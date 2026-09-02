@@ -1,0 +1,10 @@
+Rilis publik pertama.
+
+Emulator terminal ARM64. Mesin ANSI/VT, PTY, dan render UTF-8-nya ditulis dari
+nol dengan C++.
+
+- Shell BusyBox langsung bisa dipakai, tanpa root.
+- Distro Linux lewat PRoot: Debian 13 dan tiga varian Kali. Diunduh hanya
+  kalau Anda meminta, lalu dicocokkan SHA-256.
+- Sampai lima workspace, sesinya tetap hidup di latar belakang.
+- Ketik xset untuk tema, font, dan warna, dengan pratinjau langsung.

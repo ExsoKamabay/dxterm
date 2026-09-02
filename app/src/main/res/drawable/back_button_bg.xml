@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every state the button can be in is drawn, so the control is never ambiguous:
+     disabled reads as inert, focus is visible for keyboard and D-pad users (Android has no
+     hover on touch, but a mouse or a Chromebook trackpad reports it and it is handled),
+     and pressed is a clear, immediate change rather than a ripple alone. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_enabled="false">
+        <shape android:shape="oval">
+            <solid android:color="#14141A" />
+            <stroke android:width="1dp" android:color="#26262E" />
+        </shape>
+    </item>
+
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <solid android:color="#2A1B3D" />
+            <stroke android:width="2dp" android:color="#22D3EE" />
+        </shape>
+    </item>
+
+    <item android:state_focused="true">
+        <shape android:shape="oval">
+            <solid android:color="#1A1A22" />
+            <stroke android:width="2dp" android:color="#B02A8F" />
+        </shape>
+    </item>
+
+    <item android:state_hovered="true">
+        <shape android:shape="oval">
+            <solid android:color="#1E1E28" />
+            <stroke android:width="1dp" android:color="#22D3EE" />
+        </shape>
+    </item>
+
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#16161C" />
+            <stroke android:width="1dp" android:color="#3A3A46" />
+        </shape>
+    </item>
+</selector>

@@ -1,0 +1,22 @@
+<resources>
+    <color name="term_bg">#0A0A0C</color>
+    <color name="term_bar">#141419</color>
+    <color name="term_fg">#E6E6E6</color>
+    <color name="term_accent">#8A5CF6</color>
+    <!-- Wordmark on the provisioning splash. CSS/Android "darkcyan". -->
+    <color name="wordmark_fg">#008B8B</color>
+    <!-- Glow behind the wordmark. Black was invisible: the background is already near-black,
+         so a dark shadow added nothing and left the dark-blue logotype flat. The accent the
+         rest of this screen already uses (the language link, the architecture line, the
+         download button) lifts it off the background and ties the mark to the palette. -->
+    <color name="wordmark_shadow">#8A5CF6</color>
+    <color name="key_bg">#1E1E26</color>
+    <color name="key_bg_pressed">#2E2E3A</color>
+    <color name="key_fg">#CFCFD6</color>
+    <color name="divider">#22222A</color>
+    <!-- Live provisioning preview. Dark green, deliberately quieter than
+         term_fg: it is a stream of paths scrolling past, not something to be
+         read word by word, and it must not compete with the stage line below
+         it. Still around 3.9:1 against term_bg, so it stays legible. -->
+    <color name="preview_fg">#2E7D32</color>
+</resources>

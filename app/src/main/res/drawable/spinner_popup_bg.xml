@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Background for the open distro list. Translucent so the screen it covers stays visible
+     behind it. No border: the panel is told apart by its own fill and corner radius, not by an
+     outline drawn around it. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#E01A1A22" />
+    <corners android:radius="16dp" />
+</shape>

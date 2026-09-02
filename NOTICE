@@ -1,0 +1,81 @@
+dracxterm
+Copyright 2026 Bang Jack
+
+This product includes software developed for the dracxterm project.
+The original dracxterm source code is licensed under the Apache License,
+Version 2.0. See the LICENSE file distributed with this work.
+
+Third-Party Software
+--------------------
+
+This product includes or depends on third-party software. Those components
+are not relicensed under the dracxterm Apache License 2.0 and remain subject
+to their respective copyright notices and license terms.
+
+* JetBrains Mono
+  Copyright 2020 The JetBrains Mono Project Authors
+  Licensed under the SIL Open Font License, Version 1.1.
+  A copy of that license is included at app/src/main/assets/fonts/OFL.txt.
+
+* AndroidX Core, AndroidX AppCompat, and Material Components for Android
+  Licensed under the Apache License, Version 2.0.
+
+* Apache Commons Compress
+  Licensed under the Apache License, Version 2.0.
+
+* XZ for Java
+  Distributed according to its upstream public-domain dedication.
+
+* zstd-jni
+  Licensed under the BSD 2-Clause License.
+
+Bundled Prebuilt Binaries
+-------------------------
+
+The APK ships the following prebuilt ARM64 binaries under
+app/src/main/jniLibs/arm64-v8a/. dracxterm conveys these binaries and
+therefore carries the source-code obligations attached to them. Each is built
+from pinned upstream sources by prebuilts/build.sh, reproducibly. The upstream
+pin and any local patch for each one live beside its recipe under prebuilts/;
+full license texts are in licenses/.
+
+* libbusybox.so: BusyBox 1.38.0
+  Copyright the BusyBox authors. Licensed under the GNU General Public
+  License, version 2 only. See licenses/GPL-2.0.txt.
+
+* libproot.so and libproot-loader.so: PRoot v5.1.107.91 (termux/proot)
+  Copyright the PRoot authors. Licensed under the GNU General Public License,
+  version 2 or later. See licenses/GPL-2.0.txt.
+
+* libtalloc.so: talloc 2.5.0
+  Copyright the Samba/talloc authors. Licensed under the GNU Lesser General
+  Public License, version 3 or later. See licenses/LGPL-3.0.txt and
+  licenses/GPL-3.0.txt.
+
+* libandroid-shmem.so: libandroid-shmem v0.7 (termux/libandroid-shmem)
+  Copyright 2013 Sergii Pylypenko and 2017 Fredrik Fornwall. Licensed under
+  the BSD 3-Clause License. See licenses/BSD-3-Clause.txt.
+
+WRITTEN OFFER. For any of the binaries listed in this section, the maintainer
+of dracxterm will provide the complete corresponding machine-readable source
+code, on a medium customarily used for software interchange, for a charge no
+more than the cost of physically performing the distribution. This offer is
+valid to any third party and is honored through the project issue tracker at
+https://github.com/ExsoKamabay/dxterm/issues.
+
+Content Obtained At The User's Request
+--------------------------------------
+
+* Linux root filesystem images
+  A build with no archive in app/src/main/assets/rootfs downloads one only
+  after the user picks it and opts in. A build with an archive there carries
+  that image inside the APK. Either way the image is governed by the license
+  terms of the distribution it comes from, not by the dracxterm Apache
+  License 2.0.
+
+* Ollama
+  Not bundled in the APK. Downloaded only on explicit user request from the
+  official Ollama release artifacts, and governed by the Ollama license.
+
+The names and trademarks of third-party projects belong to their respective
+owners. Inclusion in this NOTICE does not imply endorsement.

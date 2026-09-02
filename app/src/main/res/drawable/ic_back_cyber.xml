@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Back arrow, drawn rather than imported so it scales and re-tints with the rest of the UI.
+     The 3D reading comes from three stacked chevrons: a dark drop plate offset down-right, a
+     cyan face, and a light top-left edge. The magenta/cyan pairing and the offset silhouette
+     are the cyberpunk part; no bitmap, no blur, so it stays crisp at any density. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Depth plate: the shadow the face sits on. -->
+    <path
+        android:pathData="M30,10 L32,12 L20,24 L32,36 L30,38 L16,24 Z"
+        android:fillColor="#3A0B4A" />
+    <!-- Magenta rim, offset the other way, for the split-channel look. -->
+    <path
+        android:pathData="M28.4,8.6 L30.4,10.6 L18.4,22.6 L30.4,34.6 L28.4,36.6 L14.4,22.6 Z"
+        android:fillColor="#B02A8F" />
+    <!-- The face. -->
+    <path
+        android:pathData="M29,9 L31,11 L19,23 L31,35 L29,37 L15,23 Z"
+        android:fillColor="#22D3EE" />
+    <!-- Top-left highlight edge, the lit side. -->
+    <path
+        android:pathData="M29,9 L31,11 L19,23 L18,22 Z"
+        android:fillColor="#CFFAFE" />
+</vector>

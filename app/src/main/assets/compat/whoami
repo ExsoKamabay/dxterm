@@ -1,0 +1,5 @@
+#!/bin/sh
+# drac identity shim: the PRESENTED user tracks the DRAC_SU (fake-root) state, so `whoami` agrees
+# with the prompt and env. Kernel euid is 0 in both states (a PRoot invariant); this reports the
+# session's logical identity: 'dracos' normally, 'root' after sudo/su.
+if [ -n "$DRAC_SU" ]; then echo root; else echo "${USER:-dracos}"; fi

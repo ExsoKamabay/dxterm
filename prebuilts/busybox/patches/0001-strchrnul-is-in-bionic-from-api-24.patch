@@ -1,0 +1,16 @@
+--- a/include/platform.h
++++ b/include/platform.h
+@@ -551,7 +551,12 @@
+ #  undef HAVE_WAIT3
+ # endif
+ # undef HAVE_MEMPCPY
+-# undef HAVE_STRCHRNUL
++# if __ANDROID_API__ < 24
++   /* bionic declares strchrnul() from API 24 (string.h, __INTRODUCED_IN(24)).
++    * Undefining this unconditionally makes libbb/platform.c define its own,
++    * which then collides with libc.a at link time in a static build. */
++#  undef HAVE_STRCHRNUL
++# endif
+ # undef HAVE_STRVERSCMP
+ # undef HAVE_UNLOCKED_LINE_OPS
+ # undef HAVE_NET_ETHERNET_H

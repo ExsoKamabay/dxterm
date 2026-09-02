@@ -1,0 +1,49 @@
+dracxterm adalah emulator terminal untuk perangkat Android ARM64 (arm64-v8a). Mesin
+terminalnya, yaitu parser ANSI/VT, buffer layar, penanganan PTY, dan render UTF-8,
+ditulis dari nol dengan C++ dan dikendalikan antarmuka Kotlin. Tanpa akses root
+perangkat.
+
+<b>Terminal</b>
+
+<ul>
+<li>Escape sequence ANSI/VT: warna, bentuk cursor, scrollback, layar alternatif</li>
+<li>UTF-8 penuh termasuk karakter lebar (CJK) dan combining mark</li>
+<li>Seleksi teks, pencarian buffer, salin clipboard, dan bracketed paste</li>
+<li>Mouse tracking untuk aplikasi yang memerlukannya</li>
+<li>Hingga lima workspace independen, masing-masing dengan shell, PTY, direktori kerja,
+dan riwayat sendiri; berpindah dengan usap</li>
+<li>Foreground service menjaga sesi tetap hidup saat aplikasi ditinggalkan</li>
+<li>Bar tombol tambahan: panah, Ctrl, Alt, Esc, Tab, Home, End, PgUp/PgDn, tempel,
+pencarian, zoom</li>
+<li>Pinch untuk zoom, font JetBrains Mono atau font sistem</li>
+</ul>
+
+<b>Pengaturan</b>
+
+Ketik <i>xset</i> di terminal untuk membuka dashboard pengaturan yang digambar di dalam
+terminal: tema, font, ukuran dan spasi teks, gaya cursor, kedalaman scrollback, padding,
+akses penyimpanan, informasi perangkat, serta ekspor dan impor konfigurasi.
+
+<b>Lingkungan Linux</b>
+
+Secara bawaan aplikasi menjalankan shell BusyBox, yang sudah merupakan terminal utuh.
+Kalau Anda ingin distribusi lengkap, dracxterm bisa menyiapkan root filesystem Linux
+ARM64 dan menjalankannya lewat PRoot di dalam sandbox aplikasi.
+
+Sebuah build bisa membawa image di dalamnya atau tidak, dan aplikasi menyesuaikan
+sendiri. Tanpa image, unduhannya kecil: saat pertama dibuka ia menampilkan image yang
+cocok dengan perangkat Anda, mengunduh pilihan Anda, lalu memeriksanya terhadap SHA-256
+terpin sebelum mengekstrak apa pun. Build yang sudah membawa image menyiapkannya saat
+pertama dibuka, tanpa jaringan dan tanpa pertanyaan. Keduanya aplikasi yang sama, paket
+dan versinya sama, jadi memasang salah satu menggantikan yang lain di tempat.
+
+<b>Penyimpanan</b>
+
+Akses penyimpanan opsional dan tidak pernah diminta saat aplikasi dibuka. Berikan izin
+dari Pengaturan, lalu penyimpanan internal muncul di ~/sdcard dan volume eksternal yang
+valid di ~/sdcard-1. Tolak izinnya, semua fitur lain tetap berjalan.
+
+<b>Privasi</b>
+
+Tanpa analitik, tanpa iklan, tanpa pustaka pelacak, tanpa telemetri, tanpa akun.
+Aplikasi membuka koneksi jaringan hanya ketika Anda memintanya mengunduh sesuatu.

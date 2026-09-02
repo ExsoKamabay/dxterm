@@ -1,0 +1,72 @@
+{
+  "_readme": [
+    "Linux root filesystem images drac-Xterm can download, keyed by Android ABI.",
+    "",
+    "The app reads Build.SUPPORTED_ABIS first and only shows the entries under a",
+    "matching key. Only arm64-v8a is listed, because that is the only ABI the",
+    "bundled proot/busybox binaries are built for (abiFilters in app/build.gradle.kts).",
+    "Adding another ABI here means building its binaries first, or the download",
+    "succeeds and nothing in it can run.",
+    "",
+    "Every entry carries a sha256. RootfsDownloader refuses to hand an archive to",
+    "the extractor unless the digest of the completed file matches exactly. An",
+    "entry without a valid 64-hex digest is dropped when this file is parsed.",
+    "",
+    "Two kinds of source appear here, and the difference matters:",
+    "",
+    "  * kali.download. Kali publishes both the image and SHA256SUMS, so those three",
+    "    digests can be re-derived from the project itself.",
+    "",
+    "  * easycli.sh. A third-party mirror of images built for PRoot on Android; it is",
+    "    where the Debian image comes from. Its digest was originally taken from",
+    "    termux/proot-distro's plugin files rather than from the mirror. Those files no",
+    "    longer exist upstream (proot-distro was rewritten and no longer ships a distro",
+    "    list with URLs), so the digest can no longer be re-derived from an independent",
+    "    authority. It was re-checked against the bytes the mirror actually serves and",
+    "    matched, and the pin still stops any later substitution -- but the provenance",
+    "    is weaker than Kali's, and an official flat Debian rootfs would be preferable."
+  ],
+  "_default": "Debian 13 (trixie)",
+  "arm64-v8a": {
+    "Debian 13 (trixie)": {
+      "url": "https://easycli.sh/proot-distro/debian-trixie-aarch64-pd-v4.37.0.tar.xz",
+      "sha256": "9bd3b19ff7cd300c7c7bf33124b726eb199f4bab9a3b1472f34749c6d12c9195",
+      "downloadBytes": 35401288,
+      "installBytes": 400000000,
+      "note": {
+        "id": "Debian yang stabil dan cocok untuk penggunaan sehari-hari.",
+        "en": "Stable Debian, a good fit for everyday use."
+      }
+    },
+    "Kali Linux (nano)": {
+      "url": "https://kali.download/nethunter-images/kali-2026.2/rootfs/kali-nethunter-rootfs-nano-arm64.tar.xz",
+      "sha256": "2ea1c50446b9b35506c4b1cc84a731c752892baafe0dc2a1332e460c2d2a1e4e",
+      "downloadBytes": 198274248,
+      "installBytes": 1000000000,
+      "note": {
+        "id": "Kali dengan sedikit perkakas. Sisanya bisa dipasang lewat apt.",
+        "en": "Kali with a few tools. Add the rest with apt."
+      }
+    },
+    "Kali Linux (minimal)": {
+      "url": "https://kali.download/nethunter-images/kali-2026.2/rootfs/kali-nethunter-rootfs-minimal-arm64.tar.xz",
+      "sha256": "d6403a5da175df325611d23af4b92330856059c45454eced7f4cdf3ca6df2e4e",
+      "downloadBytes": 137313840,
+      "installBytes": 1000000000,
+      "note": {
+        "id": "Kali paling ringan, tanpa perkakas bawaan.",
+        "en": "The lightest Kali, with no tools preinstalled."
+      }
+    },
+    "Kali Linux (full pentesting)": {
+      "url": "https://kali.download/nethunter-images/kali-2026.2/rootfs/kali-nethunter-rootfs-full-arm64.tar.xz",
+      "sha256": "fd108959bd9252b03d1ce3d573afaef2e372e4a0f137d256ba5f92e41d62ca6e",
+      "downloadBytes": 1764123932,
+      "installBytes": 9500000000,
+      "note": {
+        "id": "Semua perkakas Kali sudah terpasang. Besar: sekitar 9 GB setelah dipasang.",
+        "en": "Every Kali tool, preinstalled. Large: about 9 GB once installed."
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+#!/bin/sh
+# drac identity shim for `id`, tracking the DRAC_SU (fake-root) presentation state so uid/gid/name
+# agree with whoami, the prompt and the env. Covers the common coreutils forms. NOTE: package
+# tooling (dpkg/apt) reads geteuid() via syscall, not this command, so this cosmetic mapping never
+# affects real privilege, it only keeps the *presented* identity consistent.
+if [ -n "$DRAC_SU" ]; then name=root; uid=0; gid=0; else name="${USER:-dracos}"; uid=1000; gid=1000; fi
+full="uid=${uid}(${name}) gid=${gid}(${name}) groups=${gid}(${name})"
+case "$1" in
+  "")        echo "$full" ;;
+  -u|--user) case "$2" in -n|--name) echo "$name" ;; *) echo "$uid" ;; esac ;;
+  -g|--group) case "$2" in -n|--name) echo "$name" ;; *) echo "$gid" ;; esac ;;
+  -G|--groups) case "$2" in -n|--name) echo "$name" ;; *) echo "$gid" ;; esac ;;
+  -un|-nu)   echo "$name" ;;
+  -gn|-ng)   echo "$name" ;;
+  -Gn|-nG)   echo "$name" ;;
+  *)         echo "$full" ;;
+esac

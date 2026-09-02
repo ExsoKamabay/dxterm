@@ -1,0 +1,10 @@
+First public release.
+
+An ARM64 terminal emulator. Its ANSI/VT engine, PTY handling and UTF-8
+rendering are written from scratch in C++.
+
+- A BusyBox shell that works straight away, without root.
+- Linux distros through PRoot: Debian 13 and three Kali builds, fetched only
+  when you ask and checked against a pinned SHA-256.
+- Up to five workspaces, sessions kept alive in the background.
+- Type xset for themes, fonts and colours, with a live preview.

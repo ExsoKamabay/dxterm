@@ -1,0 +1,14 @@
+Deskripsi Screenshot dracxterm
+===============================
+
+1. 01-pilih-distro-linux-dracxterm.jpg
+   Layar pemilihan distribusi Linux di dracxterm, dengan pilihan Debian dan beberapa varian Kali Linux untuk perangkat arm64-v8a.
+
+2. 02-instalasi-debian-13-dracxterm.jpg
+   Layar instalasi Debian 13 (Trixie) yang menampilkan ukuran unduhan, kebutuhan ruang penyimpanan, dan tombol untuk memulai pemasangan.
+
+3. 03-konfigurasi-tampilan-terminal-dracxterm.jpg
+   Menu xset untuk menyesuaikan tampilan terminal, termasuk tema, ukuran font, bentuk kursor, warna, dan pratinjau langsung.
+
+4. 04-terminal-debian-berjalan-dracxterm.jpg
+   Debian berhasil berjalan di terminal dracxterm, menampilkan informasi sistem, kernel Android, penggunaan penyimpanan, CPU, dan RAM.

@@ -1,0 +1,17 @@
+#!/bin/sh
+# drac-compat fakeroot shim. PRoot -0 already provides fake-root (kernel euid 0); run the command
+# directly. Bare `fakeroot` opens a non-login interactive root shell (SUPER_USER, '#'), no banner.
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --) shift; break ;;
+    -*) shift ;;
+    *)  break ;;
+  esac
+done
+if [ "$#" -eq 0 ]; then
+  export DRAC_SU=1 USER=root LOGNAME=root HOME=/root
+  RC="${DRAC_HOME:-/home/dracos}/.bashrc"
+  if command -v bash >/dev/null 2>&1; then exec bash --rcfile "$RC" -i
+  else ENV="$RC"; export ENV; exec "${SHELL:-/bin/sh}" -i; fi
+fi
+exec "$@"

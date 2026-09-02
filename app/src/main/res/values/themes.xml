@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.Xterm" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:statusBarColor">@color/term_bar</item>
+        <item name="android:navigationBarColor">@color/term_bar</item>
+        <item name="android:windowBackground">@color/term_bg</item>
+        <item name="colorPrimary">@color/term_accent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

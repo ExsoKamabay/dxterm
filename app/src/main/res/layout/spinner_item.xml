@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The closed state of the distro picker. android.R.layout.simple_spinner_item is
+     left-aligned and uses the platform font, which left the one control on this screen
+     out of step with the copy around it. Same face, same alignment, same colour as the
+     rest of the panel; only the size is kept larger, because it is the choice itself. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fontFamily="@font/copse"
+    android:gravity="center_horizontal"
+    android:textColor="@color/term_fg"
+    android:textSize="16sp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:ellipsize="end"
+    android:singleLine="true" />

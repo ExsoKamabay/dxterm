@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/term_bg"
+    android:clipToPadding="false"
+    android:clipChildren="false"
+    android:fitsSystemWindows="false">
+
+    <!-- Top toolbar: session indicator + connection indicator + quick action -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/term_bar"
+        android:paddingStart="14dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <!-- Workspace: a horizontally-scrollable row of session chips. Currently one session;
+             the sessionTabs container is the extension point for future multi-session tabs. -->
+        <HorizontalScrollView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:scrollbars="none"
+            android:overScrollMode="never">
+
+            <!-- Workspace tabs are built dynamically by MainActivity (one chip per workspace,
+                 plus a + chip up to WorkspaceManager.MAX). -->
+            <LinearLayout
+                android:id="@+id/sessionTabs"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <ImageButton
+            android:id="@+id/btnKeyboard"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_keyboard"
+            android:contentDescription="@string/keyboard_toggle" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider" />
+
+    <!-- Main terminal surface, wrapped so strong horizontal swipes switch workspaces -->
+    <com.xdrac.WorkspaceSwipeContainer
+        android:id="@+id/swipeContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <com.xdrac.TerminalView
+            android:id="@+id/terminal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/term_bg"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+    </com.xdrac.WorkspaceSwipeContainer>
+
+    <!-- Extra-keys toolbar: rides directly above the IME (see MainActivity insets handling).
+         Horizontal fading edge signals that the row scrolls, so the last key never looks
+         "cut off"; clipToPadding=false keeps the trailing key's margin visible. -->
+    <com.xdrac.ExtraKeysView
+        android:id="@+id/extraKeys"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/term_bar"
+        android:clipToPadding="false"
+        android:requiresFadingEdge="horizontal"
+        android:fadingEdgeLength="24dp" />
+
+</LinearLayout>

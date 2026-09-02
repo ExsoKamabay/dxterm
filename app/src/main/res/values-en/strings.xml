@@ -1,0 +1,42 @@
+<resources>
+    <string name="workspace_chip">● %1$d</string>
+    <string name="workspace_add">+</string>
+    <string name="copied">Copied</string>
+    <string name="find_title">Find in buffer</string>
+    <string name="find_hint">search text</string>
+    <string name="find_next">Find</string>
+    <string name="find_none">Not found</string>
+    <string name="provision_subtitle">Linux environment</string>
+    <string name="provision_starting">Preparing…</string>
+    <string name="provision_failed">Setup failed: %1$s</string>
+    <string name="retry">Retry</string>
+    <string name="fgs_running">Terminal session running</string>
+
+    <!-- Opt-in download of a Linux root filesystem. This copy is the consent itself, so it
+         states plainly what is fetched, from where, how large it is, and that the file is
+         not covered by the checks performed on the app itself. -->
+    <string name="consent_title">Install Linux</string>
+    <string name="consent_body">Pick the Linux distro you want to install. The file is checked before the installation starts.\n\nEach distro is maintained by its own developers.</string>
+    <string name="consent_body_resume">An earlier download of %1$s stopped at %2$s and can carry on from there.\n\nEach distro is maintained by its own developers.</string>
+    <string name="consent_pick_distro">Choose a distro</string>
+    <string name="consent_no_images">No Linux image is available for this device\'s architecture (%1$s). dracxterm will start its BusyBox shell instead.</string>
+    <string name="consent_size_line">Download %1$s · about %2$s of free space needed.</string>
+    <string name="consent_download">Download and install</string>
+    <string name="consent_download_resume">Resume the download</string>
+    <string name="consent_cancel">Cancel</string>
+    <string name="consent_resume">Resume</string>
+    <string name="consent_pausing">Stopping the download…</string>
+    <string name="consent_paused">Download paused at %1$s. Press Resume to continue.</string>
+    <string name="consent_resume_unsupported">The server does not support resuming, so the file is being fetched again from the start.</string>
+    <string name="back">Back</string>
+    <string name="keyboard_toggle">Show or hide the keyboard</string>
+    <string name="consent_downloading">Downloading %1$s… %2$s of %3$s</string>
+    <string name="consent_downloading_unknown">Downloading %1$s… %2$s</string>
+    <string name="consent_download_failed">Download failed: %1$s</string>
+    <string name="consent_starting_busybox">Starting BusyBox shell…</string>
+    <string name="consent_no_network">No network connection. Connect and try again.</string>
+    <string name="lang_toggle">English</string>
+    <string name="lang_switch_to">Bahasa Indonesia</string>
+    <string name="consent_arch">Device: %1$s · %2$d distros available</string>
+    <string name="busybox_fallback">Start the BusyBox shell for now</string>
+</resources>

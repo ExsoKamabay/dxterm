@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scrollable so the consent copy stays fully readable on short screens and at large
+     font scales; the inner layout keeps the original centred splash composition. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/term_bg">
+
+    <ScrollView
+        android:id="@+id/scroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:minHeight="200dp"
+        android:padding="32dp">
+
+        <!-- The logotype. Black Ops One is a display face with its own weight built in, so
+             textStyle="bold" is dropped: synthesising bold on top of it only smears the
+             stems. letterSpacing goes too, the face is already wide. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/wordmark"
+            android:fontFamily="@font/black_ops_one"
+            android:textColor="@color/wordmark_fg"
+            android:textSize="34sp"
+            android:shadowColor="@color/wordmark_shadow"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="12"
+            android:layout_marginBottom="2dp" />
+
+        <TextView
+            android:id="@+id/provisionSubtitle"
+            android:fontFamily="@font/copse"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/provision_subtitle"
+            android:textColor="@color/key_fg"
+            android:textSize="12sp"
+            android:gravity="center_horizontal"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Live view of what provisioning is actually doing: the paths being written,
+             then each configuration step. Hidden until there is something to show, so
+             the subtitle above stays alone on the consent screen.
+
+             Shortened at the START because these are paths and the end of a path is what
+             identifies it. Fixed at three lines so the layout does not jump on every
+             update. The monospace request is a preference, not a guarantee: some devices
+             render this proportionally regardless, which is why nothing in the code
+             counts characters.
+
+             Each line is centred in its own right. Left-aligning them left a ragged edge:
+             the text sat against the left padding and the gap on the right grew or shrank
+             with whatever path happened to be showing, which is the lopsided look this
+             replaces. Centring per line, not centring the block, is what keeps
+             the two margins equal whatever the text and whatever the font's metrics turn
+             out to be, and it matches the rest of this screen, which is centred throughout.
+
+             Lines are shortened to the measured width in showDetail(), so nothing here
+             ever wraps to a second line. -->
+        <TextView
+            android:id="@+id/livePreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:visibility="gone"
+            android:minLines="3"
+            android:maxLines="3"
+            android:singleLine="false"
+            android:fontFamily="monospace"
+            android:textSize="10sp"
+            android:lineSpacingMultiplier="1.15"
+            android:textColor="@color/preview_fg"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Language toggle. Indonesian is the default; this offers the other one.
+             Placed above the copy it affects so the effect is visible when tapped. -->
+        <Button
+            android:id="@+id/langToggle"
+            android:fontFamily="@font/copse"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="4dp"
+            android:minHeight="0dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:textSize="13sp"
+            android:textColor="#7C6BFF"
+            android:text="@string/lang_toggle" />
+
+        <TextView
+            android:id="@+id/status"
+            android:fontFamily="@font/copse"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/provision_starting"
+            android:textColor="@color/term_fg"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:minLines="2"
+            android:layout_marginBottom="18dp" />
+
+        <ProgressBar
+            android:id="@+id/progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:indeterminate="true"
+            android:progressTint="@color/term_accent"
+            android:indeterminateTint="@color/term_accent" />
+
+        <!-- Opt-in panel. Hidden unless the app has no Linux image and the user has not
+             already answered. Nothing is downloaded until consentDownload is pressed. -->
+        <LinearLayout
+            android:id="@+id/consent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="20dp">
+
+            <TextView
+                android:id="@+id/consentTitle"
+                android:gravity="center_horizontal"
+            android:fontFamily="@font/copse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/consent_title"
+                android:textColor="@color/term_fg"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/consentBody"
+                android:gravity="center_horizontal"
+            android:fontFamily="@font/copse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/key_fg"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3sp"
+                android:layout_marginBottom="0dp" />
+
+            <!-- The list of images this device can actually run. Populated from
+                 assets/rootfsURLS.json filtered by Build.SUPPORTED_ABIS, so an entry
+                 shown here is always one PRoot can execute. Hidden when only a single
+                 image is available, since a one-item picker is just noise. -->
+            <!-- The device's own ABI, shown before the list rather than left implicit.
+                 The list below is filtered by it: PRoot cannot run a rootfs built for
+                 another architecture, so what is offered is what can actually work. -->
+            <TextView
+                android:id="@+id/consentArch"
+                android:gravity="center_horizontal"
+            android:fontFamily="@font/copse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#7C6BFF" />
+
+            <TextView
+                android:id="@+id/consentPickerLabel"
+                android:gravity="center_horizontal"
+            android:fontFamily="@font/copse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textSize="13sp"
+                android:textColor="#B0B0B0"
+                android:text="@string/consent_pick_distro" />
+
+            <Spinner
+                android:id="@+id/consentPicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:popupBackground="@drawable/spinner_popup_bg"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:id="@+id/consentPickerNote"
+                android:gravity="center_horizontal"
+            android:fontFamily="@font/copse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="13sp"
+                android:lineSpacingExtra="2sp"
+                android:textColor="#9E9E9E" />
+
+            <Button
+                android:id="@+id/consentDownload"
+            android:fontFamily="@font/copse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/consent_download"
+                android:textColor="@color/term_bg"
+                android:backgroundTint="@color/term_accent" />
+
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/cancel"
+            android:fontFamily="@font/copse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/consent_cancel"
+            android:textColor="@color/term_fg"
+            android:backgroundTint="@color/key_bg"
+            android:visibility="gone"
+            android:layout_marginTop="20dp" />
+
+        <Button
+            android:id="@+id/retry"
+            android:fontFamily="@font/copse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/retry"
+            android:textColor="@color/term_fg"
+            android:backgroundTint="@color/key_bg"
+            android:visibility="gone"
+            android:layout_marginTop="20dp" />
+    </LinearLayout>
+    </ScrollView>
+
+    <!-- Back, pinned to the corner rather than placed in the scrolling column: it must stay
+         reachable while the copy below scrolls, and it is chrome, not content. Sits above the
+         ScrollView in the FrameLayout so it is never covered by it. -->
+    <ImageButton
+        android:id="@+id/back"
+        android:visibility="gone"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="12dp"
+        android:padding="8dp"
+        android:src="@drawable/ic_back_cyber"
+        android:background="@drawable/back_button_bg"
+        android:scaleType="fitCenter"
+        android:focusable="true"
+        android:clickable="true"
+        android:contentDescription="@string/back" />
+</FrameLayout>

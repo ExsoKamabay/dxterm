@@ -1,0 +1,27 @@
+# drac-xterm prompt + identity presentation, app-managed theme (refreshed every launch).
+#
+# Prompt/identity State Machine. State is carried by $DRAC_SU across shell nesting (NOT by the
+# kernel uid: under PRoot the container is always fake-root, so the emulated euid cannot by itself
+# distinguish "normal user" from "super user"). The base login shell has DRAC_SU unset; the
+# sudo/su/fakeroot shims export DRAC_SU=1 before spawning their interactive shell. Exiting that
+# shell returns to the base shell (DRAC_SU unset), a pure shell-nesting transition.
+#
+#   NORMAL_USER : DRAC_SU unset -> user 'dracos', HOME=/home/dracos, trailing '$'
+#   SUPER_USER  : DRAC_SU=1     -> user 'root',   HOME=/root,        trailing '#'
+#
+# Only the identity env + the trailing symbol differ; colour, layout, alignment and spacing are
+# shared. The whoami/id/logname shims on PATH read the same $DRAC_SU so every identity view agrees.
+export TERM=xterm-256color
+
+if [ -n "$DRAC_SU" ]; then
+  # Super user: root identity + '#'. Keep env in sync with the presented identity.
+  export USER=root LOGNAME=root HOME=/root
+  # In a non-login root shell `logout` is not a builtin; make it a synonym for exit so the
+  # documented "exit OR logout returns to the normal user" holds in every super-user shell.
+  logout() { exit; }
+  PS1='\[\e[1;36m\]┌─[\[\e[1;35m\]dracOS@Xterm\[\e[1;36m\]]─[\[\e[1;32m\]\w\[\e[1;36m\]]\n\[\e[1;36m\]└──➤ # \[\e[0m\]'
+else
+  # Normal user: dracos identity + '$'.
+  export USER="${USER:-dracos}" LOGNAME="${LOGNAME:-dracos}"
+  PS1='\[\e[1;36m\]┌─[\[\e[1;35m\]dracOS@Xterm\[\e[1;36m\]]─[\[\e[1;32m\]\w\[\e[1;36m\]]\n\[\e[1;36m\]└──➤ $ \[\e[0m\]'
+fi

@@ -1,0 +1,16 @@
+#!/bin/sh
+# drac-Xterm `xset`, open the in-terminal Configuration Framework dashboard.
+#
+# Emits a private OSC 5391 sequence (namespaced "DRACX") that the emulator intercepts to open the
+# `xset` TUI. The optional sub-command selects the module directly:
+#     xset            # open the overview (Appearance)
+#     xset theme      # jump straight into Theme
+#     xset font | cursor | background | performance | backup | about
+#
+# Terminator is ST (ESC \). printf's \033 octal escape is portable across bash and busybox ash.
+#
+# NOTE: this intentionally shadows the X11 `xset` utility. A headless Android terminal has no X
+# server, so there is nothing to shadow in practice; if a real X11 xset is ever needed it remains
+# reachable by its absolute path.
+mod="${1:-xset}"
+printf '\033]5391;DRACX;open;%s\033\\' "$mod"

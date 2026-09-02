@@ -1,0 +1,27 @@
+#!/bin/sh
+# drac-compat sudo shim.
+# The guest session already runs as PRoot fake-root (kernel euid 0), so privilege is held and
+# `sudo apt …` etc. genuinely work. This shim exists to (a) present the SUPER_USER identity
+# (root / HOME=/root / '#') and (b) strip the escalation syntax the real setuid sudo can't honour
+# under PRoot. Interactive forms (sudo / sudo -i / sudo -s / sudo su) open a NON-LOGIN interactive
+# bash reading our themed rc: prompt becomes '#', whoami/id report root, no banner is redrawn.
+# `sudo CMD` runs CMD directly as root. Exiting the interactive shell drops back to the base
+# (NORMAL) shell. Installed in /usr/local/bin to shadow the real sudo.
+login=0
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -i|-s|--login)                    login=1; shift ;;
+    -u|-g|-p|-C|-c|-r|-t|-T|-U|-R|-D)  shift 2 ;;
+    --)                               shift; break ;;
+    -*)                               shift ;;
+    *)                                break ;;
+  esac
+done
+if [ "$login" = 1 ] || [ "$#" -eq 0 ]; then
+  export DRAC_SU=1 USER=root LOGNAME=root HOME=/root
+  [ "$login" = 1 ] && cd "$HOME" 2>/dev/null
+  RC="${DRAC_HOME:-/home/dracos}/.bashrc"
+  if command -v bash >/dev/null 2>&1; then exec bash --rcfile "$RC" -i
+  else ENV="$RC"; export ENV; exec "${SHELL:-/bin/sh}" -i; fi
+fi
+exec "$@"

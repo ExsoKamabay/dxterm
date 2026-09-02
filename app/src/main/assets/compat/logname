@@ -1,0 +1,3 @@
+#!/bin/sh
+# drac identity shim: login name tracking the DRAC_SU state (see whoami).
+if [ -n "$DRAC_SU" ]; then echo root; else echo "${LOGNAME:-${USER:-dracos}}"; fi

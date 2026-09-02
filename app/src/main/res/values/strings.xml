@@ -1,0 +1,58 @@
+<resources>
+    <!-- Bahasa Indonesia adalah tampilan bawaan aplikasi ini.
+         Terjemahan bahasa Inggris ada di values-en/strings.xml, dan pengguna bisa
+         berpindah lewat tombol di layar penyiapan. app_name sengaja tidak
+         diterjemahkan: itu nama, bukan kalimat. -->
+    <string name="app_name" translatable="false">dracxterm</string>
+    <!-- Wordmark on the provisioning splash only. Kept separate from app_name so the
+         launcher label, the toasts and the consent copy keep the product name they
+         already use; this string is purely the logotype. -->
+    <string name="wordmark" translatable="false">dracXterm</string>
+    <string name="workspace_chip">● %1$d</string>
+    <string name="workspace_add">+</string>
+    <string name="copied">Tersalin</string>
+    <string name="find_title">Cari di buffer</string>
+    <string name="find_hint">teks yang dicari</string>
+    <string name="find_next">Cari</string>
+    <string name="find_none">Tidak ditemukan</string>
+    <string name="provision_subtitle">Lingkungan Linux</string>
+    <string name="provision_starting">Menyiapkan…</string>
+    <string name="provision_failed">Penyiapan gagal: %1$s</string>
+    <string name="retry">Coba lagi</string>
+    <string name="fgs_running">Sesi terminal sedang berjalan</string>
+
+    <!-- Tombol ganti bahasa. Isinya adalah bahasa YANG AKAN DITUJU kalau ditekan,
+         bukan bahasa yang sedang aktif. Kalau sedang berbahasa Indonesia, tombolnya
+         menawarkan English. -->
+    <string name="lang_toggle">English</string>
+    <string name="lang_switch_to">Bahasa Indonesia</string>
+
+    <!-- Unduhan root filesystem Linux atas persetujuan pengguna. Teks ini adalah
+         persetujuannya sendiri, jadi ia menyebut dengan jelas apa yang diambil, dari
+         mana, dan bahwa berkas itu diperiksa sebelum dibuka. -->
+    <string name="consent_title">Pasang Linux</string>
+    <string name="consent_body">Pilih distro Linux yang ingin dipasang. File akan diperiksa sebelum instalasi dimulai.\n\nSetiap distro dikelola oleh pengembangnya masing-masing.</string>
+    <string name="consent_body_resume">Unduhan %1$s sebelumnya berhenti di %2$s dan bisa dilanjutkan dari sana.\n\nSetiap distro dikelola oleh pengembangnya masing-masing.</string>
+    <string name="consent_arch">Perangkat: %1$s · %2$d distro tersedia</string>
+    <string name="consent_pick_distro">Pilih distro</string>
+    <string name="consent_no_images">Tidak ada image Linux untuk arsitektur perangkat ini (%1$s). dracxterm akan menjalankan shell BusyBox saja.</string>
+    <string name="consent_size_line">Unduhan %1$s · membutuhkan sekitar %2$s ruang kosong.</string>
+    <string name="consent_download">Unduh dan pasang</string>
+    <string name="consent_download_resume">Lanjutkan unduhan</string>
+    <string name="consent_cancel">Batal</string>
+    <string name="consent_resume">Lanjutkan</string>
+    <string name="consent_pausing">Menghentikan unduhan…</string>
+    <string name="consent_paused">Unduhan dijeda pada %1$s. Tekan Lanjutkan untuk meneruskan.</string>
+    <string name="consent_resume_unsupported">Server tidak mendukung lanjut unduh, jadi berkasnya diulang dari awal.</string>
+    <string name="back">Kembali</string>
+    <string name="keyboard_toggle">Tampilkan atau sembunyikan papan ketik</string>
+    <string name="consent_downloading">Mengunduh %1$s… %2$s dari %3$s</string>
+    <string name="consent_downloading_unknown">Mengunduh %1$s… %2$s</string>
+    <string name="consent_download_failed">Unduhan gagal: %1$s</string>
+    <string name="consent_starting_busybox">Menjalankan shell BusyBox…</string>
+    <string name="consent_no_network">Tidak ada koneksi jaringan. Sambungkan lalu coba lagi.</string>
+    <!-- Hanya muncul kalau unduhan gagal. Ini bukan tombol "lewati" di layar
+         persetujuan (itu sudah dihapus), melainkan jalan keluar supaya pengguna
+         tidak terkurung di layar kegagalan tanpa pilihan apa pun. -->
+    <string name="busybox_fallback">Jalankan shell BusyBox dulu</string>
+</resources>

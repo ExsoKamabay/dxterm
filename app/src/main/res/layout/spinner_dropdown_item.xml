@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One row of the open dropdown. Matches the closed state so the list does not change
+     typeface the moment it opens; the touch target keeps the platform's minimum height. -->
+<CheckedTextView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="?android:attr/spinnerDropDownItemStyle"
+    android:layout_width="match_parent"
+    android:layout_height="?android:attr/listPreferredItemHeightSmall"
+    android:fontFamily="@font/copse"
+    android:gravity="center_vertical|center_horizontal"
+    android:textColor="@color/term_fg"
+    android:textSize="15sp"
+    android:ellipsize="marquee"
+    android:singleLine="true" />

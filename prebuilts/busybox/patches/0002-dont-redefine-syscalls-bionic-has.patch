@@ -1,0 +1,41 @@
+--- a/libbb/missing_syscalls.c
++++ b/libbb/missing_syscalls.c
+@@ -10,21 +10,38 @@
+ #if defined(ANDROID) || defined(__ANDROID__)
+ /*# include <linux/timex.h> - for struct timex, but may collide with <time.h> */
+ # include <sys/syscall.h>
++
++/* This block dates from 2012, when bionic had none of these. It does now:
++ *   getsid       unistd.h, no __INTRODUCED_IN guard
++ *   sethostname  unistd.h, __INTRODUCED_IN(23)
++ *   adjtimex     sys/timex.h
++ * Defining them here anyway makes libbb export duplicates of libc.a's own
++ * symbols, and a static link then fails with "duplicate symbol". Only compile
++ * the replacements on API levels that actually lack them.
++ *
++ * pivot_root is NOT in that list: bionic has no wrapper for it at any API
++ * level, so its definition below stays unconditional. */
++# if __ANDROID_API__ < 21
+ pid_t getsid(pid_t pid)
+ {
+ 	return syscall(__NR_getsid, pid);
+ }
++# endif
+ 
++# if __ANDROID_API__ < 23
+ int sethostname(const char *name, size_t len)
+ {
+ 	return syscall(__NR_sethostname, name, len);
+ }
++# endif
+ 
++# if __ANDROID_API__ < 21
+ struct timex;
+ int adjtimex(struct timex *buf)
+ {
+ 	return syscall(__NR_adjtimex, buf);
+ }
++# endif
+ 
+ int pivot_root(const char *new_root, const char *put_old)
+ {

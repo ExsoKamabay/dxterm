@@ -1,0 +1,136 @@
+# Config deltas applied on top of BusyBox `defconfig` for an Android/bionic build.
+#
+# Only intent-level options are listed. kconfig cascades the rest through
+# `make olddefconfig`, so this file stays readable instead of being a 190-line
+# diff of derived settings.
+#
+# Every disable below is here because the applet does not compile against
+# bionic, not because it was unwanted. The reason is recorded so a future NDK
+# bump can re-enable whatever bionic has caught up on, instead of inheriting a
+# list nobody dares touch. Verified against NDK 27.0.12077973, API 24.
+#
+# This list has NOT been minimised: it is the set that produced a working
+# build. Some entries may be broader than strictly required.
+
+# --- Enabled ---------------------------------------------------------------
+
+# Use BusyBox's own passwd/group/shadow implementations. bionic has no
+# <shadow.h> at all, and libbb.h includes it unless USE_BB_SHADOW is on.
+CONFIG_USE_BB_PWD_GRP=y
+CONFIG_USE_BB_SHADOW=y
+
+# Static: the binary is extracted into nativeLibraryDir and exec'd both from
+# Android directly (BusyBox fallback shell) and from inside the PRoot rootfs,
+# where the dynamic loader would resolve against a different libc.
+CONFIG_STATIC=y
+
+# --- No <shadow.h> / no crypt / no utmp on bionic ---------------------------
+# CONFIG_LOGIN is not set
+# CONFIG_SU is not set
+# CONFIG_SULOGIN is not set
+# CONFIG_PASSWD is not set
+# CONFIG_CHPASSWD is not set
+# CONFIG_CRYPTPW is not set
+# CONFIG_MKPASSWD is not set
+# CONFIG_ADDUSER is not set
+# CONFIG_DELUSER is not set
+# CONFIG_ADDGROUP is not set
+# CONFIG_DELGROUP is not set
+# CONFIG_VLOCK is not set
+# CONFIG_GETTY is not set
+# CONFIG_SELINUX is not set
+# CONFIG_PAM is not set
+# CONFIG_FEATURE_UTMP is not set
+# CONFIG_FEATURE_WTMP is not set
+
+# yescrypt needs explicit_bzero(), which bionic does not provide at any API level.
+# CONFIG_USE_BB_CRYPT_YES is not set
+
+# --- Needs <sys/kd.h> (Linux VT console); bionic has no such header ---------
+# CONFIG_LOADFONT is not set
+# CONFIG_LOADKMAP is not set
+# CONFIG_SETFONT is not set
+# CONFIG_DUMPKMAP is not set
+# CONFIG_KBD_MODE is not set
+# CONFIG_OPENVT is not set
+# CONFIG_CHVT is not set
+# CONFIG_DEALLOCVT is not set
+# CONFIG_SETKEYCODES is not set
+# CONFIG_SETLOGCONS is not set
+# CONFIG_SHOWKEY is not set
+# CONFIG_FGCONSOLE is not set
+# CONFIG_RESIZE is not set
+# CONFIG_CONSPY is not set
+
+# --- Functions bionic lacks at API 24 ---------------------------------------
+# gethostid()
+# CONFIG_HOSTID is not set
+# getlogin_r() is __INTRODUCED_IN(28). The app ships its own logname shim in
+# assets/compat/ regardless.
+# CONFIG_LOGNAME is not set
+# syncfs() is __INTRODUCED_IN(28)
+# CONFIG_FEATURE_SYNC_FANCY is not set
+# adjtimex()
+# CONFIG_ADJTIMEX is not set
+# getrandom() is __INTRODUCED_IN(28)
+# CONFIG_SEEDRNG is not set
+# ether_hostton()
+# CONFIG_ETHER_WAKE is not set
+# glob()/globfree()/sigisemptyset(). Both symbols are required: turning off
+# only SHELL_HUSH makes kconfig switch CONFIG_HUSH back on, which selects it
+# again, and hush compiles anyway.
+# CONFIG_SHELL_HUSH is not set
+# CONFIG_HUSH is not set
+# setbit()/clrbit() from <sys/bitops.h>
+# CONFIG_FSCK_MINIX is not set
+# CONFIG_MKFS_MINIX is not set
+# swapon()/swapoff(), and swap is meaningless in an app sandbox anyway
+# CONFIG_SWAPON is not set
+# CONFIG_SWAPOFF is not set
+
+# --- SysV IPC: no msgget/semget/shmget in bionic ----------------------------
+# CONFIG_IPCRM is not set
+# CONFIG_IPCS is not set
+# CONFIG_LOGREAD is not set
+# CONFIG_SYSLOGD is not set
+# CONFIG_KLOGD is not set
+# CONFIG_LOGGER is not set
+
+# --- struct in6_ifreq collides with bionic's kernel headers -----------------
+# CONFIG_IFCONFIG is not set
+# CONFIG_ROUTE is not set
+# CONFIG_NETSTAT is not set
+# CONFIG_ARP is not set
+# CONFIG_SLATTACH is not set
+# CONFIG_NAMEIF is not set
+# CONFIG_IP is not set
+# CONFIG_IPADDR is not set
+# CONFIG_IPLINK is not set
+# CONFIG_IPROUTE is not set
+# CONFIG_IPTUNNEL is not set
+# CONFIG_IPRULE is not set
+# CONFIG_IPNEIGH is not set
+# CONFIG_FEATURE_IPV6 is not set
+
+# --- tc: struct tc_cbq_* absent from bionic's linux/pkt_sched.h -------------
+# CONFIG_TC is not set
+
+# --- addmntent(): supplied by prebuilts/busybox/bionic-compat.h, but mtab
+# --- itself is meaningless inside the app sandbox --------------------------
+# CONFIG_FEATURE_MTAB_SUPPORT is not set
+# CONFIG_FEATURE_MOUNT_FAKE is not set
+# CONFIG_FEATURE_MOUNT_NFS is not set
+
+# --- Daemons and system management that an unprivileged app cannot use ------
+# CONFIG_INIT is not set
+# CONFIG_HALT is not set
+# CONFIG_POWEROFF is not set
+# CONFIG_REBOOT is not set
+# CONFIG_RUNLEVEL is not set
+# CONFIG_MDEV is not set
+# CONFIG_INETD is not set
+# CONFIG_FEATURE_INETD_RPC is not set
+# CONFIG_TCPSVD is not set
+# CONFIG_UDPSVD is not set
+# CONFIG_TELNETD is not set
+# CONFIG_FTPD is not set

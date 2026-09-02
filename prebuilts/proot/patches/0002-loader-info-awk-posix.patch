@@ -1,0 +1,35 @@
+diff --git a/src/loader/loader-info.awk b/src/loader/loader-info.awk
+index 578c843..24b142f 100644
+--- a/src/loader/loader-info.awk
++++ b/src/loader/loader-info.awk
+@@ -1,6 +1,28 @@
+ # Note: This file is included only for targets which have pokedata workaround
+-/\ypokedata_workaround\y/{pokedata_workaround=strtonum("0x" $2)}
+-/\y_start\y/{start=strtonum("0x" $2)}
++#
++# POSIX awk only. Upstream used two gawk extensions -- strtonum() and the \y
++# word-boundary escape -- which makes the build fail on any system where /usr/bin/awk
++# is mawk (Debian and Ubuntu's default) with the unhelpful message
++# "function strtonum never defined".
++#
++# readelf -s prints:  Num:  Value  Size  Type  Bind  Vis  Ndx  Name
++# so the symbol name is $8 and its address is $2, in hex with no 0x prefix.
++# Matching $8 exactly is also stricter than the original regex, which would have
++# matched any line merely containing the name.
++function hex2dec(s,   i, c, d, n) {
++	n = 0
++	s = tolower(s)
++	for (i = 1; i <= length(s); i++) {
++		c = substr(s, i, 1)
++		d = index("0123456789abcdef", c) - 1
++		if (d < 0)
++			continue
++		n = n * 16 + d
++	}
++	return n
++}
++$8 == "pokedata_workaround" { pokedata_workaround = hex2dec($2) }
++$8 == "_start"              { start = hex2dec($2) }
+ END {
+ 	print "#include <unistd.h>"
+ 	print "const ssize_t offset_to_pokedata_workaround=" (pokedata_workaround-start) ";"

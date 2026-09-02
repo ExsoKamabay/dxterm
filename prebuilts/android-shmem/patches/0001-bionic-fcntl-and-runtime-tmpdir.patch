@@ -1,0 +1,51 @@
+diff --git a/shmem.c b/shmem.c
+index f95fc07..17cc1d7 100644
+--- a/shmem.c
++++ b/shmem.c
+@@ -3,6 +3,7 @@
+ #include <android/sharedmem.h>
+ #endif
+ #include <errno.h>
++#include <fcntl.h>   /* open(), O_RDWR - used below, never included */
+ #include <pthread.h>
+ #include <stdbool.h>
+ #include <stdint.h>
+@@ -23,7 +24,26 @@
+ #include "shm.h"
+ 
+ #define DBG(...) __android_log_print(ANDROID_LOG_INFO, "shmem", __VA_ARGS__)
+-#define ASHV_KEY_SYMLINK_PATH _PATH_TMP "ashv_key_%d"
++/*
++ * Upstream builds this path from _PATH_TMP, which Termux patches into its own
++ * <paths.h> as $PREFIX/tmp. bionic's <paths.h> has no _PATH_TMP at all, so the
++ * macro does not compile outside Termux -- and when it did compile, it baked
++ * /data/data/com.termux/... into the binary, which is wrong for every other app.
++ *
++ * Resolve it at runtime from TMPDIR instead. Any Android app that runs this
++ * already has to set TMPDIR, because there is no writable /tmp on Android.
++ */
++#ifndef ASHV_TMPDIR_FALLBACK
++#define ASHV_TMPDIR_FALLBACK "/data/local/tmp"
++#endif
++
++static const char *ashv_tmpdir(void)
++{
++	const char *dir = getenv("TMPDIR");
++	/* Reject a relative or empty TMPDIR: the symlink has to be at a stable
++	 * absolute location or two processes will not find each other's keys. */
++	return (dir != NULL && dir[0] == '/') ? dir : ASHV_TMPDIR_FALLBACK;
++}
+ #define ANDROID_SHMEM_SOCKNAME "/dev/shm/%08x"
+ #define ROUND_UP(N, S) ((((N) + (S) - 1) / (S)) * (S))
+ 
+@@ -349,7 +369,9 @@ int shmget(key_t key, size_t size, int flags)
+ 		// (3) If connected and opened, done. If connection refused
+ 		//     take ownership of the key and create the symlink.
+ 		// (4) If no symlink, create it.
+-		sprintf(symlink_path, ASHV_KEY_SYMLINK_PATH, key);
++		/* snprintf, not sprintf: TMPDIR is environment-controlled now,
++		 * so the length of this string is no longer bounded by the source. */
++		snprintf(symlink_path, sizeof(symlink_path), "%s/ashv_key_%d", ashv_tmpdir(), key);
+ 		char path_buffer[256];
+ 		char num_buffer[64];
+ 		while (true) {

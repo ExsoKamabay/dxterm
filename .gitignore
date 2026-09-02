@@ -1,27 +1,71 @@
-# Compiled class file
-*.class
+*.iml
+.gradle/
+/local.properties
+/.idea/
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
 
-# Log file
-*.log
+# --- Release signing material. Files stay on disk for local signed builds; this
+# --- only keeps them out of version control.
+/keystore/
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+# Signing credentials belong in ~/.gradle/gradle.properties, NOT in the repo.
+keystore.properties
+signing.properties
 
-# BlueJ files
-*.ctxt
+# Environment files. Nothing in the build reads one; they exist only to hold
+# machine-local values, and those are exactly the values that must not ship.
+.env
+.env.*
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+# Host-side native engine tests (native-tests/run-tests.sh) build output.
+# The root /build/ rule above is anchored, so this path needs its own entry.
+native-tests/build/
 
-# Package Files #
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
+# --- Linux rootfs images. A 200 MB archive in git history is paid for by every
+# --- clone, for ever, and through Git LFS it exhausts the free bandwidth quota
+# --- after a handful of fetches. Build-time drop-in only; keep it locally.
+/app/src/main/assets/rootfs/*
+!/app/src/main/assets/rootfs/README.txt
+*.tar.xz
 *.tar.gz
-*.rar
+*.tar.zst
+*.tgz
+*.txz
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+# Build outputs that must never be committed (releases are attached to tags).
+*.apk
+*.aab
+*.idsig
+/app/release/
 
-# Kotlin Gradle plugin data, see https://kotlinlang.org/docs/whatsnew20.html#new-directory-for-kotlin-data-in-gradle-projects
-.kotlin/
+# Signed release artifacts staged for a GitHub Release, plus their checksums.
+# They are attached to the tag, not tracked here.
+/apps/
+
+# Scratch files left behind by local tooling. They describe the machine they were
+# written on, not this app, and nothing in the build reads them.
+/SKILLS.json
+/.gstack/
+
+# Prebuilt build tree: fetched upstream sources and build output. The recipe is
+# what belongs in the repository; its results do not.
+/prebuilts/work/
+
+# --- Notes files that tend to collect secrets. A passphrase in docs/pass.txt is
+# --- how this repository leaked a signing key once; catching it mechanically is
+# --- cheaper than catching it by reading.
+pass.txt
+passwords.txt
+secrets.txt
+credentials.txt
+*-password*
+*-passphrase*
+*.secret

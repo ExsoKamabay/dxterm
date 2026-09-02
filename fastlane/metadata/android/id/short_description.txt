@@ -1,0 +1,1 @@
+Emulator terminal ARM64 native dengan lingkungan Linux PRoot opsional

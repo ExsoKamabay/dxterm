@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/key_fg">
+    <!-- keyboard body -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.6"
+        android:pathData="M3.3,6.2 h17.4 a1.1,1.1 0 0 1 1.1,1.1 v9.4 a1.1,1.1 0 0 1 -1.1,1.1 h-17.4 a1.1,1.1 0 0 1 -1.1,-1.1 v-9.4 a1.1,1.1 0 0 1 1.1,-1.1 z" />
+    <!-- key row 1 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M5,9h1.6v1.6h-1.6z M8.2,9h1.6v1.6h-1.6z M11.2,9h1.6v1.6h-1.6z M14.2,9h1.6v1.6h-1.6z M17.4,9h1.6v1.6h-1.6z" />
+    <!-- key row 2 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M6.5,11.9h1.6v1.6h-1.6z M9.7,11.9h1.6v1.6h-1.6z M12.7,11.9h1.6v1.6h-1.6z M15.9,11.9h1.6v1.6h-1.6z" />
+    <!-- spacebar -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M7.5,14.8h9v1.4h-9z" />
+</vector>
