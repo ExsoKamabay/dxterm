@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import re
 import struct
+import subprocess
 import sys
 from pathlib import Path
 
@@ -345,17 +346,29 @@ def main() -> int:
         ok("no keystore or private key in the working tree")
 
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8") if (ROOT / ".gitignore").is_file() else ""
-    for rule in ("*.keystore", "*.jks", "*.apk"):
+    for rule in ("*.keystore", "*.jks", "*.apk", "*.aab", "/apps/"):
         if rule in gitignore:
             ok(f".gitignore covers {rule}")
         else:
             fail(f".gitignore does not cover {rule}")
 
-    workflow = ROOT / ".github" / "workflows" / "release.yml"
-    if workflow.is_file():
-        ok(".github/workflows/release.yml present (tagged releases are automated)")
+    # A rule in .gitignore does nothing for a file that was already added, so ask git
+    # what it actually tracks rather than trusting the rule.
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z"], cwd=ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.split("\0")
+    except (OSError, subprocess.CalledProcessError):
+        warn("could not ask git which files are tracked; skipped the artifact check")
     else:
-        fail(".github/workflows/release.yml is missing, tagged releases are how APKs get published")
+        staged = [f for f in tracked
+                  if f.endswith((".apk", ".aab")) or f.startswith("apps/")]
+        if staged:
+            for f in staged:
+                fail(f"build artifact tracked by git: {f}")
+        else:
+            ok("no APK, AAB or apps/ content is tracked by git")
 
     # ----------------------------------------------------------------------
     section("Result")
