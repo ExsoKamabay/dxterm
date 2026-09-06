@@ -50,6 +50,11 @@ native-tests/build/
 # They are attached to the tag, not tracked here.
 /apps/
 
+# Downloaded rootfs images staged for mirroring (scripts/, manual fetches). The
+# *.tar.xz rule above already covers the archives; this keeps the checksums,
+# signatures and build logs that come with them out of the tree too.
+/rootless/
+
 # Scratch files left behind by local tooling. They describe the machine they were
 # written on, not this app, and nothing in the build reads them.
 /SKILLS.json

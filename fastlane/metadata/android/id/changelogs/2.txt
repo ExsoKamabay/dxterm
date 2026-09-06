@@ -1,0 +1,10 @@
+Perbaikan pemasangan Debian.
+
+Sumber image Debian, easycli.sh, berhenti melayani berkasnya, jadi pemasangan
+Debian gagal di versi 1.0.0. Pin SHA-256 menolak byte yang salah itu, seperti
+seharusnya, tapi Debian tetap tidak bisa dipasang.
+
+Entri Debian sekarang menunjuk ke images.linuxcontainers.org, yang menerbitkan
+SHA256SUMS sendiri. Unduhannya 90 MB, dan butuh sekitar 520 MB terpasang.
+
+Kali Linux tidak berubah. Terminal dan xset juga tidak.

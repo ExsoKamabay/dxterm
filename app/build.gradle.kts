@@ -110,8 +110,8 @@ android {
         applicationId = "com.xdrac"
         minSdk = 24            // forkpty/openpty + WindowInsets IME animation path supported; runtime-guarded below
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         // Every shipped prebuilt (proot, busybox, talloc, shmem, loader) is arm64-v8a only.
         // Another ABI here builds an APK whose binaries cannot run on it.

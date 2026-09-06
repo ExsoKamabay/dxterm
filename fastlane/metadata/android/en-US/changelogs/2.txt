@@ -1,0 +1,10 @@
+A fix for installing Debian.
+
+The Debian image host, easycli.sh, stopped serving the file, so installing
+Debian failed in 1.0.0. The pinned SHA-256 refused those wrong bytes, which is
+what it is for, but Debian could not be installed either way.
+
+The Debian entry now points at images.linuxcontainers.org, which publishes its
+own SHA256SUMS. The download is 90 MB and needs about 520 MB installed.
+
+Kali Linux is unchanged, and so are the terminal and xset.

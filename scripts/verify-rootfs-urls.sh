@@ -42,6 +42,7 @@ checksum_source() {
     dir="${url%/*}"; file="${url##*/}"
     case "$url" in
         *kali.download*)           printf '%s/SHA256SUMS\n' "$dir" ;;
+        *images.linuxcontainers.org*) printf '%s/SHA256SUMS\n' "$dir" ;;
         *)                         printf '\n' ;;
     esac
 }

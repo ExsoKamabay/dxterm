@@ -1,0 +1,47 @@
+Deskripsi Screenshot dracxterm 1.0.1
+====================================
+
+Perangkat uji: Infinix X6726B, Android 15 (API 35), arm64-v8a, layar 720x1600.
+Distro yang dipasang: Kali Linux (nano). Semua gambar 720x1600 JPEG.
+
+1. 01-pilih-distro-arm64-dracxterm.jpg
+   Layar pertama dracxterm. Aplikasi membaca ABI perangkat dan hanya
+   menampilkan image yang cocok untuk arm64-v8a, lengkap dengan ukuran
+   unduhan dan ruang penyimpanan yang dibutuhkan tiap distro. Toggle
+   bahasa Indonesia/Inggris ada di bagian atas.
+
+2. 02-unduh-pasang-kali-nano-dracxterm.jpg
+   Proses pemasangan Kali Linux (nano) berjalan, dengan progres unduhan
+   dalam MB dan tombol batal. Setelah unduhan selesai, arsipnya dicocokkan
+   SHA-256 dengan digest yang dipin di dalam APK sebelum diekstrak.
+
+3. 03-terminal-kali-berjalan-dracxterm.jpg
+   Kali Linux berjalan di dalam terminal lewat PRoot, tanpa root. Terlihat
+   kernel Android yang dipakai, isi root filesystem, jumlah paket yang
+   terpasang, dan proses proot yang menopang sesi.
+
+4. 04-render-warna-utf8-dracxterm.jpg
+   Kemampuan mesin terminal yang ditulis dari nol dengan C++: 16 warna
+   ANSI, palet 256 warna, atribut bold, italic, underline dan reverse,
+   serta UTF-8 penuh termasuk karakter lebar CJK dan emoji.
+
+5. 05-xset-appearance-dracxterm.jpg
+   Menu xset, pengaturan yang digambar di dalam terminal itu sendiri.
+   Halaman Appearance merangkum tema, ukuran font, bentuk dan warna kursor,
+   spasi baris, dan padding dalam satu layar, dengan pratinjau langsung.
+
+6. 06-xset-tema-preset-dracxterm.jpg
+   Pemilihan preset tema di xset. Sepuluh preset tersedia, dan perubahan
+   warna foreground, background, serta kursor langsung diterapkan ke
+   terminal yang sedang berjalan lalu tersimpan otomatis.
+
+7. 07-xset-akses-penyimpanan-dracxterm.jpg
+   Sakelar akses penyimpanan. Izin tidak pernah diminta saat aplikasi
+   dibuka; kalau dinyalakan, penyimpanan internal muncul di ~/sdcard dan
+   volume lepas-pasang di ~/sdcard-1, berlaku langsung pada shell yang
+   sedang jalan. Kalau ditolak, terminal tetap berfungsi.
+
+8. 08-scrollback-multi-workspace-dracxterm.jpg
+   Lima workspace terbuka sekaligus, masing-masing dengan shell, PTY, dan
+   riwayatnya sendiri, berpindah dengan usap. Scrollback berwarna sedalam
+   ribuan baris, dengan seleksi teks yang langsung disalin ke clipboard.
