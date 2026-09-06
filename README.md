@@ -84,9 +84,9 @@ Yang pertama diperiksa: apakah sudah ada rootfs yang terpasang dan masih utuh.
 Kalau ada, semua langkah di bawah dilewati dan aplikasi langsung membuka
 terminal.
 
-Kalau belum ada, aplikasi menanyakan satu hal ke dirinya sendiri, yaitu build
-ini membawa image di dalam APK atau tidak. Jawabannya dibaca dari isi
-`assets/rootfs/` di dalam APK, bukan dari nama berkas APK atau flag build:
+Kalau belum ada, langkah berikutnya ditentukan oleh apakah build ini membawa
+image di dalam APK atau tidak. Jawabannya dibaca dari isi `assets/rootfs/` di
+dalam APK, bukan dari nama berkas APK atau flag build:
 
 - **Ada arsip di dalam APK.** Arsipnya langsung diekstrak. Tidak ada daftar
   distro, tidak ada panel persetujuan, dan tidak ada jaringan yang disentuh.
@@ -100,9 +100,8 @@ dari situ tanpa mengunduh ulang.
 
 ### Panel persetujuan
 
-Tidak ada yang diunduh sampai Anda menekan tombolnya. Ini bukan detail kecil:
-mengunduh adalah satu-satunya alasan aplikasi ini membuka koneksi jaringan sama
-sekali.
+Tidak ada yang diunduh sampai Anda menekan tombolnya. Mengunduh adalah
+satu-satunya alasan aplikasi ini membuka koneksi jaringan.
 
 Menolak adalah pilihan yang sah, bukan kondisi error. Kalau Anda menolak,
 aplikasi membuka terminal dengan shell BusyBox yang ikut di dalam APK, dan
