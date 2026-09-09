@@ -90,10 +90,18 @@ while IFS=$'\t' read -r abi label url sha size; do
     # Upstream formats differ: "<sha>  <file>", "<sha> *<file>", and some hosts
     # "SHA256 (<file>) = <sha>". Pull whichever 64-hex token shares a line with
     # the filename rather than assuming a column.
+    #
+    # The trailing "|| true" is what keeps a missing digest a warning instead of the
+    # end of the run. Under "set -e" with pipefail a grep that matches nothing fails
+    # the whole pipeline, and the failure of a command substitution in an assignment
+    # is the failure of the assignment, so the script exited here without printing
+    # anything and left the remaining entries unchecked. An empty result is a normal
+    # outcome the "could not read a digest" branch below already handles: a host can
+    # prune its SHA256SUMS while still serving the archive.
     upstream=$(curl -sL --max-time 45 "$src" 2>/dev/null \
         | grep -F "$file" \
         | grep -oiE '[0-9a-f]{64}' \
-        | head -1 | tr 'A-F' 'a-f')
+        | head -1 | tr 'A-F' 'a-f' || true)
 
     if [ -z "$upstream" ]; then
         warn "could not read a digest for $file from $src"

@@ -1,0 +1,10 @@
+Perubahan pengemasan. Tidak ada yang baru di layar.
+
+Android Gradle Plugin menulis pohon dependency aplikasi ke dalam signing block
+APK, dienkripsi supaya hanya Google yang bisa membacanya. Build ini tidak lagi
+menyertakannya, jadi isi APK bisa diperiksa siapa saja.
+
+Skrip yang mencocokkan katalog image dengan upstream juga berhenti lebih awal
+ketika sebuah host menghapus SHA256SUMS-nya. Sekarang keempat entri diperiksa.
+
+Terminal, xset, izin, dan katalognya tidak berubah.

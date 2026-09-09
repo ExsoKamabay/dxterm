@@ -200,7 +200,7 @@ talloc, dan libandroid-shmem. Rinciannya di
 
 ## Versi dan paket
 
-Rilis saat ini 1.0.1, `versionCode` 2, dengan `applicationId` `com.xdrac`.
+Rilis saat ini 1.0.2, `versionCode` 3, dengan `applicationId` `com.xdrac`.
 
 Riwayat perubahan tiap rilis ada di [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -210,13 +210,13 @@ Ambil APK dari [Releases](https://github.com/ExsoKamabay/dxterm/releases).
 Tiap berkas punya `.sha256` di sebelahnya. Periksa dulu sebelum memasang:
 
 ```bash
-sha256sum -c dracxterm-1.0.1-vc2-release.apk.sha256
+sha256sum -c dracxterm-1.0.2-vc3-release.apk.sha256
 ```
 
 Lalu pasang lewat `adb`:
 
 ```bash
-adb install -r dracxterm-1.0.1-vc2-release.apk
+adb install -r dracxterm-1.0.2-vc3-release.apk
 ```
 
 Atau salin APK ke perangkat dan buka dari file manager. Android akan meminta
@@ -396,8 +396,8 @@ Untuk rilis baru, ubah dua angka di
 [`app/build.gradle.kts`](app/build.gradle.kts):
 
 ```kotlin
-versionCode = 2
-versionName = "1.0.1"
+versionCode = 3
+versionName = "1.0.2"
 ```
 
 `versionCode` hanya boleh naik dan tidak boleh dipakai ulang untuk unggahan

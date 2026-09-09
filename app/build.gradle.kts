@@ -110,8 +110,8 @@ android {
         applicationId = "com.xdrac"
         minSdk = 24            // forkpty/openpty + WindowInsets IME animation path supported; runtime-guarded below
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
 
         // Every shipped prebuilt (proot, busybox, talloc, shmem, loader) is arm64-v8a only.
         // Another ABI here builds an APK whose binaries cannot run on it.
@@ -132,6 +132,18 @@ android {
     // A local image is deliberately not committed: 200 MB in git history is paid for by
     // every clone, and through Git LFS it exhausts the free bandwidth quota after a handful
     // of fetches. ./scripts/fetch-rootfs.sh puts one in place when an offline build is wanted.
+
+    // AGP writes a description of the dependency tree into the APK signing block,
+    // encrypted against a Google public key. Nobody outside Google can read it back, so
+    // no reviewer and no user can check what a published build actually declares there,
+    // and the IzzyOnDroid scanner reports it on every APK that carries one. Turning both
+    // flags off keeps the blob out of the APK and out of the App Bundle. It holds no
+    // information the build needs; Play is the only consumer, and this app is not
+    // distributed through it.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
 
     // The prebuilt executables must exist as real files inside nativeLibraryDir so they
     // can be exec()'d on API 29+. useLegacyPackaging=true keeps them uncompressed/extracted.

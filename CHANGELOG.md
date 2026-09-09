@@ -5,6 +5,52 @@ Rilis dracxterm, versi terbaru di atas. Format tanggalnya YYYY-MM-DD.
 `versionCode` adalah nomor internal Google Play. Ia hanya boleh naik, dan satu
 angka tidak boleh dipakai ulang untuk unggahan yang berbeda.
 
+## [1.0.2] - 2026-09-10
+
+Rilis perkakas build. `versionCode` 3. Mesin terminal, antarmuka, izin, dan
+katalog image tidak berubah sama sekali. Yang berubah adalah apa yang ikut
+ditulis ke dalam APK, dan satu skrip pemeriksaan pra-rilis yang ternyata
+berhenti di tengah jalan tanpa bilang apa-apa.
+
+### Blob dependency Google tidak lagi ikut dikemas
+
+Android Gradle Plugin menulis deskripsi pohon dependency ke dalam signing block
+APK, dienkripsi dengan kunci publik milik Google. Tidak ada pihak di luar Google
+yang bisa membacanya kembali, jadi tidak ada peninjau maupun pengguna yang bisa
+memeriksa apa yang sebenarnya dinyatakan di sana.
+
+`dependenciesInfo` sekarang mematikannya untuk APK maupun App Bundle. Build
+tidak membutuhkan isinya: satu-satunya yang membaca blob itu adalah Play, dan
+aplikasi ini tidak disalurkan lewat sana.
+
+### Pemeriksaan katalog berhenti diam-diam
+
+`scripts/verify-rootfs-urls.sh` berjalan dengan `set -e` dan `pipefail`. Ketika
+sebuah host memangkas `SHA256SUMS`-nya tapi tetap menyajikan arsipnya, `grep`
+yang tidak menemukan apa pun menggagalkan seluruh pipeline, dan gagalnya
+substitusi perintah di dalam assignment ikut menggagalkan assignment itu. Skrip
+keluar di tengah tanpa mencetak sebaris pun.
+
+Itulah yang terjadi pada entri Debian. Direktori build bertanggalnya masih
+menyajikan `rootfs.tar.xz`, tapi `SHA256SUMS` di sebelahnya sudah 404. Skrip
+berhenti di entri pertama, dan tiga entri Kali tidak pernah diperiksa. Dari
+layar, hasilnya terlihat seperti pemeriksaan yang lolos.
+
+Digest yang tidak terbaca sekarang kembali jadi peringatan seperti yang
+dirancang, dan keempat entri selalu diperiksa sampai habis.
+
+### Keadaan katalog saat rilis ini dipotong
+
+Keempat entri terjangkau dan ukurannya cocok. Ketiga image Kali cocok dengan
+`SHA256SUMS` upstream. Digest Debian sudah tidak bisa diturunkan ulang dari
+upstream karena `SHA256SUMS` build itu dihapus, tapi byte yang disajikan masih
+sama persis dengan yang dipin di dalam APK. Itu diperiksa dengan mengunduh ulang
+arsipnya dan menghitung SHA-256-nya sendiri sebelum rilis ini dipotong.
+
+Keterbatasan yang dicatat di 1.0.1 masih berlaku. Server linuxcontainers
+merotasi build bertanggal, jadi URL Debian akan berhenti resolve dan pemasangan
+Debian gagal lagi sampai katalognya dipindah ke mirror sendiri.
+
 ## [1.0.1] - 2026-09-07
 
 Rilis perbaikan. `versionCode` 2. Tidak ada perubahan pada mesin terminal,

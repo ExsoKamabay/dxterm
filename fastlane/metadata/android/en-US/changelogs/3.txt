@@ -1,0 +1,10 @@
+A packaging change. Nothing new on screen.
+
+Android Gradle Plugin writes the app's dependency tree into the APK signing
+block, encrypted so only Google can read it back. This build leaves it out, so
+what ships inside the APK is something anyone can inspect.
+
+The script that checks the image catalogue against upstream also stopped early
+when a host dropped its SHA256SUMS. It checks all four entries again.
+
+The terminal, xset, permissions, and the catalogue are unchanged.
