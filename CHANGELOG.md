@@ -5,6 +5,16 @@ Rilis dracxterm, versi terbaru di atas. Format tanggalnya YYYY-MM-DD.
 `versionCode` adalah nomor internal Google Play. Ia hanya boleh naik, dan satu
 angka tidak boleh dipakai ulang untuk unggahan yang berbeda.
 
+## [1.0.3] - 2026-09-11
+
+Perubahan lisensi. `versionCode` 4. Kode aplikasi sekarang berlisensi GNU
+General Public License versi 3, menggantikan Apache License 2.0. Ini menyamakan
+lisensi aplikasi dengan biner GPL yang ikut dibundel, yaitu BusyBox dan PRoot.
+Berkas `LICENSE`, `NOTICE`, dan bagian lisensi di `README.md` sudah diperbarui.
+Biner pihak ketiga tetap memakai lisensinya sendiri; tidak ada yang direlisensi.
+
+Tidak ada perubahan pada mesin terminal, antarmuka, izin, maupun katalog image.
+
 ## [1.0.2] - 2026-09-10
 
 Rilis perkakas build. `versionCode` 3. Mesin terminal, antarmuka, izin, dan

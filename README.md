@@ -528,7 +528,7 @@ Versi upstream, lisensi, dan written offer untuk source code-nya ada di
 
 ## Lisensi
 
-Apache-2.0, lihat [`LICENSE`](LICENSE).
+GPL-3.0-or-later, lihat [`LICENSE`](LICENSE).
 
 Biner pihak ketiga punya lisensinya sendiri: GPL-2.0 untuk BusyBox dan PRoot,
 LGPL-3.0 untuk talloc, dan BSD-3-Clause untuk libandroid-shmem. Font JetBrains

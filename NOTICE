@@ -2,14 +2,14 @@ dracxterm
 Copyright 2026 Bang Jack
 
 This product includes software developed for the dracxterm project.
-The original dracxterm source code is licensed under the Apache License,
-Version 2.0. See the LICENSE file distributed with this work.
+The original dracxterm source code is licensed under the GNU General Public License,
+Version 3. See the LICENSE file distributed with this work.
 
 Third-Party Software
 --------------------
 
 This product includes or depends on third-party software. Those components
-are not relicensed under the dracxterm Apache License 2.0 and remain subject
+are not relicensed under the dracxterm GPL-3.0 license and remain subject
 to their respective copyright notices and license terms.
 
 * JetBrains Mono
@@ -70,8 +70,8 @@ Content Obtained At The User's Request
   A build with no archive in app/src/main/assets/rootfs downloads one only
   after the user picks it and opts in. A build with an archive there carries
   that image inside the APK. Either way the image is governed by the license
-  terms of the distribution it comes from, not by the dracxterm Apache
-  License 2.0.
+  terms of the distribution it comes from, not by the dracxterm GPL-3.0
+  license.
 
 * Ollama
   Not bundled in the APK. Downloaded only on explicit user request from the
