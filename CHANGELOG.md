@@ -5,6 +5,47 @@ Rilis dracxterm, versi terbaru di atas. Format tanggalnya YYYY-MM-DD.
 `versionCode` adalah nomor internal Google Play. Ia hanya boleh naik, dan satu
 angka tidak boleh dipakai ulang untuk unggahan yang berbeda.
 
+## [Belum dirilis]
+
+`versionCode` belum dinaikkan. Perubahannya ada di katalog image, skrip
+pemeriksaan, dan dokumentasi; mesin terminal, antarmuka, dan izin tidak
+tersentuh.
+
+### Keempat image pindah ke mirror sendiri
+
+Katalog `assets/rootfsURLS.json` sekarang menunjuk ke aset rilis
+`rootfs-20260913` di https://github.com/ExsoKamabay/rootless. Repositori itu
+hanya menyimpan arsip rootfs beserta `SHA256SUMS`-nya, tanpa kode program.
+
+Untuk ketiga entri Kali yang berubah cuma host-nya. Digest, ukuran unduhan, dan
+perkiraan ruang terpasang sama persis dengan 1.0.3, dan ketiganya masih cocok
+dengan `SHA256SUMS` yang diterbitkan Kali untuk kali-2026.2.
+
+### Entri Debian kembali ke image 1.0.0
+
+URL `images.linuxcontainers.org` yang dipin sejak 1.0.1 sudah mati. Server itu
+menyimpan build bertanggal sekitar tiga hari saja, dan build
+`20260904_05:24` menjawab 404 sekarang. Catatan di 1.0.1 sudah memperingatkan
+ini akan terjadi.
+
+Entri Debian kembali memakai `debian-trixie-aarch64-pd-v4.37.0.tar.xz`, build
+proot-distro yang dipin proyek ini di 1.0.0, dengan digest
+`9bd3b19ff7cd300c7c7bf33124b726eb199f4bab9a3b1472f34749c6d12c9195`. Unduhannya
+turun dari 90 MB ke 35 MB dan perkiraan ruang terpasang dari 520 MB ke 400 MB,
+angka yang dipakai 1.0.0 untuk image yang sama.
+
+Digest itu tidak bisa lagi diturunkan ulang dari pihak luar. `easycli.sh` yang
+dulu menerbitkannya sudah menutup hosting. Yang menopangnya sekarang adalah pin
+yang dibawa proyek ini sejak rilis pertama, dan byte di mirror cocok dengan pin
+itu.
+
+### Skrip pemeriksaan tahu letak SHA256SUMS mirror
+
+`scripts/verify-rootfs-urls.sh` memetakan URL aset rilis GitHub ke
+`SHA256SUMS` di branch main repositori yang sama, karena mirror menerbitkan satu
+berkas untuk semua image alih-alih satu per direktori rilis. Tanpa itu keempat
+entri akan lewat dengan peringatan "no known checksum layout for this host".
+
 ## [1.0.3] - 2026-09-11
 
 Perubahan lisensi. `versionCode` 4. Kode aplikasi sekarang berlisensi GNU

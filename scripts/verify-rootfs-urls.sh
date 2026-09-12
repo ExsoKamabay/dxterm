@@ -41,6 +41,14 @@ checksum_source() {
     local url="$1" dir file
     dir="${url%/*}"; file="${url##*/}"
     case "$url" in
+        # The mirror publishes one SHA256SUMS on its default branch, not one per
+        # release directory, so the digest does not come from "$dir" here. Turn
+        #   https://github.com/<owner>/<repo>/releases/download/<tag>/<file>
+        # into
+        #   https://raw.githubusercontent.com/<owner>/<repo>/main/SHA256SUMS
+        *//github.com/*/releases/download/*)
+            printf 'https://raw.githubusercontent.com/%s/main/SHA256SUMS\n' \
+                "$(printf '%s' "$url" | cut -d/ -f4,5)" ;;
         *kali.download*)           printf '%s/SHA256SUMS\n' "$dir" ;;
         *images.linuxcontainers.org*) printf '%s/SHA256SUMS\n' "$dir" ;;
         *)                         printf '\n' ;;

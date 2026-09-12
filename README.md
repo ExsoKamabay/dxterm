@@ -173,7 +173,7 @@ tetap hidup saat Anda pindah ke aplikasi lain.
 - Android 7.0 (API 24) atau lebih baru.
 - Prosesor ARM64. APK hanya memuat biner `arm64-v8a`; perangkat 32-bit
   (`armeabi-v7a`) dan x86 tidak didukung.
-- Ruang penyimpanan sesuai distro yang dipilih. Debian 13 butuh sekitar 520 MB
+- Ruang penyimpanan sesuai distro yang dipilih. Debian 13 butuh sekitar 400 MB
   setelah terpasang, Kali versi lengkap sekitar 9,5 GB.
 
 Tidak butuh akun, layanan Google, atau akses root.
@@ -235,31 +235,34 @@ BusyBox yang ikut di dalam APK.
 
 Empat image tersedia untuk `arm64-v8a`:
 
-| Distro | Unduhan | Terpasang | Sumber |
+| Distro | Unduhan | Terpasang | Asal image |
 |---|---|---|---|
-| Debian 13 (trixie) | 90 MB | 520 MB | `images.linuxcontainers.org` |
-| Kali Linux (nano) | 198 MB | 1,0 GB | `kali.download` |
-| Kali Linux (minimal) | 137 MB | 1,0 GB | `kali.download` |
-| Kali Linux (full pentesting) | 1,8 GB | 9,5 GB | `kali.download` |
+| Debian 13 (trixie) | 35 MB | 400 MB | build proot-distro |
+| Kali Linux (nano) | 198 MB | 1,0 GB | Kali NetHunter 2026.2 |
+| Kali Linux (minimal) | 137 MB | 1,0 GB | Kali NetHunter 2026.2 |
+| Kali Linux (full pentesting) | 1,8 GB | 9,5 GB | Kali NetHunter 2026.2 |
+
+Keempatnya diunduh dari satu tempat, yaitu aset rilis
+[`ExsoKamabay/rootless`](https://github.com/ExsoKamabay/rootless), mirror milik
+proyek ini. Repositori itu hanya menyimpan arsip rootfs, tanpa kode program.
 
 Debian 13 adalah pilihan default. URL, digest, dan catatan tiap image ada di
 [`rootfsURLS.json`](app/src/main/assets/rootfsURLS.json), termasuk penjelasan
 asal-usul tiap sumber.
 
-Kedua sumber di atas menerbitkan `SHA256SUMS` sendiri, jadi digest yang dipin di
-dalam APK bisa dicocokkan ulang dengan proyeknya masing-masing. Sebelum memotong
-rilis, jalankan pemeriksaannya:
+Mirror itu menerbitkan `SHA256SUMS` di branch main-nya, dan tiga digest Kali di
+dalamnya masih sama dengan yang diterbitkan Kali untuk kali-2026.2. Sebelum
+memotong rilis, jalankan pemeriksaannya:
 
 ```bash
 ./scripts/verify-rootfs-urls.sh
 ```
 
 Skrip itu membaca katalognya, memastikan tiap URL masih hidup dan ukurannya
-belum berubah, lalu membandingkan tiap digest dengan `SHA256SUMS` upstream. Ada
-satu hal yang perlu diawasi: server image linuxcontainers hanya menyimpan build
-bertanggal sekitar tiga hari, jadi URL Debian akan berhenti resolve begitu build
-itu dirotasi keluar. Digest-nya tetap berlaku di mana pun byte yang sama
-disajikan, jadi memindahkannya ke mirror sendiri tidak mengubah apa yang
+belum berubah, lalu membandingkan tiap digest dengan `SHA256SUMS` milik mirror.
+Aset rilis tidak dirotasi keluar seperti build bertanggal di server
+linuxcontainers, yang dua kali membuat entri Debian mati. Digest tetap berlaku
+di mana pun byte yang sama disajikan, jadi pindah host tidak mengubah apa yang
 dipasang di perangkat.
 
 ## Izin Android
@@ -518,10 +521,11 @@ Versi upstream, lisensi, dan written offer untuk source code-nya ada di
   dan riwayat shell, bisa ikut terbawa oleh backup atau transfer perangkat.
   Matikan backup untuk aplikasi ini lewat Settings kalau Anda mengetik hal
   sensitif di terminal.
-- **URL Debian berumur pendek.** `images.linuxcontainers.org` hanya menyimpan
-  build bertanggal sekitar tiga hari, jadi URL Debian di katalog berhenti
-  resolve setelah build itu dirotasi keluar, dan pemasangan Debian gagal sampai
-  katalognya dipindah ke mirror sendiri. Kali tidak punya masalah ini.
+- **Semua image bergantung pada satu mirror.** Keempat URL di katalog menunjuk
+  ke aset rilis `ExsoKamabay/rootless`. Kalau rilis itu dihapus atau reponya
+  hilang, tidak ada distro yang bisa dipasang sampai katalognya dipindah.
+  Digest ketiga image Kali masih bisa diturunkan ulang dari `kali.download`,
+  sedangkan digest Debian tidak: host yang dulu menerbitkannya sudah tutup.
 - **Tidak ada unit test JVM dan tidak ada CI di repo ini.** Yang tersedia hanya
   suite C++ untuk mesin terminal di `native-tests/` dan lint Android.
 - **Ollama berjalan lewat PRoot**, jadi kecepatannya di bawah biner native.
