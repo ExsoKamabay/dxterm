@@ -16,6 +16,12 @@ while [ "$#" -gt 0 ]; do
     *)                        shift ;;
   esac
 done
+# Real sudo replaces PATH with secure_path so root-only tools in the sbin directories are found.
+# Without it `sudo dpkg -i pkg.deb` dies with "'ldconfig' not found in PATH or not executable",
+# because the login user's PATH carries no /usr/sbin or /sbin. Mirror Debian's default secure_path.
+# /usr/local/bin stays ahead of /usr/bin so the identity shims still shadow the distro's coreutils.
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
 if [ -n "$cmd" ]; then
   # DRAC_SU here too, so `su -c whoami` answers root like the interactive form does.
   # The identity shims on PATH read this variable; without it the two spellings of su

@@ -21,6 +21,23 @@ class RootfsDiscovery(private val ctx: Context) {
         const val ASSET_DIR = "rootfs"
         /** On-device location for images obtained at the user's request. */
         const val IMAGE_DIR = "rootfs-image"
+
+        /**
+         * The device's primary CPU arch in [RootfsArchive.classify]'s vocabulary
+         * ("arm64"/"armhf"/"x86_64"/"x86"), so a rootfs' `arch` can be compared to it directly.
+         * Shared by [selectLocal] and [RootfsSourceResolver] so bundled and downloaded images are
+         * matched to the device the same way.
+         */
+        fun deviceArch(): String {
+            val abis = Build.SUPPORTED_ABIS ?: emptyArray()
+            return when {
+                abis.any { it == "arm64-v8a" } -> "arm64"
+                abis.any { it == "armeabi-v7a" } -> "armhf"
+                abis.any { it == "x86_64" } -> "x86_64"
+                abis.any { it == "x86" } -> "x86"
+                else -> "unknown"
+            }
+        }
     }
 
     /** Directory holding downloaded/imported images. Created lazily by the downloader. */
@@ -64,16 +81,5 @@ class RootfsDiscovery(private val ctx: Context) {
         }
         if (freed > 0L) Log.i(ShellLocator.TAG, "[DISCOVERY] Reclaimed $freed bytes of image cache")
         return freed
-    }
-
-    private fun deviceArch(): String {
-        val abis = Build.SUPPORTED_ABIS ?: emptyArray()
-        return when {
-            abis.any { it == "arm64-v8a" } -> "arm64"
-            abis.any { it == "armeabi-v7a" } -> "armhf"
-            abis.any { it == "x86_64" } -> "x86_64"
-            abis.any { it == "x86" } -> "x86"
-            else -> "unknown"
-        }
     }
 }

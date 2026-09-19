@@ -1,0 +1,20 @@
+Force 16 KB max-page-size on the PRoot loader link.
+
+The loader is linked through LOADER_LDFLAGS, not the top-level LDFLAGS that
+prebuilts/proot/build.sh passes -Wl,-z,max-page-size=16384 to, so the loader
+came out with 4 KB-aligned PT_LOAD segments while proot itself was 16 KB. On an
+Android 15 device with 16 KB pages, exec() of a 4 KB-aligned binary fails, and
+the loader is exec()'d as the ptrace stub. Append the same flag here so the
+loader matches. -Ttext and the arch-specific LOADER_ADDRESS are unaffected;
+this only changes segment padding.
+
+--- a/src/GNUmakefile
++++ b/src/GNUmakefile
+@@ -214,7 +214,7 @@ $(eval $(call define_from_arch.h,$1,LOADER_ADDRESS))
+
+ LOADER_CFLAGS$1  += -fPIC -ffreestanding $(LOADER_ARCH_CFLAGS$1)
+-LOADER_LDFLAGS$1 += -static -nostdlib -Wl$(BUILD_ID_NONE),-Ttext=$(LOADER_ADDRESS$1)$(ROSEGMENT),-z,noexecstack
++LOADER_LDFLAGS$1 += -static -nostdlib -Wl$(BUILD_ID_NONE),-Ttext=$(LOADER_ADDRESS$1)$(ROSEGMENT),-z,noexecstack,-z,max-page-size=16384
+
+ loader/loader$1.o: loader/loader.c
+ 	@mkdir -p $$(dir $$@)

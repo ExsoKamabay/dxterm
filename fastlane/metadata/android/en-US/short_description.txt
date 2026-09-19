@@ -1,1 +1,1 @@
-Native ARM64 terminal emulator with an optional PRoot Linux environment
+Native terminal emulator with an optional rootless Linux environment

@@ -17,11 +17,24 @@ while [ "$#" -gt 0 ]; do
     *)                                break ;;
   esac
 done
-if [ "$login" = 1 ] || [ "$#" -eq 0 ]; then
+# Real sudo replaces PATH with secure_path so root-only tools in the sbin directories are found.
+# Without it `sudo dpkg -i pkg.deb` dies with "'ldconfig' not found in PATH or not executable",
+# because the login user's PATH carries no /usr/sbin or /sbin. Mirror Debian's default secure_path.
+# /usr/local/bin stays ahead of /usr/bin so the identity shims still shadow the distro's coreutils.
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+# Interactive root shell only when NO command remains: bare `sudo`, `sudo -i`, `sudo -s`, `sudo su`.
+if [ "$#" -eq 0 ]; then
   export DRAC_SU=1 USER=root LOGNAME=root HOME=/root
   [ "$login" = 1 ] && cd "$HOME" 2>/dev/null
   RC="${DRAC_HOME:-/home/dracos}/.bashrc"
   if command -v bash >/dev/null 2>&1; then exec bash --rcfile "$RC" -i
   else ENV="$RC"; export ENV; exec "${SHELL:-/bin/sh}" -i; fi
 fi
+# `sudo CMD` (with or without -i/-s): run CMD as root. Present the SUPER_USER identity so the
+# whoami/id/logname shims on PATH report root, matching `su -c CMD`. The session is already fake-root
+# (kernel euid 0); this only fixes the PRESENTED identity. Plain `sudo CMD` keeps the caller's HOME
+# (like real sudo without -H); `sudo -i CMD` / `sudo -s CMD` use root's login HOME, and never drop CMD.
+export DRAC_SU=1 USER=root LOGNAME=root
+[ "$login" = 1 ] && { export HOME=/root; cd "$HOME" 2>/dev/null; }
 exec "$@"

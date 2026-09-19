@@ -319,12 +319,14 @@ static bool base64Decode(const std::string& in, std::string& out) {
         if (c == '/') return 63;
         return -1;
     };
-    int buf = 0, bits = 0;
+    // Unsigned + masked: a signed int accumulator shifted left 6 bits per char overflows (UB) after
+    // ~5 chars; masking to the leftover bits keeps it bounded and defined for any input length.
+    unsigned buf = 0; int bits = 0;
     for (char c : in) {
         if (c == '=') break;
         int v = val(c); if (v < 0) continue;
-        buf = (buf << 6) | v; bits += 6;
-        if (bits >= 8) { bits -= 8; out.push_back((char)((buf >> bits) & 0xFF)); }
+        buf = (buf << 6) | static_cast<unsigned>(v); bits += 6;
+        if (bits >= 8) { bits -= 8; out.push_back((char)((buf >> bits) & 0xFFu)); buf &= (1u << bits) - 1u; }
     }
     return true;
 }

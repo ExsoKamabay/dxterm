@@ -1,5 +1,8 @@
 package com.xdrac.xset
 
+import com.xdrac.vhdp.Vhdp
+import org.json.JSONObject
+
 /**
  * Built-in configuration modules + the single place that declares defaults and registers modules.
  * A brand-new `xset <name>` menu is added by writing an [XsetModule] and adding one line to
@@ -55,10 +58,13 @@ object XsetDefaults {
 
 // -------- helpers to build live-applying settings --------
 
+// Every theme preset except Cyber Neon sets at least one colour outside the curated option lists,
+// and the row then showed the stored ARGB Int ("-33061"). Such a value is shown as #RRGGBB instead.
 private fun enumColor(store: XsetStore, key: String, label: String, opts: List<Opt>, apply: (Int) -> Unit) =
     Setting(key, label, SettingKind.ENUM, options = opts,
         read = { store.get(key) },
-        write = { v -> store.set(key, v); apply(v.toIntOrNull() ?: C.WHITE) })
+        write = { v -> store.set(key, v); apply(v.toIntOrNull() ?: C.WHITE) },
+        format = { v -> v.toIntOrNull()?.let { "#%06X".format(it and 0xFFFFFF) } ?: v })
 
 private fun intSetting(store: XsetStore, key: String, label: String, mn: Int, mx: Int, st: Int, hint: String, apply: (Int) -> Unit) =
     Setting(key, label, SettingKind.INT, min = mn, max = mx, step = st, hint = hint,
@@ -266,6 +272,85 @@ class AboutModule : XsetModule {
     }
 }
 
+/**
+ * VHDP diagnostics. The real in-app consumer of the embedded libvhdp (com.xdrac.vhdp.Vhdp): it
+ * surfaces the library version/ABI, the build arch, the detected runtime profile, the exec-storage
+ * policy, and the android-app support status, plus an on-demand active `doctor` probe. All calls are
+ * cheap and cached at build() time except the explicit active-probe action; everything is guarded so
+ * a VHDP failure (e.g. libvhdpjni not loaded) degrades to a single info row and never breaks xset.
+ *
+ * The rows describe the VHDP that runs the terminal: the rootless engine starts guests in-app
+ * through the userland loader (android-app profile), with proot kept as the fallback when the
+ * VHDP self-test fails on a device; "Guest backend" names the one in use and why.
+ */
+class DiagnosticsModule : XsetModule {
+    override val id = "vhdp"; override val title = "Diagnostics"; override val icon = XsetDesign.Icon.PERFORMANCE
+
+    private data class Snap(
+        val version: String, val abi: Int, val arch: String,
+        val profile: String, val execPolicy: String, val androidApp: String
+    )
+
+    private fun snapshot(): Snap {
+        val ver = Vhdp.version()
+        val abi = Vhdp.abiVersion()
+        var arch = "?"; var androidApp = "?"
+        val cap = Vhdp.capabilities()
+        if (cap.ok) {
+            val o = JSONObject(cap.json)
+            arch = o.optJSONObject("build")?.optString("arch", "?") ?: "?"
+            o.optJSONArray("profiles")?.let { profs ->
+                for (i in 0 until profs.length()) {
+                    val p = profs.getJSONObject(i)
+                    if (p.optString("id") == "android-app") androidApp = p.optString("status", "?")
+                }
+            }
+        }
+        var profile = "?"; var exec = "?"
+        val doc = Vhdp.doctor(Vhdp.DOCTOR_NO_ACTIVE_PROBES)
+        if (doc.ok) {
+            val o = JSONObject(doc.json)
+            profile = o.optString("detected_profile", "?")
+            o.optJSONArray("checks")?.let { checks ->
+                for (i in 0 until checks.length()) {
+                    val c = checks.getJSONObject(i)
+                    if (c.optString("id") == "exec.storage_policy") exec = c.optString("status", "?")
+                }
+            }
+        }
+        return Snap(ver, abi, arch, profile, exec, androidApp)
+    }
+
+    override fun build(ctx: XsetContext): List<Setting> {
+        val snap = runCatching { snapshot() }.getOrNull()
+            ?: return listOf(info("vhdp.err", "VHDP", { "unavailable (library not loaded)" }))
+        return listOf(
+            info("vhdp.ver", "Library", { "libvhdp ${snap.version}" }),
+            info("vhdp.abi", "ABI version", { snap.abi.toString() }),
+            info("vhdp.arch", "Build arch", { snap.arch }),
+            info("vhdp.profile", "Detected profile", { snap.profile }),
+            info("vhdp.exec", "Exec-storage policy", { snap.execPolicy }),
+            info("vhdp.androidapp", "android-app support", { snap.androidApp }),
+            info("vhdp.backend", "Guest backend", { ctx.guestBackend() }),
+            action("Run active probes") {
+                runCatching {
+                    val r = Vhdp.doctor(Vhdp.DOCTOR_REFRESH)
+                    if (!r.ok) return@runCatching "doctor failed: ${Vhdp.statusName(r.status)}"
+                    val checks = JSONObject(r.json).optJSONArray("checks")
+                    fun status(id: String): String {
+                        if (checks != null) for (i in 0 until checks.length()) {
+                            val c = checks.getJSONObject(i); if (c.optString("id") == id) return c.optString("status", "?")
+                        }
+                        return "?"
+                    }
+                    "ptrace=${status("ptrace.child")} seccomp=${status("seccomp.filter")} openat2=${status("openat2")}"
+                }.getOrElse { "doctor error: ${it.message}" }
+            },
+            info("vhdp.note", "Note", { "the rootless engine runs guests in-app via the userland loader; proot is the fallback" }),
+        )
+    }
+}
+
 /** The one place modules are wired in. Adding a menu = add one register() line here. */
 object XsetBootstrap {
     /** Register one module, isolating construction failures so a single bad module can't block the rest. */
@@ -283,6 +368,7 @@ object XsetBootstrap {
         safeReg { BackgroundModule() }
         safeReg { PerformanceModule() }
         safeReg { StorageModule() }
+        safeReg { DiagnosticsModule() }   // real consumer of the embedded libvhdp (com.xdrac.vhdp.Vhdp)
         safeReg { BackupModule() }
         safeReg { AboutModule() }
         // Roadmap (guest-coupled; not shipped as placeholders):

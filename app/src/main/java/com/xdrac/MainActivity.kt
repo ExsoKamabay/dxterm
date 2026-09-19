@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.widget.EditText
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,6 +38,14 @@ class MainActivity : AppCompatActivity() {
      *  the device is in, while the provisioning screen honoured the user's choice. */
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleSupport.wrap(newBase))
+    }
+
+    /** Rotation and resize are handled in place (see the manifest), and the framework hands the
+     *  activity the system configuration, device locale included. Re-apply the saved language so
+     *  strings read afterwards (toasts, the find dialog) stay in the language the user chose. */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        LocaleSupport.applyInPlace(this)
     }
 
 
@@ -303,12 +312,19 @@ class MainActivity : AppCompatActivity() {
             xsetStore.set("storage.enabled", "off")
             // OFF removes the ~/sdcard[/-1] symlinks from the running shell right now, a genuine
             // filesystem change on the same session, not a cosmetic flag or `ls` filter. The hidden
-            // backing bind stays until the session ends (proot binds are spawn-fixed), but it is no
+            // backing bind stays until the session ends (the backend's binds are fixed at spawn),
+            // but it is no
             // longer reachable by the ~/sdcard names.
             Bootstrap.applyStorageVisibility(this@MainActivity, false)
             return "Storage disabled. ~/sdcard removed from this shell"
         }
         override fun appInfo(): List<Pair<String, String>> = deviceInfo()
+        override fun guestBackend(): String {
+            val rootfs = java.io.File(filesDir, "rootfs")
+            val d = com.xdrac.guest.GuestBackend.decision(this@MainActivity, rootfs)
+                ?: return "not decided yet (no Linux rootfs, or first start pending)"
+            return "${d.backend.name.lowercase()} — ${d.detail}"
+        }
         override fun contactDeveloper(): String {
             // No mail client is a normal state on a device that runs a terminal, and
             // startActivity throws rather than returning false, so the address goes to the

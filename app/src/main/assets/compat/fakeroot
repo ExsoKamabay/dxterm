@@ -8,10 +8,20 @@ while [ "$#" -gt 0 ]; do
     *)  break ;;
   esac
 done
+# Real sudo replaces PATH with secure_path so root-only tools in the sbin directories are found.
+# Without it `sudo dpkg -i pkg.deb` dies with "'ldconfig' not found in PATH or not executable",
+# because the login user's PATH carries no /usr/sbin or /sbin. Mirror Debian's default secure_path.
+# /usr/local/bin stays ahead of /usr/bin so the identity shims still shadow the distro's coreutils.
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
 if [ "$#" -eq 0 ]; then
   export DRAC_SU=1 USER=root LOGNAME=root HOME=/root
   RC="${DRAC_HOME:-/home/dracos}/.bashrc"
   if command -v bash >/dev/null 2>&1; then exec bash --rcfile "$RC" -i
   else ENV="$RC"; export ENV; exec "${SHELL:-/bin/sh}" -i; fi
 fi
+# `fakeroot CMD`: run CMD as root. Present the SUPER_USER identity so the whoami/id/logname shims on
+# PATH report root, consistent with sudo/su (the session is already fake-root euid 0; this only fixes
+# the PRESENTED identity). HOME is left as-is, like real fakeroot which does not change it.
+export DRAC_SU=1 USER=root LOGNAME=root
 exec "$@"

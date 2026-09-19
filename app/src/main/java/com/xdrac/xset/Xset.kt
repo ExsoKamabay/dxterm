@@ -46,11 +46,13 @@ class Setting(
     val read: () -> String,
     val write: ((String) -> Unit)? = null,
     val run: (() -> String?)? = null,
+    /** How an ENUM value that matches none of [options] is shown, e.g. a colour set by a preset. */
+    val format: ((String) -> String)? = null,
 ) {
     /** Display string for the current value (right column). */
     fun display(): String = when (kind) {
         SettingKind.TOGGLE -> if (read().equals("on", true) || read() == "1" || read().equals("true", true)) "ON" else "OFF"
-        SettingKind.ENUM   -> options.firstOrNull { it.value == read() }?.label ?: read()
+        SettingKind.ENUM   -> options.firstOrNull { it.value == read() }?.label ?: format?.invoke(read()) ?: read()
         SettingKind.ACTION -> "▶"
         else               -> read()
     }
@@ -289,6 +291,10 @@ interface XsetContext {
     fun enableStorage(): String
     /** Disable the feature: remove ~/sdcard[/-1] from the running shell immediately (same session). */
     fun disableStorage(): String
+
+    // ---- guest runtime ----
+    /** Which backend runs the Linux guest and why, e.g. "vhdp — self-test passed …". */
+    fun guestBackend(): String = "unknown"
 
     // ---- misc ----
     fun appInfo(): List<Pair<String, String>>

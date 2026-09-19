@@ -71,6 +71,56 @@ val validateBundledRootfs = tasks.register("validateBundledRootfs") {
 // Every build path runs it: preBuild is upstream of assemble, bundle, lint and test alike.
 tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(validateBundledRootfs) }
 
+// 16 KB page-size safety for the arm64 PREBUILT executables in jniLibs. libxterm/libvhdp/libvhdpjni
+// are built here and forced to 16 KB alignment by the linker (see cpp/CMakeLists.txt), but the five
+// prebuilt lib*.so are exec()'d from nativeLibraryDir as-is, so a PT_LOAD aligned < 16 KB makes
+// exec() fail on a 16 KB-page device (Android 15+). This reads each one with the NDK's llvm-readelf.
+// It WARNS on every build and FAILS a RELEASE build, so a broken release can never ship while a
+// developer can still build/test debug locally until the offending prebuilts are rebuilt.
+fun misalignedPrebuilts(ndkDir: File, jniLibsRoot: File): List<String>? {
+    val readelf = listOf("linux-x86_64", "darwin-x86_64", "windows-x86_64")
+        .map { File(ndkDir, "toolchains/llvm/prebuilt/$it/bin/llvm-readelf") }
+        .firstOrNull { it.isFile } ?: return null            // cannot verify (no readelf)
+    val bad = mutableListOf<String>()
+    // Every ABI directory under jniLibs is checked (arm64-v8a AND x86_64), so a prebuilt that
+    // is < 16 KB-aligned in any packaged ABI is caught, not just arm64.
+    val abiDirs = jniLibsRoot.listFiles { f: File -> f.isDirectory }.orEmpty().sortedBy { it.name }
+    abiDirs.forEach { abiDir ->
+        (abiDir.listFiles { f: File -> f.isFile && f.name.endsWith(".so") }.orEmpty()).sortedBy { it.name }.forEach { so ->
+            val p = ProcessBuilder(readelf.absolutePath, "-lW", so.absolutePath).redirectErrorStream(true).start()
+            val out = p.inputStream.bufferedReader().readText(); p.waitFor()
+            fun parseAlign(tok: String): Long? =
+                if (tok.startsWith("0x") || tok.startsWith("0X")) tok.substring(2).toLongOrNull(16) else tok.toLongOrNull()
+            val aligns = out.lineSequence().map { it.trim() }.filter { it.startsWith("LOAD ") }
+                .mapNotNull { line -> line.split(Regex("\\s+")).lastOrNull()?.let { parseAlign(it) } }
+                .toList()
+            val min = aligns.minOrNull()
+            if (min != null && min < 16384L) bad += "${abiDir.name}/${so.name} (min PT_LOAD align 0x${min.toString(16)})"
+        }
+    }
+    return bad
+}
+
+val validateNativeLibAlignment = tasks.register("validateNativeLibAlignment") {
+    group = "verification"
+    description = "Warns (fails on release) when a bundled prebuilt .so (any ABI) is < 16 KB-aligned."
+    val libRoot = file("src/main/jniLibs")
+    outputs.upToDateWhen { false }
+    doLast {
+        val bad = misalignedPrebuilts(android.ndkDirectory, libRoot)
+        when {
+            bad == null -> logger.warn("[align] llvm-readelf not found in the NDK; skipped 16 KB alignment check")
+            bad.isEmpty() -> logger.lifecycle("[align] all prebuilts (all ABIs) are >= 16 KB-aligned")
+            else -> logger.warn(
+                "[align] WARNING: these prebuilts are NOT 16 KB-aligned and will fail exec() on 16 KB-page devices:\n" +
+                    bad.joinToString("\n") { "  - $it" } +
+                    "\n[align] rebuild them with NDK r27+ / -Wl,-z,max-page-size=16384 (prebuilts/build.sh). Release builds are blocked until then."
+            )
+        }
+    }
+}
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(validateNativeLibAlignment) }
+
 // Refuses to produce an unsigned release.
 //
 // This lives in the task graph rather than in a configuration block because a configuration
@@ -94,6 +144,16 @@ gradle.taskGraph.whenReady {
         if (!ks.isFile) {
             throw GradleException("Keystore not found at " + ks.absolutePath + " (DRACOS_STORE_FILE).")
         }
+        // A release must not ship prebuilts (any ABI) that will fail exec() on 16 KB-page devices.
+        val bad = misalignedPrebuilts(android.ndkDirectory, file("src/main/jniLibs"))
+        if (!bad.isNullOrEmpty()) {
+            throw GradleException(
+                "Refusing to build a release: these prebuilt libraries are NOT 16 KB-aligned and " +
+                    "will fail exec() on 16 KB-page devices (Android 15+):\n" +
+                    bad.joinToString("\n") { "  - $it" } +
+                    "\nRebuild them with NDK r27+ / -Wl,-z,max-page-size=16384 (see prebuilts/build.sh)."
+            )
+        }
     }
 }
 
@@ -110,12 +170,16 @@ android {
         applicationId = "com.xdrac"
         minSdk = 24            // forkpty/openpty + WindowInsets IME animation path supported; runtime-guarded below
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.5"
 
-        // Every shipped prebuilt (proot, busybox, talloc, shmem, loader) is arm64-v8a only.
-        // Another ABI here builds an APK whose binaries cannot run on it.
-        ndk { abiFilters += "arm64-v8a" }
+        // The shipped prebuilts (proot, busybox, talloc, shmem, loader) and the VHDP libraries
+        // are provided for BOTH arm64-v8a and x86_64 (see src/main/jniLibs/<abi> and the CMake
+        // build), so the standard build packages both. arm64-v8a covers physical phones; x86_64
+        // covers emulators / WayDroid / ChromeOS. One universal build installs on all of them --
+        // there is no build flag or flavour. Every ABI listed here MUST have its binaries in
+        // jniLibs/<abi>, or the app installs and then crashes on first exec.
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
 
         externalNativeBuild {
             cmake {
@@ -269,5 +333,4 @@ dependencies {
     // already links with -Wl,-z,max-page-size=16384 for Android 15's 16 KB pages. Raising
     // it needs compileSdk and AGP raised first.
     implementation("com.github.luben:zstd-jni:1.5.7-12@aar")
-
 }

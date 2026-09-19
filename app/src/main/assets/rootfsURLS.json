@@ -3,20 +3,27 @@
     "Linux root filesystem images drac-Xterm can download, keyed by Android ABI.",
     "",
     "The app reads Build.SUPPORTED_ABIS first and only shows the entries under a",
-    "matching key. Only arm64-v8a is listed, because that is the only ABI the",
-    "bundled proot/busybox binaries are built for (abiFilters in app/build.gradle.kts).",
-    "Adding another ABI here means building its binaries first, or the download",
-    "succeeds and nothing in it can run.",
+    "matching key. arm64-v8a is the main ABI; phones use it.",
+    "Adding another ABI here means building its proot/busybox binaries first, or the",
+    "download succeeds and nothing in it can run.",
+    "",
+    "The x86_64 section is for emulator/WayDroid/ChromeOS and is still marked as",
+    "testing. Its Debian image is the images.linuxcontainers.org build 20260919_05:24,",
+    "mirrored because that host keeps dated builds for only about three days: the",
+    "20260913_05:24 build pinned while 1.0.5 was in development answered 404 before",
+    "1.0.5 shipped. The mirror release also carries that build's original SHA256SUMS",
+    "and its GPG signature (key E7FB0CAEC8173D669066514CBAEFF88C22F6E216, \"LXC",
+    "pre-built images\"), so the digest can be traced upstream after the rotation.",
     "",
     "Every entry carries a sha256. RootfsDownloader refuses to hand an archive to",
     "the extractor unless the digest of the completed file matches exactly. An",
     "entry without a valid 64-hex digest is dropped when this file is parsed.",
     "",
-    "All four images come from one place now: the release assets of",
-    "github.com/ExsoKamabay/rootless, a mirror this project controls. The bytes and",
-    "the digests are the same as before; the host is what changed. That repository",
-    "also publishes SHA256SUMS on its main branch, and that is the file",
-    "scripts/verify-rootfs-urls.sh reads to check the pins below.",
+    "All five images come from one place now: the release assets of",
+    "github.com/ExsoKamabay/rootless, a mirror this project controls. For the four",
+    "arm64 images the bytes and the digests are the same as before; the host is what",
+    "changed. That repository also publishes SHA256SUMS on its main branch, and that",
+    "is the file scripts/verify-rootfs-urls.sh reads to check the pins below.",
     "",
     "Why each source moved:",
     "",
@@ -80,6 +87,18 @@
       "note": {
         "id": "Semua perkakas Kali sudah terpasang. Besar: sekitar 9 GB setelah dipasang.",
         "en": "Every Kali tool, preinstalled. Large: about 9 GB once installed."
+      }
+    }
+  },
+  "x86_64": {
+    "Debian 13 (trixie)": {
+      "url": "https://github.com/ExsoKamabay/rootless/releases/download/rootfs-20260920/debian-trixie-amd64-lxc-20260919.tar.xz",
+      "sha256": "6c070114809e6fa24dde8f2f845bb349667430c70d1b20281cd83a80bf132c23",
+      "downloadBytes": 93142872,
+      "installBytes": 700000000,
+      "note": {
+        "id": "Debian x86_64 untuk emulator/WayDroid (uji coba).",
+        "en": "Debian x86_64 for emulator/WayDroid (testing)."
       }
     }
   }

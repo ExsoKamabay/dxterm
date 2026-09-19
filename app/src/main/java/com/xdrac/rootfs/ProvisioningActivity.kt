@@ -2,6 +2,7 @@ package com.xdrac.rootfs
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
@@ -444,6 +445,18 @@ class ProvisioningActivity : AppCompatActivity() {
                 binding.progress.progress = percent.coerceIn(0, 100)
             }
         }
+    }
+
+    /**
+     * The manifest keeps this activity alive across rotation, resize and density changes, and
+     * the framework rebuilds its resources from the system configuration each time, locale
+     * included. Without re-applying the saved language here, every string read after a
+     * rotation came out in the device language: an Indonesian consent screen turned into
+     * "Downloading ... Cancel" halfway through a download.
+     */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        LocaleSupport.applyInPlace(this)
     }
 
     override fun onDestroy() {

@@ -19,10 +19,10 @@ RECIPE_DIR="$PREBUILTS_DIR/busybox"
 setup_toolchain
 fetch_tarball "$BUSYBOX_URL" "$BUSYBOX_SHA256" "busybox-$BUSYBOX_VERSION.tar.bz2"
 
-SRC="$WORK_DIR/src/busybox-$BUSYBOX_VERSION"
+SRC="$BUILD_ROOT/src/busybox-$BUSYBOX_VERSION"
 rm -rf "$SRC"
-mkdir -p "$WORK_DIR/src"
-tar -xjf "$DL_DIR/busybox-$BUSYBOX_VERSION.tar.bz2" -C "$WORK_DIR/src"
+mkdir -p "$BUILD_ROOT/src"
+tar -xjf "$DL_DIR/busybox-$BUSYBOX_VERSION.tar.bz2" -C "$BUILD_ROOT/src"
 [ -f "$SRC/Makefile" ] || die "busybox sources not found under $SRC"
 
 # --- patches -----------------------------------------------------------------
@@ -127,6 +127,10 @@ note "banner: BusyBox v$BUSYBOX_VERSION (drac-Xterm)"
 # bionic has no libresolv, the resolver lives in libc, and the probe treats the
 # missing library as a hard failure rather than dropping it.
 note "compiling"
+# CONFIG_EXTRA_LDFLAGS reaches the final link: Makefile.flags appends it to
+# LDFLAGS, and scripts/trylink links the binary with `$CC $CFLAGS $LDFLAGS`.
+# max-page-size=16384 is required by Android 15 (16 KB page devices); without it
+# the busybox PT_LOAD segments come out 4 KB-aligned and exec() fails there.
 make -C "$SRC" -j"$(nproc)" \
     CC="$CC" \
     HOSTCC="${HOSTCC:-cc}" \
@@ -135,10 +139,11 @@ make -C "$SRC" -j"$(nproc)" \
     SKIP_STRIP=y \
     LDLIBS="m" \
     CONFIG_EXTRA_CFLAGS="$REPRO_CFLAGS" \
-    > "$WORK_DIR/busybox-build.log" 2>&1 \
+    CONFIG_EXTRA_LDFLAGS="-Wl,-z,max-page-size=16384" \
+    > "$BUILD_ROOT/busybox-build.log" 2>&1 \
     || {
-        grep -E 'error:|ld.lld: error' "$WORK_DIR/busybox-build.log" | sort -u | head -20 >&2
-        die "busybox build failed; full log at $WORK_DIR/busybox-build.log"
+        grep -E 'error:|ld.lld: error' "$BUILD_ROOT/busybox-build.log" | sort -u | head -20 >&2
+        die "busybox build failed; full log at $BUILD_ROOT/busybox-build.log"
     }
 
 [ -f "$SRC/busybox" ] || die "no busybox binary was produced"

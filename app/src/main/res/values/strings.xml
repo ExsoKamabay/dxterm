@@ -51,6 +51,22 @@
     <string name="consent_download_failed">Unduhan gagal: %1$s</string>
     <string name="consent_starting_busybox">Menjalankan shell BusyBox…</string>
     <string name="consent_no_network">Tidak ada koneksi jaringan. Sambungkan lalu coba lagi.</string>
+
+    <!-- Tahap pemasangan rootfs yang ditulis BootManager ke baris status. Jangan pakai
+         garis miring di sini: ProvisioningActivity menganggap baris bergaris miring
+         sebagai path berkas dan membatasi laju tampilnya. -->
+    <string name="stage_env_ready">Lingkungan Linux siap</string>
+    <string name="stage_looking">Mencari image Linux…</string>
+    <string name="stage_preparing_bundled">Menyiapkan image bawaan %1$s…</string>
+    <string name="stage_busybox">Menjalankan shell BusyBox</string>
+    <string name="stage_validating">Memeriksa %1$s…</string>
+    <string name="stage_extracting">Mengekstrak… %1$d berkas</string>
+    <string name="stage_configuring">Mengatur lingkungan…</string>
+    <string name="stage_inspecting">VHDP: memeriksa rootfs…</string>
+    <string name="stage_verifying">Memverifikasi pemasangan…</string>
+    <string name="stage_reclaiming">Mengosongkan ruang…</string>
+    <string name="stage_finalizing">Merapikan package manager…</string>
+    <string name="stage_linux_ready">Linux siap</string>
     <!-- Hanya muncul kalau unduhan gagal. Ini bukan tombol "lewati" di layar
          persetujuan (itu sudah dihapus), melainkan jalan keluar supaya pengguna
          tidak terkurung di layar kegagalan tanpa pilihan apa pun. -->

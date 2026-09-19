@@ -35,6 +35,21 @@
     <string name="consent_download_failed">Download failed: %1$s</string>
     <string name="consent_starting_busybox">Starting BusyBox shell…</string>
     <string name="consent_no_network">No network connection. Connect and try again.</string>
+
+    <!-- Rootfs install stages BootManager writes to the status line. No slashes here:
+         ProvisioningActivity treats a line containing one as a file path and throttles it. -->
+    <string name="stage_env_ready">Linux environment ready</string>
+    <string name="stage_looking">Looking for a Linux image…</string>
+    <string name="stage_preparing_bundled">Preparing bundled image %1$s…</string>
+    <string name="stage_busybox">Starting BusyBox shell</string>
+    <string name="stage_validating">Validating %1$s…</string>
+    <string name="stage_extracting">Extracting… %1$d files</string>
+    <string name="stage_configuring">Configuring environment…</string>
+    <string name="stage_inspecting">VHDP: inspecting rootfs…</string>
+    <string name="stage_verifying">Verifying installation…</string>
+    <string name="stage_reclaiming">Reclaiming space…</string>
+    <string name="stage_finalizing">Finalizing package manager…</string>
+    <string name="stage_linux_ready">Linux ready</string>
     <string name="lang_toggle">English</string>
     <string name="lang_switch_to">Bahasa Indonesia</string>
     <string name="consent_arch">Device: %1$s · %2$d distros available</string>

@@ -9,6 +9,11 @@ import java.io.File
  *
  * Shell detection goes through ShellLocator rather than File.exists(), which follows the
  * link and so misses a symlinked shell such as Alpine's /bin/sh -> /bin/busybox.
+ *
+ * The session normally runs on the VHDP engine (libphdp.so plus the userland loader), with
+ * PRoot as the automatic fallback picked by GuestBackend. Only the fallback's binaries are
+ * required here: a device without the VHDP pair still boots, so those two are reported and
+ * not treated as a failure.
  */
 class RuntimeValidator(private val ctx: Context) {
 
@@ -24,13 +29,17 @@ class RuntimeValidator(private val ctx: Context) {
 
     fun isBusyboxReady(): Boolean = File(nativeLib, "libbusybox.so").exists()
 
-    /** Full validation before launching a Linux (PRoot) session; logs everything it inspects. */
+    /** Full validation before launching a Linux session; logs everything it inspects. */
     fun validate(): Report {
         Log.i(tag, "[RUNTIME] Checking rootfs: ${rootfs.absolutePath}")
         if (!File(nativeLib, "libbusybox.so").exists())        return fail("busybox binary missing")
         if (!File(nativeLib, "libproot.so").exists())          return fail("proot binary missing")
         if (!File(nativeLib, "libproot-loader.so").exists())   return fail("proot loader missing")
         if (!File(nativeLib, "libtalloc.so").exists())         return fail("talloc library missing")
+
+        // Not fatal: without these the guest still starts, on the PRoot fallback.
+        reportOptional("libphdp.so", "vhdp cli")
+        reportOptional("libvhdp-loader.so", "vhdp userland loader")
 
         if (!rootfs.isDirectory) return fail("rootfs directory missing")
 
@@ -46,6 +55,14 @@ class RuntimeValidator(private val ctx: Context) {
             return fail("shell present but no exec-able interpreter (busybox/bash) extracted")
         }
         return Report(true, "linux environment ready (shell=/$shell)")
+    }
+
+    private fun reportOptional(name: String, what: String) {
+        if (File(nativeLib, name).exists()) {
+            Log.i(tag, "[RUNTIME] $what present ($name)")
+        } else {
+            Log.w(tag, "[RUNTIME] $what missing ($name); session falls back to proot")
+        }
     }
 
     private fun fail(reason: String): Report {

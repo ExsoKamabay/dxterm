@@ -25,10 +25,6 @@ signing.properties
 .env
 .env.*
 
-# Host-side native engine tests (native-tests/run-tests.sh) build output.
-# The root /build/ rule above is anchored, so this path needs its own entry.
-native-tests/build/
-
 # --- Linux rootfs images. A 200 MB archive in git history is paid for by every
 # --- clone, for ever, and through Git LFS it exhausts the free bandwidth quota
 # --- after a handful of fetches. Build-time drop-in only; keep it locally.

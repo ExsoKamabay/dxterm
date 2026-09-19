@@ -1,0 +1,9 @@
+The Linux session now runs on VHDP, a rootless engine inside the APK. PRoot
+stays as an automatic fallback.
+
+- The APK also runs on x86_64: emulators, WayDroid, ChromeOS.
+- Fixed: tar -cf failing, SIGPIPE and SIGUSR1 never arriving, /dev missing
+  from the guest on real phones.
+- New: the vhdp command in the guest and a Diagnostics page in xset.
+- The chosen language now survives a screen rotation.
+- Distro images come from the project's own mirror.

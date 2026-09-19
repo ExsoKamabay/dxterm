@@ -6,11 +6,20 @@ set -euo pipefail
 PREBUILTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_ROOT="$(cd "$PREBUILTS_DIR/.." && pwd)"
 WORK_DIR="${PREBUILTS_WORK:-$PREBUILTS_DIR/work}"
-DL_DIR="$WORK_DIR/downloads"
-OUT_DIR="$WORK_DIR/out"
 
+# Sourced before the directory layout below, which needs ANDROID_ABI.
 # shellcheck source=../manifest.env
 . "$PREBUILTS_DIR/manifest.env"
+
+# Upstream sources are architecture-independent, so every ABI shares one
+# download cache. Everything *built* from them is not: object files, configured
+# source trees and the finished .so files are all specific to one ABI, so they
+# live under their own directory. Without that split an x86_64 build silently
+# reuses arm64 objects (the recipes only re-run make, they do not clean every
+# tree) and --install copies one architecture's binaries over the other's.
+DL_DIR="$WORK_DIR/downloads"
+BUILD_ROOT="$WORK_DIR/$ANDROID_ABI"
+OUT_DIR="$BUILD_ROOT/out"
 
 die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 note() { printf '\033[36m==>\033[0m %s\n' "$*"; }
@@ -105,7 +114,12 @@ setup_toolchain() {
     # This does not make the build bit-for-bit reproducible on its own, BusyBox
     # embeds its own configuration and build metadata, but it removes the
     # largest and least obvious source of drift.
-    export REPRO_CFLAGS="-ffile-prefix-map=$WORK_DIR=/build -no-canonical-prefixes"
+    # Two disjoint maps rather than one over $WORK_DIR: the build tree is now
+    # per-ABI while the download cache is shared, and mapping each to the place
+    # it used to sit keeps the recorded paths free of the ABI name. Without
+    # that, talloc (which compiles __location__ strings into the binary) would
+    # differ between arm64-v8a and x86_64 for no reason but its own directory.
+    export REPRO_CFLAGS="-ffile-prefix-map=$BUILD_ROOT=/build -ffile-prefix-map=$DL_DIR=/build/downloads -no-canonical-prefixes"
     export ZERO_AR_DATE=1
 
     note "NDK      $NDK_ROOT"
@@ -232,24 +246,40 @@ install_artifact() {
         "$(sha256sum "$dest" | cut -d' ' -f1)" "$dest_name" "$(stat -c%s "$dest")"
 }
 
+# ELF e_machine value expected for a given ABI. Keeps assert_arch honest across
+# targets instead of hardcoding AArch64.
+expected_em() {
+    case "${1:-$ANDROID_ABI}" in
+        arm64-v8a)   echo 183 ;;   # EM_AARCH64 (0xB7)
+        x86_64)      echo 62  ;;   # EM_X86_64  (0x3E)
+        armeabi-v7a) echo 40  ;;   # EM_ARM     (0x28)
+        x86)         echo 3   ;;   # EM_386
+        *)           return 1 ;;
+    esac
+}
+
 # Fails the build if a binary was linked for the wrong architecture, the
 # mistake that produces an APK that installs and then crashes on first exec.
-assert_arm64() {
-    local f="$1"
+# Checks against $ANDROID_ABI so an x86_64 build is verified as x86_64, not
+# rejected as "not AArch64".
+assert_arch() {
+    local f="$1" want
+    want=$(expected_em "$ANDROID_ABI") || die "assert_arch: unknown ABI '$ANDROID_ABI'"
     [ -f "$f" ] || die "$f does not exist"
 
     # Read e_machine straight out of the ELF header rather than parsing a tool's
     # prose. ELF64 header: e_machine is a 2-byte little-endian field at offset
-    # 0x12, and EM_AARCH64 is 183 (0xB7).
-    #
-    # The previous version grepped llvm-readelf's output for "AArch64". That is
-    # not stable: the same binary is llvm-readobj under another name, and its
-    # output says "Arch: aarch64" in lower case. A CI runner with a different NDK
-    # therefore failed this check on a perfectly good arm64 binary, and the error
-    # message pointed at the architecture instead of at the parsing.
+    # 0x12 (EM_AARCH64=183, EM_X86_64=62). Grepping a tool's text is not stable:
+    # the same binary is llvm-readobj under another name whose output differs in
+    # case, which once failed this check on a perfectly good binary.
     local machine
     machine=$(od -An -tu2 -j18 -N2 --endian=little "$f" 2>/dev/null | tr -d ' ') \
         || die "could not read the ELF header of $f"
 
-    [ "$machine" = "183" ] || die "$f is not an AArch64 binary (ELF e_machine=$machine, expected 183)"
+    [ "$machine" = "$want" ] || \
+        die "$f is not a $ANDROID_ABI binary (ELF e_machine=$machine, expected $want)"
 }
+
+# Back-compat name: the recipes historically called assert_arm64. It now asserts
+# whatever $ANDROID_ABI is, so an arm64 build behaves exactly as before.
+assert_arm64() { assert_arch "$@"; }

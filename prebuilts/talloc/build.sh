@@ -11,11 +11,11 @@
 setup_toolchain
 fetch_tarball "$TALLOC_URL" "$TALLOC_SHA256" "talloc-$TALLOC_VERSION.tar.gz"
 
-SRC="$WORK_DIR/src/talloc-$TALLOC_VERSION"
-BUILD="$WORK_DIR/build/talloc"
+SRC="$BUILD_ROOT/src/talloc-$TALLOC_VERSION"
+BUILD="$BUILD_ROOT/build/talloc"
 rm -rf "$SRC" "$BUILD"
-mkdir -p "$SRC" "$BUILD" "$WORK_DIR/src"
-tar -xzf "$DL_DIR/talloc-$TALLOC_VERSION.tar.gz" -C "$WORK_DIR/src"
+mkdir -p "$SRC" "$BUILD" "$BUILD_ROOT/src"
+tar -xzf "$DL_DIR/talloc-$TALLOC_VERSION.tar.gz" -C "$BUILD_ROOT/src"
 [ -f "$SRC/talloc.c" ] || die "talloc.c not found under $SRC"
 
 # waf normally derives these from the version and bakes them into config.h.

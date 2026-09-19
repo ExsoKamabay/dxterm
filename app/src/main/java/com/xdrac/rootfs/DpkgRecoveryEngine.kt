@@ -6,15 +6,16 @@ import com.xdrac.Bootstrap
 import java.io.File
 
 /**
- * Advanced Compatibility & Recovery Engine for apt / dpkg inside a PRoot guest, no Android root.
+ * Advanced Compatibility & Recovery Engine for apt / dpkg inside the guest, no Android root.
  *
  * Root cause it repairs: with a non-root interactive login (dracos), package-manager state under
- * /var/lib/dpkg ends up owned by dracos(1000) instead of root(0). Under PRoot a sudo/su-acquired
- * root does not inherit the launch-time (-0) fake-root DAC bypass, so dpkg, even via sudo, cannot
- * write a dracos-owned directory ("error creating new backup file '/var/lib/dpkg/status-old':
- * Permission denied"), and the transaction is left interrupted.
+ * /var/lib/dpkg ends up owned by dracos(1000) instead of root(0). In a fake-root guest (vhdp
+ * --uid 0 or proot -0) a sudo/su-acquired root does not inherit the launch-time fake-root DAC
+ * bypass, so dpkg, even via sudo, cannot write a dracos-owned directory ("error creating new
+ * backup file '/var/lib/dpkg/status-old': Permission denied"), and the transaction is left
+ * interrupted.
  *
- * Strategy (all inside a single PRoot fake-root pass, the only context where chown succeeds here):
+ * Strategy (all inside a single fake-root pass, the only context where chown succeeds here):
  *   1. Normalise ownership of the SYSTEM tree to root:root (user homes are left untouched), so
  *      that apt/dpkg run through `sudo` (guest uid 0) own their files and can write them.
  *   2. Clear stale package-manager locks from the interrupted run.
@@ -34,16 +35,24 @@ object DpkgRecoveryEngine {
     // link2symlink lets the backup link() succeed.
     private const val MARKER = ".dpkg-recovery.v2"
 
-    /** Run recovery if needed. Returns true when nothing to do or recovery succeeded. */
-    fun run(ctx: Context, rootfs: File): Boolean {
-        // Only meaningful for a dpkg-based (Debian/Kali) rootfs.
-        if (!File(rootfs, "var/lib/dpkg").isDirectory) return true
-        val marker = File(ctx.filesDir, MARKER)
-        if (marker.exists()) return true                       // already repaired once
+    /** The one-off recovery has already run successfully on this install. */
+    fun alreadyRecovered(ctx: Context): Boolean = File(ctx.filesDir, MARKER).exists()
 
+    /** Record that recovery completed, so the (heavier) pass runs once per install. */
+    fun markRecovered(ctx: Context) {
+        runCatching { File(ctx.filesDir, MARKER).createNewFile() }
+    }
+
+    /**
+     * Execute a recovery [script] inside the guest as fake-root, through the backend the rootfs runs
+     * on ([Bootstrap.fakerootShell]: VHDP, or proot as the fallback). VHDP (via GuestBackend) decides
+     * the script; this runs it. Returns true on exit 0. Never throws; a failure is logged and returned
+     * so the caller withholds the success marker and retries next boot. Does NOT touch the marker.
+     */
+    fun runScript(ctx: Context, rootfs: File, script: String): Boolean {
         val log = File(ctx.filesDir, "dpkg-recovery.log")
         return try {
-            val (argv, env) = Bootstrap.fakerootShell(ctx, rootfs.absolutePath, RECOVERY_SH)
+            val (argv, env) = Bootstrap.fakerootShell(ctx, rootfs.absolutePath, script)
             Log.i(ShellLocator.TAG, "[RECOVERY] starting dpkg/apt recovery (fake-root)")
             val pb = ProcessBuilder(argv.toList()).redirectErrorStream(true)
             pb.environment().apply {
@@ -54,12 +63,25 @@ object DpkgRecoveryEngine {
             proc.inputStream.use { input -> log.outputStream().use { input.copyTo(it) } }
             val code = proc.waitFor()
             Log.i(ShellLocator.TAG, "[RECOVERY] finished, exit=$code (see ${log.absolutePath})")
-            if (code == 0) runCatching { marker.createNewFile() }
             code == 0
         } catch (t: Throwable) {
             Log.w(ShellLocator.TAG, "[RECOVERY] skipped: ${t.message}")
-            false                                              // no marker -> retried next boot
+            false
         }
+    }
+
+    /**
+     * Self-contained fallback used when VHDP's plan is unavailable: marker-gated, runs the built-in
+     * [RECOVERY_SH] through whichever backend runs the rootfs. The primary path is
+     * [com.xdrac.guest.GuestBackend.recoverDpkg], which asks VHDP to decide the plan/script and
+     * calls [runScript] here to execute it.
+     */
+    fun run(ctx: Context, rootfs: File): Boolean {
+        if (!File(rootfs, "var/lib/dpkg").isDirectory) return true   // not a dpkg distro
+        if (alreadyRecovered(ctx)) return true                       // already repaired once
+        val ok = runScript(ctx, rootfs, RECOVERY_SH)
+        if (ok) markRecovered(ctx)
+        return ok
     }
 
     // POSIX sh, executed as fake-root (uid 0) inside the guest. Defensive: every step tolerates

@@ -79,11 +79,23 @@ object ArchivePaths {
             is Link.Hard -> "absolute link target: $path -> ${link.target}"
             is Link.Sym -> null
         }
-        escapes(path, link.target) -> "link escapes archive root: $path -> ${link.target}"
+        // A HARD link target is recorded relative to the ARCHIVE ROOT (tar convention) and the
+        // extractor resolves it as File(stagingRoot, target); so it must be validated root-relative,
+        // NOT relative to the entry's own directory. Using the entry's directory (as a symlink would)
+        // is too permissive: e.g. entry "a/b/c" with target "../../x" stays "safe" relative to a/b but
+        // File(root, "../../x") climbs above the staging tree, letting Os.link reach a host file.
+        link is Link.Hard -> if (escapes("", link.target)) "hardlink target escapes archive root: $path -> ${link.target}" else null
+        // A relative SYMLINK target is resolved (later, under the guest root) relative to the link's
+        // own directory, so it is checked that way.
+        link is Link.Sym -> if (escapes(path, link.target)) "symlink escapes archive root: $path -> ${link.target}" else null
         else -> null
     }
 
-    /** True when resolving [target] from the directory holding [path] climbs above the root. */
+    /**
+     * True when resolving [target] from the directory holding [path] climbs above the root.
+     * Pass an empty [path] to resolve [target] from the root itself (used for hard-link targets,
+     * which tar records relative to the archive root).
+     */
     fun escapes(path: String, target: String): Boolean {
         val base = path.split('/').dropLast(1).toMutableList()
         for (seg in target.split('/')) {

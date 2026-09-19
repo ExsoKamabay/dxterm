@@ -1,5 +1,5 @@
-dracxterm is a terminal emulator for ARM64 (arm64-v8a) Android devices. The terminal
-engine, meaning the ANSI/VT parser, screen buffer, PTY handling and UTF-8 rendering, is
+dracxterm is a terminal emulator for Android devices with an arm64-v8a or x86_64
+processor. The terminal engine, meaning the ANSI/VT parser, screen buffer, PTY handling and UTF-8 rendering, is
 written from scratch in C++ and driven by a Kotlin user interface. No device root
 required.
 
@@ -21,13 +21,16 @@ and history; swipe to switch</li>
 
 Type <i>xset</i> in the terminal to open a settings dashboard drawn inside the terminal
 itself: themes, fonts, text size and spacing, cursor style, scrollback depth, padding,
-storage access and device information, plus configuration export and import.
+storage access and device information, plus configuration export and import. A
+Diagnostics page shows which engine runs the session and the result of its self-test.
 
 <b>Linux environment</b>
 
 Out of the box the app runs a BusyBox shell, which is a complete working terminal on its
-own. For a full distribution, dracxterm can set up an ARM64 Linux root filesystem and
-run it through PRoot in the app sandbox.
+own. For a full distribution, dracxterm can set up a Linux root filesystem and run it in
+the app sandbox through VHDP, a rootless engine that ships inside the APK. If VHDP
+fails its self-test on a device, the session falls back to PRoot on its own. Inside
+the distro, sudo, su and apt work as expected, and .deb packages install with dpkg.
 
 A build either carries an image or it does not, and the app adapts on its own. Without
 one it is a small download: on first run it lists the images your device can actually

@@ -1,47 +1,48 @@
-Deskripsi Screenshot dracxterm 1.0.1
+Deskripsi Screenshot dracxterm 1.0.5
 ====================================
 
-Perangkat uji: Infinix X6726B, Android 15 (API 35), arm64-v8a, layar 720x1600.
-Distro yang dipasang: Kali Linux (nano). Semua gambar 720x1600 JPEG.
+Diambil dari APK release 1.0.5 (versionCode 5) di WayDroid, Android 13, x86_64,
+dengan layar logis 1080x2400 pada 420 dpi. Distro yang dipasang: Debian 13
+(trixie) amd64 dari katalog. Semua gambar JPEG 1080x2049, dipotong ke area
+aplikasi saja, tanpa bilah status dan bilah navigasi.
 
-1. 01-pilih-distro-arm64-dracxterm.jpg
-   Layar pertama dracxterm. Aplikasi membaca ABI perangkat dan hanya
-   menampilkan image yang cocok untuk arm64-v8a, lengkap dengan ukuran
-   unduhan dan ruang penyimpanan yang dibutuhkan tiap distro. Toggle
-   bahasa Indonesia/Inggris ada di bagian atas.
+1. 01-pilih-distro-dracxterm.jpg
+   Layar pertama. Aplikasi membaca ABI perangkat dan hanya menampilkan image
+   yang cocok, di sini Debian 13 untuk x86_64, lengkap dengan ukuran unduhan
+   (93 MB) dan ruang yang dibutuhkan. Tombol bahasa ada di bawah logo.
 
-2. 02-unduh-pasang-kali-nano-dracxterm.jpg
-   Proses pemasangan Kali Linux (nano) berjalan, dengan progres unduhan
-   dalam MB dan tombol batal. Setelah unduhan selesai, arsipnya dicocokkan
-   SHA-256 dengan digest yang dipin di dalam APK sebelum diekstrak.
+2. 02-pasang-distro-dracxterm.jpg
+   Pemasangan berjalan. Arsip sudah lolos pemeriksaan SHA-256 dan sedang
+   diekstrak; tiga baris hijau menunjukkan berkas yang sedang ditulis. Pesan
+   tahapnya kini mengikuti bahasa yang dipilih pengguna.
 
-3. 03-terminal-kali-berjalan-dracxterm.jpg
-   Kali Linux berjalan di dalam terminal lewat PRoot, tanpa root. Terlihat
-   kernel Android yang dipakai, isi root filesystem, jumlah paket yang
-   terpasang, dan proses proot yang menopang sesi.
+3. 03-terminal-debian-dracxterm.jpg
+   Debian 13 berjalan di terminal lewat VHDP, tanpa root. fastfetch
+   menunjukkan terminalnya libphdp.so, yaitu engine VHDP. Di bawahnya: sudo
+   apt-get memasang paket, cowsay, sesi root lewat sudo -i dengan ls berwarna,
+   lalu git, Python 3.13, dan curl.
 
-4. 04-render-warna-utf8-dracxterm.jpg
-   Kemampuan mesin terminal yang ditulis dari nol dengan C++: 16 warna
-   ANSI, palet 256 warna, atribut bold, italic, underline dan reverse,
-   serta UTF-8 penuh termasuk karakter lebar CJK dan emoji.
+4. 04-warna-utf8-dracxterm.jpg
+   Mesin terminal C++ milik dracxterm: 16 warna ANSI, palet 256 warna,
+   truecolor 24-bit, bold, italic, underline, reverse, coret, dim, serta UTF-8
+   penuh termasuk CJK, Hangul, Yunani, Kirill, emoji, dan combining mark.
 
-5. 05-xset-appearance-dracxterm.jpg
-   Menu xset, pengaturan yang digambar di dalam terminal itu sendiri.
-   Halaman Appearance merangkum tema, ukuran font, bentuk dan warna kursor,
-   spasi baris, dan padding dalam satu layar, dengan pratinjau langsung.
+5. 05-superuser-deb-dracxterm.jpg
+   Superuser di dalam guest. User biasa dracos (uid 1000) naik ke root lewat
+   sudo -i, mengunduh paket .deb, memasangnya dengan dpkg -i, menjalankannya,
+   lalu menghapusnya. exit mengembalikan shell ke dracos.
 
-6. 06-xset-tema-preset-dracxterm.jpg
-   Pemilihan preset tema di xset. Sepuluh preset tersedia, dan perubahan
-   warna foreground, background, serta kursor langsung diterapkan ke
-   terminal yang sedang berjalan lalu tersimpan otomatis.
+6. 06-htop-multi-workspace-dracxterm.jpg
+   htop berjalan layar penuh di workspace kedua: grafik delapan inti CPU,
+   memori, swap, dan daftar proses berwarna. Chip 1 dan 2 di atas adalah dua
+   workspace dengan shell dan PTY masing-masing.
 
-7. 07-xset-akses-penyimpanan-dracxterm.jpg
-   Sakelar akses penyimpanan. Izin tidak pernah diminta saat aplikasi
-   dibuka; kalau dinyalakan, penyimpanan internal muncul di ~/sdcard dan
-   volume lepas-pasang di ~/sdcard-1, berlaku langsung pada shell yang
-   sedang jalan. Kalau ditolak, terminal tetap berfungsi.
+7. 07-xset-appearance-dracxterm.jpg
+   xset, pengaturan yang digambar di dalam terminal. Halaman Appearance
+   merangkum tema, ukuran font, bentuk dan warna kursor, spasi baris, dan
+   padding, dengan pratinjau langsung di bagian bawah.
 
-8. 08-scrollback-multi-workspace-dracxterm.jpg
-   Lima workspace terbuka sekaligus, masing-masing dengan shell, PTY, dan
-   riwayatnya sendiri, berpindah dengan usap. Scrollback berwarna sedalam
-   ribuan baris, dengan seleksi teks yang langsung disalin ke clipboard.
+8. 08-xset-diagnostics-vhdp-dracxterm.jpg
+   Halaman Diagnostics yang baru di 1.0.5: versi libvhdp, ABI, arsitektur
+   build, profil perangkat, kebijakan exec storage, backend yang menjalankan
+   sesi (vhdp, self-test lolos), dan hasil probe aktif ptrace dan seccomp.

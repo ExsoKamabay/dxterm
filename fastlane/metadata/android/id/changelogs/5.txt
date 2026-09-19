@@ -1,0 +1,9 @@
+Sesi Linux sekarang dijalankan VHDP, engine rootless di dalam APK. PRoot
+tetap ada sebagai fallback otomatis.
+
+- APK juga berjalan di x86_64: emulator, WayDroid, ChromeOS.
+- Diperbaiki: tar -cf gagal, SIGPIPE dan SIGUSR1 tidak sampai, /dev hilang
+  dari guest di ponsel nyata.
+- Baru: perintah vhdp di guest dan halaman Diagnostics di xset.
+- Bahasa pilihan tidak lagi berubah saat layar diputar.
+- Image distro diambil dari mirror milik proyek.

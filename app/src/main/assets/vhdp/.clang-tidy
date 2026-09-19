@@ -1,0 +1,29 @@
+---
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-branch-clone,
+  -bugprone-narrowing-conversions,
+  -bugprone-reserved-identifier,
+  -bugprone-assignment-in-if-condition,
+  clang-analyzer-*,
+  -clang-analyzer-optin.*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  cert-err34-c,
+  cert-dcl58-cpp,
+  cert-oop57-cpp,
+  misc-misplaced-const,
+  misc-unused-using-decls,
+  misc-definitions-in-headers,
+  modernize-use-nullptr,
+  modernize-use-override,
+  performance-*,
+  -performance-enum-size,
+  -performance-no-int-to-ptr,
+  readability-misleading-indentation,
+  readability-redundant-string-cstr
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/(include|src|hdr|vdr)/.*'
+FormatStyle: none
+...

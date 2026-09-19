@@ -32,12 +32,13 @@ to their respective copyright notices and license terms.
 Bundled Prebuilt Binaries
 -------------------------
 
-The APK ships the following prebuilt ARM64 binaries under
-app/src/main/jniLibs/arm64-v8a/. dracxterm conveys these binaries and
-therefore carries the source-code obligations attached to them. Each is built
-from pinned upstream sources by prebuilts/build.sh, reproducibly. The upstream
-pin and any local patch for each one live beside its recipe under prebuilts/;
-full license texts are in licenses/.
+The APK ships the following prebuilt binaries, once per supported ABI, under
+app/src/main/jniLibs/arm64-v8a/ and app/src/main/jniLibs/x86_64/. dracxterm
+conveys these binaries and therefore carries the source-code obligations
+attached to them. Each is built from pinned upstream sources by
+prebuilts/build.sh, reproducibly. The upstream pin and any local patch for each
+one live beside its recipe under prebuilts/; full license texts are in
+licenses/.
 
 * libbusybox.so: BusyBox 1.38.0
   Copyright the BusyBox authors. Licensed under the GNU General Public
@@ -55,6 +56,16 @@ full license texts are in licenses/.
 * libandroid-shmem.so: libandroid-shmem v0.7 (termux/libandroid-shmem)
   Copyright 2013 Sergii Pylypenko and 2017 Fredrik Fornwall. Licensed under
   the BSD 3-Clause License. See licenses/BSD-3-Clause.txt.
+
+* libphdp.so and libvhdp-loader.so: Virtual Hardware Driver Platform (VHDP)
+  1.0.0 -- the rootless engine that runs the Linux session, and its userland
+  ELF loader. Copyright 2026 The VHDP Authors. Licensed under the Apache
+  License, Version 2.0. See licenses/Apache-2.0.txt. The corresponding source
+  ships with this product under app/src/main/cpp/vhdp/ (and, for the in-guest
+  `vhdp` command in app/src/main/assets/vhdp/bin/<abi>/, under
+  app/src/main/assets/vhdp/), together with that project's own LICENSE and
+  NOTICE. It is original work and does not copy source code from PRoot, QEMU,
+  or any other project.
 
 WRITTEN OFFER. For any of the binaries listed in this section, the maintainer
 of dracxterm will provide the complete corresponding machine-readable source

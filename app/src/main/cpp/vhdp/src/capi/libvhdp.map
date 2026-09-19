@@ -1,0 +1,52 @@
+/* Export allowlist for libvhdp.so. Only the C ABI is visible; every C++ and
+ * runtime symbol (including a statically linked C++ standard library) is local.
+ * The exact expected list is checked by tests/abi/exported_symbols.txt. */
+VHDP_1 {
+  global:
+    vhdp_abi_version;
+    vhdp_version_string;
+    vhdp_status_name;
+    vhdp_last_error_message;
+    vhdp_context_create;
+    vhdp_context_destroy;
+    vhdp_doctor_json;
+    vhdp_capabilities_json;
+    vhdp_inspect_rootfs_json;
+    vhdp_configure_rootfs;
+    vhdp_dpkg_plan_json;
+    vhdp_projection_plan_json;
+    vhdp_config_create;
+    vhdp_config_destroy;
+    vhdp_config_set_rootfs;
+    vhdp_config_set_engine;
+    vhdp_config_set_cwd;
+    vhdp_config_set_argv;
+    vhdp_config_add_env;
+    vhdp_config_set_clear_env;
+    vhdp_config_add_bind;
+    vhdp_config_set_read_only_rootfs;
+    vhdp_config_set_network;
+    vhdp_config_set_uid;
+    vhdp_config_set_gid;
+    vhdp_config_set_timeout_ms;
+    vhdp_config_set_trace;
+    vhdp_config_set_stdio;
+    vhdp_config_set_pty_size;
+    vhdp_config_set_output_callback;
+    vhdp_config_set_seccomp;
+    vhdp_config_set_dev;
+    vhdp_config_set_proc;
+    vhdp_session_create;
+    vhdp_session_start;
+    vhdp_session_wait;
+    vhdp_session_state;
+    vhdp_session_engine;
+    vhdp_session_signal;
+    vhdp_session_resize;
+    vhdp_session_write_input;
+    vhdp_session_pty_master;
+    vhdp_session_cancel;
+    vhdp_session_destroy;
+  local:
+    *;
+};

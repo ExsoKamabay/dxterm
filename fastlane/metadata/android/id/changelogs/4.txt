@@ -1,0 +1,8 @@
+Perubahan lisensi. Tidak ada yang baru di layar.
+
+Kode aplikasi sekarang memakai GNU General Public License versi 3, menggantikan
+Apache 2.0, agar sama dengan biner GPL yang ikut dibundel (BusyBox dan PRoot).
+Berkas LICENSE, NOTICE, dan bagian lisensi di README sudah diperbarui. Biner
+pihak ketiga tetap memakai lisensinya sendiri; tidak ada yang direlisensi.
+
+Terminal, xset, izin, dan katalognya tidak berubah.

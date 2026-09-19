@@ -26,7 +26,7 @@ bool Pty::start(const std::vector<std::string>& argv,
     // malloc arena another thread happened to hold at fork time is locked there for ever: the
     // child hangs before exec and the terminal opens to nothing. This app always has other
     // threads running (a reader per workspace, the download and provisioning workers), so the
-    // window is real. Everything the child does below, chdir/signal/execve, is async-signal-safe.
+    // window is real. Everything the child does below, chdir/signal/sigprocmask/execve, is async-signal-safe.
     std::vector<char*> cargv;
     cargv.reserve(argv.size() + 1);
     for (const auto& a : argv) cargv.push_back(const_cast<char*>(a.c_str()));
@@ -45,9 +45,27 @@ bool Pty::start(const std::vector<std::string>& argv,
         // ---- child ----
         if (!cwd.empty()) { if (chdir(cwd.c_str()) != 0) { /* fall through */ } }
 
-        // Reset signal dispositions the parent may have touched.
-        signal(SIGCHLD, SIG_DFL);
-        signal(SIGPIPE, SIG_DFL);
+        // Hand the guest a clean signal state. Both halves matter, and neither is
+        // undone by execve:
+        //
+        //   * Dispositions set to SIG_IGN survive an exec (only caught handlers are
+        //     reset), and ART leaves SIGHUP ignored, so without this every process in
+        //     the terminal silently ignored SIGHUP.
+        //   * The signal MASK survives an exec outright, and ART blocks SIGQUIT,
+        //     SIGUSR1 and SIGPIPE for its own use (stack dumps, GC). Inherited, that
+        //     made those three undeliverable everywhere in the guest: `trap ... USR1`
+        //     never fired, the Ctrl-backslash quit key did nothing, and a writer whose pipe closed got an
+        //     EPIPE error instead of dying quietly.
+        //
+        // Reset every signal rather than the handful we know about: the parent is a
+        // whole Android runtime, and which signals it claims is not ours to track.
+        for (int s = 1; s < NSIG; ++s) {
+            if (s == SIGKILL || s == SIGSTOP) continue;   // cannot be changed
+            signal(s, SIG_DFL);
+        }
+        sigset_t none;
+        sigemptyset(&none);
+        sigprocmask(SIG_SETMASK, &none, nullptr);
 
         execve(cargv[0], cargv.data(), cenv.data());
         _exit(127);   // exec failed

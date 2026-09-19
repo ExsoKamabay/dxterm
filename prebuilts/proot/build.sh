@@ -21,7 +21,7 @@ RECIPE_DIR="$PREBUILTS_DIR/proot"
 setup_toolchain
 fetch_git "$PROOT_REPO" "$PROOT_COMMIT" proot
 
-TALLOC_SRC="$WORK_DIR/src/talloc-$TALLOC_VERSION"
+TALLOC_SRC="$BUILD_ROOT/src/talloc-$TALLOC_VERSION"
 [ -f "$TALLOC_SRC/talloc.h" ] || die "talloc sources missing; run prebuilts/talloc/build.sh first"
 [ -f "$OUT_DIR/libtalloc.so" ] || die "libtalloc.so not built; run prebuilts/talloc/build.sh first"
 [ -f "$OUT_DIR/libandroid-shmem.so" ] || die "libandroid-shmem.so not built; run prebuilts/android-shmem/build.sh first"
@@ -29,7 +29,7 @@ TALLOC_SRC="$WORK_DIR/src/talloc-$TALLOC_VERSION"
 # Build in a copy of src/. PRoot's GNUmakefile supports out-of-tree builds
 # through VPATH, but only with relative paths, an absolute -f path makes it
 # concatenate the source directory with itself and every .c "does not exist".
-SRC="$WORK_DIR/build/proot"
+SRC="$BUILD_ROOT/build/proot"
 rm -rf "$SRC"
 mkdir -p "$(dirname "$SRC")"
 cp -a "$DL_DIR/proot/src" "$SRC"
@@ -87,10 +87,10 @@ make -C "$SRC" -j"$(nproc)" \
     CPPFLAGS="-I. -Idep-include -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE" \
     CFLAGS="-Wall -Wextra -O2 $REPRO_CFLAGS" \
     LDFLAGS="-Ldep-lib -ltalloc -landroid-shmem -Wl,-z,noexecstack -Wl,-z,max-page-size=16384" \
-    > "$WORK_DIR/proot-build.log" 2>&1 \
+    > "$BUILD_ROOT/proot-build.log" 2>&1 \
     || {
-        grep -E 'error:|Error [0-9]' "$WORK_DIR/proot-build.log" | sort -u | head -20 >&2
-        die "proot build failed; full log at $WORK_DIR/proot-build.log"
+        grep -E 'error:|Error [0-9]' "$BUILD_ROOT/proot-build.log" | sort -u | head -20 >&2
+        die "proot build failed; full log at $BUILD_ROOT/proot-build.log"
     }
 
 [ -f "$SRC/proot" ] || die "no proot binary was produced"

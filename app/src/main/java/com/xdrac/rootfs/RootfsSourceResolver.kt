@@ -55,22 +55,33 @@ class RootfsSourceResolver(private val ctx: Context) {
      */
     fun resolve(): Source {
         val bundled = bundledArchives()
-        return when {
-            bundled.isEmpty() -> {
-                Log.i(ShellLocator.TAG, "[SOURCE] no image in assets/$ASSET_DIR -> online installer (catalogue)")
-                Source.RemoteCatalog
-            }
-            else -> {
-                if (bundled.size > 1) {
-                    Log.e(ShellLocator.TAG,
-                        "[SOURCE] ${bundled.size} images in assets/$ASSET_DIR (" +
-                            bundled.joinToString { it.fileName } + "); the build should have refused this. " +
-                            "Using ${bundled[0].fileName}")
-                }
-                Log.i(ShellLocator.TAG, "[SOURCE] bundled image ${bundled[0].fileName} -> offline installer")
-                Source.Bundled(bundled[0])
-            }
+        if (bundled.isEmpty()) {
+            Log.i(ShellLocator.TAG, "[SOURCE] no image in assets/$ASSET_DIR -> online installer (catalogue)")
+            return Source.RemoteCatalog
         }
+        if (bundled.size > 1) {
+            Log.e(ShellLocator.TAG,
+                "[SOURCE] ${bundled.size} images in assets/$ASSET_DIR (" +
+                    bundled.joinToString { it.fileName } + "); the build should have refused this.")
+        }
+
+        // The APK is universal (arm64-v8a + x86_64), but a bundled offline image is a single
+        // architecture. Using an arm64 image on an x86_64 device (or vice versa) installs a rootfs
+        // whose /bin/sh cannot exec -- a broken terminal. So a bundled image is only used offline
+        // when its arch matches the device (or is unnamed/unknown, where we cannot tell and keep the
+        // old behaviour). When every bundled image is a KNOWN mismatch, fall through to the online
+        // catalogue, which serves this device's matching arch from assets/rootfsURLS.json.
+        val deviceArch = RootfsDiscovery.deviceArch()
+        val usable = bundled.firstOrNull { it.arch == deviceArch || it.arch == "unknown" }
+        if (usable == null) {
+            Log.w(ShellLocator.TAG,
+                "[SOURCE] bundled image(s) [" + bundled.joinToString { "${it.fileName} (${it.arch})" } +
+                    "] do not match device arch '$deviceArch' -> online installer (catalogue) for the matching arch")
+            return Source.RemoteCatalog
+        }
+        Log.i(ShellLocator.TAG,
+            "[SOURCE] bundled image ${usable.fileName} (arch=${usable.arch}, device=$deviceArch) -> offline installer")
+        return Source.Bundled(usable)
     }
 
     companion object {

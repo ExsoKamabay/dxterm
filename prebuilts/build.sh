@@ -5,10 +5,15 @@
 #   ./prebuilts/build.sh talloc proot    build only these
 #   ./prebuilts/build.sh --install       build all, then copy into jniLibs
 #
-# Results land in prebuilts/work/out/. Nothing touches app/src/main/jniLibs
-# unless --install is passed: replacing the shipped binaries changes what the
-# APK contains, and that should be a decision, not a side effect of running a
-# build script.
+# ANDROID_ABI selects the architecture (default arm64-v8a, see manifest.env);
+# the APK is universal, so a full refresh is both of:
+#   ./prebuilts/build.sh --install
+#   ANDROID_ABI=x86_64 TRIPLE=x86_64-linux-android ./prebuilts/build.sh --install
+#
+# Results land in prebuilts/work/$ANDROID_ABI/out/. Nothing touches
+# app/src/main/jniLibs unless --install is passed: replacing the shipped
+# binaries changes what the APK contains, and that should be a decision, not a
+# side effect of running a build script.
 #
 # Set PREBUILTS_WORK to build somewhere other than prebuilts/work.
 set -euo pipefail
@@ -16,21 +21,33 @@ set -euo pipefail
 PREBUILTS_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$PREBUILTS_DIR/.." && pwd)"
 WORK_DIR="${PREBUILTS_WORK:-$PREBUILTS_DIR/work}"
-OUT_DIR="$WORK_DIR/out"
-JNI_DIR="$REPO_ROOT/app/src/main/jniLibs/arm64-v8a"
+
+# For ANDROID_ABI, which decides both where the recipes build and which jniLibs
+# directory --install writes to. The app ships a universal APK (arm64-v8a and
+# x86_64), so "install" has to mean "install for the ABI just built" -- a fixed
+# arm64 path would quietly overwrite the x86_64 binaries with arm64 ones.
+# shellcheck source=manifest.env
+. "$PREBUILTS_DIR/manifest.env"
+
+OUT_DIR="$WORK_DIR/$ANDROID_ABI/out"
+JNI_DIR="$REPO_ROOT/app/src/main/jniLibs/$ANDROID_ABI"
 
 # Dependency order, not alphabetical:
 #   proot links against both talloc and android-shmem, and compiles against
 #   android-shmem's sys/shm.h. Building it first fails with a clear message,
 #   but there is no reason to make that happen.
-ORDER="android-shmem talloc busybox proot"
+# vhdp-cli is last and independent: it builds from sources already in this
+# repository. Its *.so outputs (libphdp.so, libvhdp-loader.so) go into jniLibs
+# through the install loop below like every other prebuilt, while the in-guest
+# `vhdp` binary is installed by its own recipe into assets/, outside that loop.
+ORDER="android-shmem talloc busybox proot vhdp-cli"
 
 INSTALL=0
 TARGETS=""
 for arg in "$@"; do
     case "$arg" in
         --install) INSTALL=1 ;;
-        -h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) printf 'unknown option: %s\n' "$arg" >&2; exit 2 ;;
         *)
             case " $ORDER " in
@@ -54,6 +71,10 @@ fi
 
 printf '\033[1mBuilding:\033[0m%s\n' "$TARGETS"
 printf 'work dir: %s\n\n' "$WORK_DIR"
+
+# Recipes whose artifact does not belong in jniLibs install themselves, and read
+# this to know whether the caller asked for it.
+export PREBUILTS_INSTALL="$INSTALL"
 
 for c in $TARGETS; do
     printf '\033[1m===== %s =====\033[0m\n' "$c"
@@ -97,9 +118,11 @@ Installed. Before committing these, understand what changed:
     workarounds in Bootstrap are no longer load-bearing. They are harmless, but
     they now describe something untrue.
   * NOTHING here has been run on a device. A build that links is not a build
-    that works: exercise the BusyBox shell, then a full PRoot rootfs launch, on
-    real arm64 hardware before shipping.
+    that works: exercise the BusyBox shell, then a full rootfs launch on the
+    VHDP backend AND on the PRoot fallback (GuestBackend picks one; force the
+    other by writing files/.guest-backend), on real arm64 hardware before
+    shipping.
 EOF
 else
-    printf '\nNothing was installed. Re-run with --install to copy these into\napp/src/main/jniLibs/arm64-v8a/.\n'
+    printf '\nNothing was installed. Re-run with --install to copy these into\n%s/.\n' "$JNI_DIR"
 fi

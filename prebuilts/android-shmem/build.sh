@@ -15,7 +15,7 @@ setup_toolchain
 fetch_git "$SHMEM_REPO" "$SHMEM_COMMIT" android-shmem
 
 SRC="$DL_DIR/android-shmem"
-BUILD="$WORK_DIR/build/android-shmem"
+BUILD="$BUILD_ROOT/build/android-shmem"
 rm -rf "$BUILD" && mkdir -p "$BUILD"
 
 [ -f "$SRC/shmem.c" ] || die "shmem.c not found in $SRC"

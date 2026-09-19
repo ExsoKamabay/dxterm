@@ -96,30 +96,43 @@ object Bootstrap {
         // shims' `${SHELL:-…}` and `su -c` paths resolve to a shell the image actually ships.
         val guestShell = if (hasGuest) (ShellLocator.guestPath(File(rootfs)) ?: "/bin/sh") else "/bin/sh"
 
-        val env = if (hasGuest) {
-            // Guest environment. The login identity is the ordinary user 'dracos' with a '$'
-            // prompt, but the container is proot fake-root, so the kernel euid is 0 whatever the
-            // shell says. The dracos/root distinction is presentation, driven by $DRAC_SU: the
-            // prompt in ~/.bashrc and the whoami/id/logname shims on PATH both read it.
-            // DRAC_HOME pins the themed rc so a super-user shell loads it even with HOME=/root.
-            arrayOf(
-                "HOME=/home/dracos",
-                "PWD=/home/dracos",
-                "USER=dracos",
-                "LOGNAME=dracos",
-                "DRAC_HOME=/home/dracos",
-                "SHELL=$guestShell",
-                "TMPDIR=/tmp",
+        // Guest environment. The login identity is the ordinary user 'dracos' with a '$' prompt,
+        // but the guest runs as fake-root, so the (emulated) euid is 0 whatever the shell says.
+        // The dracos/root distinction is presentation, driven by $DRAC_SU: the prompt in
+        // ~/.bashrc and the whoami/id/logname shims on PATH both read it. DRAC_HOME pins the
+        // themed rc so a super-user shell loads it even with HOME=/root.
+        val guestEnv = arrayOf(
+            "HOME=/home/dracos",
+            "PWD=/home/dracos",
+            "USER=dracos",
+            "LOGNAME=dracos",
+            "DRAC_HOME=/home/dracos",
+            "SHELL=$guestShell",
+            "TMPDIR=/tmp",
+            "TERM=xterm-256color",
+            "LANG=C.UTF-8",
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        )
+        val backend = if (hasGuest) com.xdrac.guest.GuestBackend.chosenBackend(ctx, File(rootfs)) else null
+
+        val env = when {
+            // phdp is an Android-side process: it gets a host environment, and hands the guest
+            // exactly guestEnv (--clear-env + -e), so nothing of the app's environment leaks in.
+            backend == com.xdrac.guest.GuestBackend.Backend.VHDP -> arrayOf(
+                "HOME=$home",
+                "PWD=$home",
+                "TMPDIR=$tmp",
                 "TERM=xterm-256color",
                 "LANG=C.UTF-8",
-                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-            ) + prootEnv
-        } else {
+                "PATH=$nativeLib:/system/bin"
+            )
+            // proot passes its own environment through to the guest.
+            hasGuest -> guestEnv + prootEnv
             // BusyBox-over-Android environment (no rootfs): Android paths are correct. There is no
             // real /home/dracos on a non-rooted device, so HOME stays app-private; the identity is
             // still presented as 'dracos' (USER + a whoami function seeded into .ashrc) and the
-            // prompt ends with '$' to match the normal-user contract of the primary (proot) path.
-            arrayOf(
+            // prompt ends with '$' to match the normal-user contract of the Linux path.
+            else -> arrayOf(
                 "HOME=$home",
                 "PWD=$home",
                 "USER=dracos",
@@ -136,8 +149,9 @@ object Bootstrap {
         writeNetSnapshot(ctx)
 
         val argv = if (hasGuest) {
-            Log.i(TAG, "rootfs found at $rootfs -> launching via proot")
-            prootArgv(ctx, rootfs)          // proot sets the guest cwd via -w /home/dracos
+            Log.i(TAG, "rootfs found at $rootfs -> launching via guest backend $backend")
+            // Through the guest front door, which picks VHDP or proot for this rootfs.
+            com.xdrac.guest.GuestBackend.launchArgv(ctx, rootfs, guestEnv)
         } else {
             // Through the link, not the binary: argv[0] has to read "ash" for BusyBox to
             // dispatch to the shell. Handing it the packaged path gets "applet not found",
@@ -145,15 +159,16 @@ object Bootstrap {
             arrayOf("$usrBin/ash")
         }
         // The host-side cwd handed to execve is always a real host directory ($HOME);
-        // proot re-roots the guest itself, so this stays valid in both modes.
+        // the backend re-roots the guest itself (vhdp --cwd, proot), so this stays valid
+        // in both modes.
         return Spec(argv, env, home)
     }
 
     /**
-     * Build a proot FAKE-ROOT (-0) one-shot invocation that runs `/bin/sh -c <script>` inside the
-     * rootfs, for bootstrap-time maintenance such as the dpkg recovery engine. Fake-root is the
-     * only context in which chown/permission repair inside a proot guest succeeds without Android
-     * root. Ensures proot's runtime deps (libtalloc symlink, tmp dir) exist, exactly like prepare().
+     * Build a FAKE-ROOT one-shot invocation that runs `/bin/sh -c <script>` inside the rootfs, for
+     * bootstrap-time maintenance such as the dpkg recovery engine, through whichever backend runs
+     * this rootfs (VHDP with --uid 0, or proot -0). Fake-root is the only context in which
+     * chown/permission repair inside the guest succeeds without Android root.
      * Returns (argv, env) ready for ProcessBuilder.
      */
     fun fakerootShell(ctx: Context, rootfs: String, script: String): Pair<Array<String>, Array<String>> {
@@ -161,11 +176,28 @@ object Bootstrap {
         val files = ctx.filesDir.absolutePath
         val tmp = "$files/tmp"; val usrLib = "$files/usr/lib"
         listOf(tmp, usrLib).forEach { File(it).mkdirs() }
+        val guestPath = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+        if (com.xdrac.guest.GuestBackend.chosenBackend(ctx, File(rootfs)) == com.xdrac.guest.GuestBackend.Backend.VHDP) {
+            ensureGuestDev(File(rootfs))
+            val env = arrayOf("HOME=$files/home", "TMPDIR=$tmp", "LANG=C.UTF-8", "PATH=$nativeLib:/system/bin")
+            val argv = arrayOf(
+                *phdpEventsToLog(ctx), "$nativeLib/libphdp.so", "run", "--event-fd", "3",
+                "--engine", "rootless",
+                "--uid", "0", "--gid", "0", "--proc", "host", "--dev", "minimal",
+                "--bind", "/sys:/sys:rw", "--cwd", "/", "--clear-env",
+                "-e", "HOME=/root", "-e", "PWD=/root", "-e", "TMPDIR=/tmp",
+                "-e", "TERM=xterm-256color", "-e", "LANG=C.UTF-8", "-e", guestPath,
+                rootfs, "--", "/bin/sh", "-c", script
+            )
+            return argv to env
+        }
+
         symlink("$nativeLib/libtalloc.so", "$usrLib/libtalloc.so.2")   // proot DT_NEEDED
         val env = arrayOf(
             "HOME=/root", "PWD=/root", "TMPDIR=/tmp",
             "TERM=xterm-256color", "LANG=C.UTF-8",
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            guestPath,
             "LD_LIBRARY_PATH=$nativeLib:$usrLib",
             "PROOT_LOADER=$nativeLib/libproot-loader.so",
             "PROOT_TMP_DIR=$tmp"
@@ -186,17 +218,26 @@ object Bootstrap {
     private fun hasRootfs(rootfs: String): Boolean =
         ShellLocator.find(File(rootfs)) != null
 
+    /** What both guest backends bind or project, prepared once per session start. */
+    class GuestTree(
+        val rootfs: File,
+        val guestHome: File,
+        val shell: String,
+        val storage: LinkedHashMap<String, File>,
+    )
+
     /**
-     * The proot command line for an installed rootfs. prepare() selects it whenever one is
-     * present at filesDir/rootfs.
+     * Prepares an installed rootfs for a session, whichever backend runs it: the writable guest
+     * HOME, the login user, the guest-side commands (compat shims, `xset`, `vhdp`), and the
+     * storage volumes to graft under /mnt. Idempotent and refreshed every launch, so a rootfs
+     * provisioned by an older build is repaired in place.
      */
-    fun prootArgv(ctx: Context, rootfs: String): Array<String> {
-        val nativeLib = ctx.applicationInfo.nativeLibraryDir
+    fun prepareGuestTree(ctx: Context, rootfs: String): GuestTree {
         val rootfsDir = File(rootfs)
 
-        // Writable guest HOME backed by a host directory, bound over /home/dracos below. World-
+        // Writable guest HOME backed by a host directory, bound over /home/dracos. World-
         // writable so the session can always write it regardless of host-side ownership of the
-        // extracted files (an in-rootfs home can otherwise be read-only under proot).
+        // extracted files (an in-rootfs home can otherwise be read-only under the backend).
         val guestHome = File(ctx.filesDir, "guest-home").apply { mkdirs() }
         runCatching { Os.chmod(guestHome.absolutePath, 0x1FF) }   // 0777
         seedUserHome(ctx, guestHome)
@@ -208,23 +249,17 @@ object Bootstrap {
             .onFailure { Log.w(ShellLocator.TAG, "[BOOTSTRAP] ensureUser skipped: ${it.message}") }
         installCompatShims(ctx, rootfsDir)                        // sudo/su/fakeroot + whoami/id/logname (idempotent)
         installXsetCommand(ctx, File(rootfsDir, "usr/local/bin").absolutePath)  // `xset` dashboard command
-
-        val binds = ArrayList<String>()
-        fun bind(src: String?, dst: String) { if (src != null) { binds += "-b"; binds += "$src:$dst" } }
-        bind("/dev", "/dev"); bind("/proc", "/proc"); bind("/sys", "/sys")
-
-        // Bind the writable guest HOME onto /home/dracos.
-        bind(guestHome.absolutePath, "/home/dracos")
+        installVhdpCommand(ctx, rootfsDir)                        // `vhdp` CLI (doctor/inspect/capabilities/run)
 
         // Storage, as the xset Storage Access row exposes it.
         //
-        // proot binds are fixed at spawn and a running proot can never be re-bound, so every
-        // real volume is grafted here whether or not storage permission is held yet. That is
-        // safe because a bind is only a path-translation rule: establishing one needs no read
-        // permission and invents nothing, reads stay gated by the OS, so an unpermitted source
-        // shows up as an empty or EACCES directory that is nonetheless real. Gating the bind on
-        // permission instead would strand the common case, where the user grants access from
-        // xset after the shell has already spawned and there is no namespace left to bind into.
+        // Binds are fixed at spawn and a running backend can never be re-bound, so every real
+        // volume is grafted whether or not storage permission is held yet. That is safe because
+        // a bind is only a path-translation rule: establishing one needs no read permission and
+        // invents nothing, reads stay gated by the OS, so an unpermitted source shows up as an
+        // empty or EACCES directory that is nonetheless real. Gating the bind on permission
+        // instead would strand the common case, where the user grants access from xset after the
+        // shell has already spawned and there is nothing left to bind into.
         //
         //   /mnt/sdcard      the internal shared-storage root
         //   /mnt/sdcard-1 …  a removable volume root, only when one exists and is readable
@@ -233,31 +268,125 @@ object Bootstrap {
         // inside another bind can fail to stat on proot 5.1.0 even while its contents stay
         // reachable, so HOME reaches them through a plain symlink instead.
         runCatching { File(rootfsDir, "mnt").mkdirs() }          // ensure the guest /mnt bind-parent exists
-        val bound = LinkedHashSet<String>()
+        val storage = LinkedHashMap<String, File>()
         for ((name, src) in storageVolumes(ctx)) {
-            bind(src.absolutePath, "/mnt/$name")
-            bound += name
+            runCatching { File(rootfsDir, "mnt/$name").mkdirs() }
+            storage[name] = src
         }
-        boundStorageNames = bound
+        boundStorageNames = LinkedHashSet(storage.keys)
         applyStorageVisibility(ctx, storageAccessEnabled(ctx))   // reflect the persisted ON/OFF at spawn
         logStorageTrace(ctx, "spawn")
+
+        val shell = ShellLocator.guestPath(rootfsDir) ?: "/bin/sh"
+        return GuestTree(rootfsDir, guestHome, shell, storage)
+    }
+
+    /**
+     * The proot command line for an installed rootfs, used when VHDP cannot run it (see
+     * [com.xdrac.guest.GuestBackend.selectBackend]).
+     */
+    fun prootArgv(ctx: Context, rootfs: String): Array<String> {
+        val nativeLib = ctx.applicationInfo.nativeLibraryDir
+        val tree = prepareGuestTree(ctx, rootfs)
+
+        val binds = ArrayList<String>()
+        fun bind(src: String?, dst: String) { if (src != null) { binds += "-b"; binds += "$src:$dst" } }
+        // The device/system projection (/dev, /proc, /sys) is decided by VHDP; proot applies it.
+        for ((h, g) in com.xdrac.guest.GuestBackend.systemBinds()) bind(h, g)
+        bind(tree.guestHome.absolutePath, "/home/dracos")
+        for ((name, src) in tree.storage) bind(src.absolutePath, "/mnt/$name")
 
         // -0 is fake-root, and it is not a choice: dpkg checks geteuid()==0 and sudo wants a
         // uid-0 setuid binary proot cannot forge, so without it apt and dpkg cannot write. The
         // kernel euid is therefore 0 in every state, which is why the dracos/root distinction
-        // is presented at the shell rather than enforced by the kernel. proot-distro, UserLAnd
-        // and Andronix all run their containers the same way.
+        // is presented at the shell rather than enforced by the kernel.
         //
         // --link2symlink emulates hardlinks with symlinks, because dpkg's link()-based backups
         // fail on Android's app-private filesystem without it.
-        val shell = ShellLocator.guestPath(rootfsDir) ?: "/bin/sh"
         val head = arrayOf("$nativeLib/libproot.so", "-0", "--link2symlink", "-r", rootfs) + binds.toTypedArray()
-        Log.i(ShellLocator.TAG, "[BOOTSTRAP] login user=dracos HOME=/home/dracos (fake-root euid 0, link2symlink), shell=$shell")
-        val tail = arrayOf("-w", "/home/dracos", shell, "-l")
+        Log.i(ShellLocator.TAG, "[BOOTSTRAP] login user=dracos HOME=/home/dracos (proot fake-root euid 0, link2symlink), shell=${tree.shell}")
+        val tail = arrayOf("-w", "/home/dracos", tree.shell, "-l")
 
         val argv = head + tail
         Log.i(ShellLocator.TAG, "[BOOTSTRAP] proot argv: " + argv.joinToString(" "))
         return argv
+    }
+
+    /**
+     * The VHDP command line for an installed rootfs: phdp's rootless engine, started from
+     * nativeLibraryDir, runs the guest itself -- guest programs start through the userland loader
+     * (libvhdp-loader.so) instead of execve() from app storage, which Android forbids.
+     *
+     * It presents the same guest as [prootArgv]: fake-root identity (--uid 0 --gid 0; the
+     * dracos/root distinction is still presentation via DRAC_SU), host /proc, /sys bound, the
+     * writable HOME and every storage volume bound read-write, and the login shell in
+     * /home/dracos. /dev is VHDP's minimal device projection over the rootfs's own /dev (see
+     * [ensureGuestDev]), which, unlike a whole-/dev bind, can be listed.
+     */
+    fun vhdpArgv(ctx: Context, rootfs: String, guestEnv: Array<String>): Array<String> {
+        val nativeLib = ctx.applicationInfo.nativeLibraryDir
+        val tree = prepareGuestTree(ctx, rootfs)
+        ensureGuestDev(tree.rootfs)
+
+        val args = arrayListOf(*phdpEventsToLog(ctx), "$nativeLib/libphdp.so", "run",
+            "--event-fd", "3",
+            "--engine", "rootless",
+            "--uid", "0", "--gid", "0",
+            "--proc", "host",
+            "--dev", "minimal",
+            "--cwd", "/home/dracos",
+            "--clear-env"
+        )
+        for (kv in guestEnv) { args += "-e"; args += kv }
+        // /dev and /proc are projected natively above; any other system tree VHDP decided on is bound.
+        for ((h, g) in com.xdrac.guest.GuestBackend.systemBinds()) {
+            if (g != "/dev" && g != "/proc") { args += "--bind"; args += "$h:$g:rw" }
+        }
+        args += "--bind"; args += "${tree.guestHome.absolutePath}:/home/dracos:rw"
+        for ((name, src) in tree.storage) { args += "--bind"; args += "${src.absolutePath}:/mnt/$name:rw" }
+        args += rootfs; args += "--"; args += tree.shell; args += "-l"
+
+        Log.i(ShellLocator.TAG, "[BOOTSTRAP] login user=dracos HOME=/home/dracos (VHDP fake-root uid 0, userland loader), shell=${tree.shell}")
+        Log.i(ShellLocator.TAG, "[BOOTSTRAP] vhdp argv: " + args.joinToString(" "))
+        return args.toTypedArray()
+    }
+
+    /**
+     * Launch prefix giving phdp an event descriptor 3 appended to cache/vhdp-events.log. phdp
+     * reports its diagnostics (refused syscalls, paths outside the session) on that stream,
+     * which is otherwise stderr: the terminal itself, where they would be interleaved with the
+     * guest's output. Start failures are still printed on stderr. `exec` replaces the shell, so
+     * the process the terminal holds is phdp itself. The redirection belongs to the exec'd
+     * command: mksh marks a descriptor above 2 opened by a bare `exec 3>>file` close-on-exec.
+     */
+    private fun phdpEventsToLog(ctx: Context): Array<String> {
+        val log = File(ctx.cacheDir, "vhdp-events.log")
+        if (log.length() > 512L * 1024) log.delete()
+        return arrayOf("/system/bin/sh", "-c", "exec \"\$@\" 3>>\"\$0\"", log.absolutePath)
+    }
+
+    /**
+     * The guest /dev that VHDP's minimal projection expects, for a rootfs provisioned before
+     * VHDP configure created it (configure.cpp does the same for new installs): /proc/self/fd
+     * links for process substitution and /dev/std*, a sticky world-writable /dev/shm, a /dev/pts
+     * directory, and placeholders so the projected nodes appear in a listing. Existing entries
+     * are never replaced.
+     */
+    fun ensureGuestDev(rootfs: File) {
+        val dev = File(rootfs, "dev").apply { mkdirs() }
+        for ((name, target) in listOf("fd" to "/proc/self/fd", "stdin" to "/proc/self/fd/0",
+                                      "stdout" to "/proc/self/fd/1", "stderr" to "/proc/self/fd/2")) {
+            val link = File(dev, name)
+            if (runCatching { Os.lstat(link.absolutePath) }.isFailure) {
+                runCatching { Os.symlink(target, link.absolutePath) }
+            }
+        }
+        File(dev, "shm").let { it.mkdirs(); runCatching { Os.chmod(it.absolutePath, 0x3FF) } }  // 01777
+        File(dev, "pts").mkdirs()
+        for (n in listOf("null", "zero", "full", "random", "urandom", "tty", "ptmx")) {
+            val f = File(dev, n)
+            if (runCatching { Os.lstat(f.absolutePath) }.isFailure) runCatching { f.createNewFile() }
+        }
     }
 
     /** The persisted Storage-Access opt-in (`storage.enabled` in the xset store). Off by
@@ -504,6 +633,30 @@ object Bootstrap {
             ctx.assets.open("compat/xset").use { i -> f.outputStream().use { i.copyTo(it) } }
             Os.chmod(f.absolutePath, 0x1ED)   // 0755 = rwxr-xr-x
         }.onFailure { Log.w(TAG, "[XSET] command install failed: ${it.message}") }
+    }
+
+    /**
+     * Install the `vhdp` guest command into /usr/local/bin from the prebuilt CLI shipped in
+     * assets/vhdp/bin/<abi>/vhdp.
+     *
+     * This is the terminal half of the VHDP integration: users get `vhdp doctor` / `inspect` /
+     * `capabilities` (and `run`, where the profile allows it) without downloading anything, because
+     * the binary already ships in the APK. It is a fully STATIC build, so it runs inside the glibc
+     * Debian guest under either backend without depending on the guest's or Android's libc/loader. Its full
+     * source ships alongside in assets/vhdp/ for anyone who wants to rebuild it. The ABI is chosen
+     * from Build.SUPPORTED_ABIS so the same code path serves an arm64 device and an x86_64 emulator.
+     * Refreshed every launch like the compat/xset shims; non-fatal, never blocks the terminal.
+     */
+    private fun installVhdpCommand(ctx: Context, rootfsDir: File) {
+        val abi = (Build.SUPPORTED_ABIS ?: emptyArray())
+            .firstOrNull { it == "arm64-v8a" || it == "x86_64" }
+            ?: Build.SUPPORTED_ABIS?.firstOrNull() ?: "arm64-v8a"
+        runCatching {
+            val binDir = File(rootfsDir, "usr/local/bin").apply { mkdirs() }
+            val f = File(binDir, "vhdp")
+            ctx.assets.open("vhdp/bin/$abi/vhdp").use { i -> f.outputStream().use { i.copyTo(it) } }
+            Os.chmod(f.absolutePath, 0x1ED)   // 0755 = rwxr-xr-x
+        }.onFailure { Log.w(ShellLocator.TAG, "[VHDP] command install failed ($abi): ${it.message}") }
     }
 
     /**

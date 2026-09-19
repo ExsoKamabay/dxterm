@@ -1,0 +1,57 @@
+Handle the legacy creat(2) when Android's seccomp policy rejects it.
+
+Android's system seccomp policy for app processes rejects creat(2), which
+raises SIGSYS. PRoot catches that in handle_seccomp_event(), but its emulation
+switch had no case for PR_creat, so the call fell through to the default arm
+and was completed with -ENOSYS. Anything still using creat(2) therefore failed
+with "Function not implemented": GNU tar uses it to create an archive, so
+`tar -cf out.tar dir` could not create any archive inside the guest, while
+`tar -cf - dir | gzip` worked because that opens no file.
+
+creat(path, mode) is exactly openat(AT_FDCWD, path, O_CREAT|O_WRONLY|O_TRUNC,
+mode), so convert it the way the neighbouring PR_open case converts open(2) and
+restart the syscall: the rewritten openat() passes the policy, and PRoot
+translates the path on the restart. Only x86 guests reach this -- arm64 has no
+creat syscall -- but PR_creat is an architecture-independent enum, so the case
+compiles everywhere, exactly as it already does in syscall/enter.c.
+
+diff --git a/src/tracee/seccomp.c b/src/tracee/seccomp.c
+index 66dfef3..f1292c4 100644
+--- a/src/tracee/seccomp.c
++++ b/src/tracee/seccomp.c
+@@ -7,6 +7,7 @@
+ #include <linux/net.h> /* SYS_SENDMMSG */
+ #include <assert.h>    /* assert(3), */
+ #include <time.h>      /* time(2), */
++#include <fcntl.h>     /* O_CREAT, O_WRONLY, O_TRUNC, AT_FDCWD, */
+ 
+ #include "extension/extension.h"
+ #include "cli/note.h"
+@@ -155,6 +156,27 @@ static int handle_seccomp_event_common(Tracee *tracee)
+ 	}
+ 
+ 	switch (sysnum) {
++	case PR_creat:
++		/* int creat(const char *pathname, mode_t mode);
++		 *
++		 * Android's system seccomp policy rejects the legacy creat()
++		 * (this is what raised the SIGSYS that brought us here), and
++		 * GNU tar still uses it to create an archive, so without this
++		 * `tar -cf file.tar dir` fails with ENOSYS.  creat() is exactly
++		 * openat(AT_FDCWD, pathname, O_CREAT|O_WRONLY|O_TRUNC, mode),
++		 * so convert it the same way PR_open is converted below: the
++		 * rewritten syscall passes the policy, and PRoot translates the
++		 * path when the syscall is restarted.  Arguments are moved
++		 * highest-first so every register is read before it is
++		 * overwritten.  */
++		poke_reg(tracee, SYSARG_4, peek_reg(tracee, CURRENT, SYSARG_2));
++		poke_reg(tracee, SYSARG_3, O_CREAT | O_WRONLY | O_TRUNC);
++		poke_reg(tracee, SYSARG_2, peek_reg(tracee, CURRENT, SYSARG_1));
++		poke_reg(tracee, SYSARG_1, AT_FDCWD);
++		set_sysnum(tracee, PR_openat);
++		restart_syscall_after_seccomp(tracee);
++		break;
++
+ 	case PR_open:
+ 		set_sysnum(tracee, PR_openat);
+ 		poke_reg(tracee, SYSARG_4, peek_reg(tracee, CURRENT, SYSARG_3));

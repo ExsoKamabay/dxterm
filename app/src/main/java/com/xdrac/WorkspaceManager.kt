@@ -34,7 +34,12 @@ class WorkspaceManager(
 ) {
     companion object { const val MAX = 5 }
 
-    private class Slot(var session: TerminalSession) { var started = false }
+    // started: the async start has completed successfully. starting: a start is in flight on the
+    // starter thread. Without the in-flight flag, re-selecting a workspace before its first start
+    // finishes re-enters the !started branch and calls session.start() a SECOND time on the same
+    // session, overwriting its native handle without closing the first -> a leaked PTY + reader
+    // thread + proot/bash process tree that nothing can ever destroy.
+    private class Slot(var session: TerminalSession) { var started = false; var starting = false }
 
     private val slots = ArrayList<Slot>()
     var active = 0; private set
@@ -80,9 +85,13 @@ class WorkspaceManager(
     fun switchTo(index: Int) {
         if (index !in slots.indices) return
         active = index
-        val seq = ++switchSeq
         onChanged()                        // reflect the selected tab immediately (cheap, incremental)
         val slot = slots[index]
+        // A start is already in flight for this slot. Do NOT launch a second one (that leaks the
+        // first session's native handle). The in-flight start presents itself on completion if this
+        // is still the active workspace; switchSeq is deliberately NOT bumped here so it can.
+        if (slot.starting) return
+        val seq = ++switchSeq
         val c = terminal.gridCols(); val r = terminal.gridRows()
         when {
             !slot.started ->
@@ -112,9 +121,11 @@ class WorkspaceManager(
      */
     private fun startInBackground(slot: Slot, session: TerminalSession, c: Int, r: Int, seq: Int) {
         if (c <= 0 || r <= 0) { slot.started = false; return }
+        slot.starting = true                 // block a concurrent re-entry from starting this slot again
         starter.execute {
             val ok = runCatching { session.start(c, r) }.getOrDefault(false)
             main.post {
+                slot.starting = false
                 val curIdx = slots.indexOf(slot)
                 if (curIdx < 0) { if (ok) runCatching { session.close() } ; return@post }  // slot removed meanwhile
                 slot.started = ok
@@ -154,6 +165,7 @@ class WorkspaceManager(
      */
     fun restartActive() {
         val slot = slots[active]
+        if (slot.starting) return            // a start is already in flight; let it produce the live shell
         runCatching { slot.session.close() }
         val fresh = TerminalSession(ctx)
         slot.session = fresh

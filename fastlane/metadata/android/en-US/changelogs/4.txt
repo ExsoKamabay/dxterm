@@ -1,0 +1,8 @@
+A licensing change. Nothing new on screen.
+
+The app code is now under the GNU General Public License version 3, replacing
+Apache 2.0, to match the GPL binaries it bundles (BusyBox and PRoot). LICENSE,
+NOTICE, and the licensing section of the README are updated. Third-party
+binaries keep their own licenses; nothing was relicensed.
+
+The terminal, xset, permissions, and the catalogue are unchanged.

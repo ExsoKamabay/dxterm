@@ -145,7 +145,8 @@ def main() -> int:
             fail(f"{name} is missing at the repository root")
 
     lic_dir = ROOT / "licenses"
-    for name in ("GPL-2.0.txt", "GPL-3.0.txt", "LGPL-3.0.txt", "BSD-3-Clause.txt"):
+    for name in ("GPL-2.0.txt", "GPL-3.0.txt", "LGPL-3.0.txt", "BSD-3-Clause.txt",
+                 "Apache-2.0.txt"):
         p = lic_dir / name
         if p.is_file() and p.stat().st_size > 0:
             ok(f"licenses/{name} present")
