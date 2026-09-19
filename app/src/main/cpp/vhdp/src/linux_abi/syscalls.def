@@ -398,7 +398,7 @@ VHDP_SYSCALL(io_uring_register, denied, deny_enosys)
 VHDP_SYSCALL(io_uring_setup, denied, deny_enosys)
 #endif
 #ifdef __NR_ioctl
-VHDP_SYSCALL(ioctl, pass_through, none)
+VHDP_SYSCALL(ioctl, pass_through, ioctl)
 #endif
 #ifdef __NR_ioperm
 VHDP_SYSCALL(ioperm, denied, deny_eperm)

@@ -6,6 +6,7 @@
 #include <termios.h>
 #include <signal.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>     // umask
 #include <sys/wait.h>
 #include <cstdlib>
 #include <cerrno>
@@ -26,7 +27,7 @@ bool Pty::start(const std::vector<std::string>& argv,
     // malloc arena another thread happened to hold at fork time is locked there for ever: the
     // child hangs before exec and the terminal opens to nothing. This app always has other
     // threads running (a reader per workspace, the download and provisioning workers), so the
-    // window is real. Everything the child does below, chdir/signal/sigprocmask/execve, is async-signal-safe.
+    // window is real. Everything the child does below, chdir/signal/sigprocmask/umask/execve, is async-signal-safe.
     std::vector<char*> cargv;
     cargv.reserve(argv.size() + 1);
     for (const auto& a : argv) cargv.push_back(const_cast<char*>(a.c_str()));
@@ -66,6 +67,12 @@ bool Pty::start(const std::vector<std::string>& argv,
         sigset_t none;
         sigemptyset(&none);
         sigprocmask(SIG_SETMASK, &none, nullptr);
+
+        // The file-creation mask of a Linux login (login.defs, pam_umask) instead of the 077 every
+        // Android app process runs with. Under 077 each file the guest creates is private to its
+        // owner: `dpkg-deb --build` refuses the 0700 DEBIAN directory that results, and files a
+        // package script writes cannot be read by the service users it writes them for.
+        umask(022);
 
         execve(cargv[0], cargv.data(), cenv.data());
         _exit(127);   // exec failed

@@ -14,6 +14,7 @@
 #include "common/json.hpp"
 #include "common/unique_fd.hpp"
 #include "engines/rootless/proc_synth.hpp"
+#include "engines/rootless/termios2.hpp"
 #include "engines/rootless/tracee_mem.hpp"
 #include "linux_abi/errno_table.h"
 #include "platform/linux/proc.hpp"
@@ -73,6 +74,7 @@ pid_t proc_exe_owner(std::string_view guest, pid_t self_tgid) {
 }
 
 constexpr long kAtFdcwd = -100;
+constexpr std::string_view kSelinuxFs = "/sys/fs/selinux";
 constexpr std::uint64_t kAtSymlinkNofollow = 0x100;
 constexpr std::uint64_t kAtSymlinkFollow = 0x400;
 constexpr std::uint64_t kAtEmptyPath = 0x1000;
@@ -361,6 +363,14 @@ int Supervisor::translate_path(Tracee& t, arch::RegsAccess& regs, StackWriter& s
             }
         }
         full = vfs::join(base, path);
+    }
+    if (selinuxfs_hidden_ && vfs::is_below(full, kSelinuxFs)) {
+        // The host has SELinux but keeps its interface to itself (an Android app domain), so the
+        // guest is told there is none: libselinux verifies the mount by stat'ing it, fails, and
+        // every program built on it behaves as on a kernel without SELinux. Left visible, dpkg
+        // 1.23.6+ aborts every package install with "cannot open security status notification
+        // channel", and nothing in the guest could have used the interface anyway.
+        return ENOENT;
     }
     vfs::ResolveOptions ro = resolve_options(t, s.follow);
     ro.see_through_links = ro.see_through_links && !s.link_name;
@@ -1197,6 +1207,20 @@ void Supervisor::fixup_exit(Tracee& t, arch::RegsAccess& regs) {
         case Fixup::dirents:
             present_dirents(t, ret);
             break;
+        case Fixup::termios2_get: {
+            // TCGETS filled the termios part; add the two speeds TCGETS2 reports after it.
+            if (ret != 0) {
+                break;
+            }
+            std::uint32_t cflag = 0;
+            if (read_mem(t.tid, p.buf + termios2::cflag_offset(), &cflag, sizeof(cflag)) != 0) {
+                break;
+            }
+            const std::uint32_t speeds[2] = {termios2::input_speed(cflag),
+                                             termios2::output_speed(cflag)};
+            (void)write_mem(t.tid, p.buf + termios2::ispeed_offset(), speeds, sizeof(speeds));
+            break;
+        }
     }
 }
 
@@ -1814,6 +1838,24 @@ SyscallAction Supervisor::dispatch(Tracee& t, arch::RegsAccess& regs,
             return handle_fd_meta(t, regs, info, static_cast<int>(a[0]), false);
         case Handler::fchown_fd:
             return handle_fd_meta(t, regs, info, static_cast<int>(a[0]), true);
+        case Handler::ioctl: {
+            // Only reached for the termios2 requests, and only on a host that refuses them
+            // (termios2.hpp): the original request does the same job on the same buffer.
+            if (!termios2_refused_) {
+                return {};
+            }
+            const auto request = static_cast<std::uint32_t>(a[1]);
+            std::uint32_t classic = termios2::classic_request(request);
+            if (classic == 0) {
+                return {};
+            }
+            rewrite_arg(t, regs, 1, classic);
+            if (termios2::is_get(request) && a[2] != 0) {
+                t.pending.fixup = Fixup::termios2_get;
+                t.pending.buf = a[2];
+            }
+            return {};
+        }
 
         case Handler::execve:
             return handle_exec(t, regs, false);

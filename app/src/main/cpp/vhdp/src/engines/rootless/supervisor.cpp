@@ -5,6 +5,7 @@
 #include "engines/rootless/bootstrap.h"
 #include "engines/rootless/loader/load_request.h"
 #include "engines/rootless/seccomp_filter.hpp"
+#include "engines/rootless/termios2.hpp"
 #include "engines/rootless/tracee_mem.hpp"
 #include "linux_abi/errno_table.h"
 #include "platform/linux/host_probe.hpp"
@@ -494,6 +495,25 @@ bool Supervisor::prepare_and_spawn(vdr::PtyDriver* pty) {
     } else {
         audit_refused_ = errno == EACCES || errno == EPERM;
     }
+    const char* termios2_mode = std::getenv("VHDP_TERMIOS2"); // "translate": on any host
+    bool termios2_forced =
+        termios2_mode != nullptr && std::string_view(termios2_mode) == "translate";
+    termios2_refused_ = termios2_forced || termios2::host_refuses();
+    // selinuxfs mounted but closed to this process: access() tells the two apart, and a host
+    // without SELinux at all answers ENOENT, where there is nothing to hide.
+    selinuxfs_hidden_ = ::access("/sys/fs/selinux/enforce", R_OK) != 0 &&
+                        (errno == EACCES || errno == EPERM);
+    if (selinuxfs_hidden_) {
+        emit(EventKind::diagnostic, Severity::debug, "selinux.hidden",
+             "the host refuses its selinuxfs; the guest is presented a kernel without SELinux", 0,
+             EACCES);
+    }
+    if (termios2_refused_) {
+        emit(EventKind::diagnostic, Severity::debug, "tty.termios2_refused",
+             "the host refuses the termios2 terminal ioctls; TCGETS2/TCSETS*2 are made as "
+             "TCGETS/TCSETS*",
+             0, EACCES);
+    }
 
     std::vector<sock_filter> filter;
     vhdp_sock_fprog_view fprog{};
@@ -535,6 +555,9 @@ bool Supervisor::prepare_and_spawn(vdr::PtyDriver* pty) {
                     !audit_refused_) {
                     allow = true;
                 }
+                if (s.handler == abi::Handler::ioctl && termios2_refused_) {
+                    allow = false; // the termios2 requests are traced, see nr_ioctl below
+                }
                 if (allow) {
                     fp.allow.push_back(s.nr);
                 }
@@ -543,6 +566,11 @@ bool Supervisor::prepare_and_spawn(vdr::PtyDriver* pty) {
             fp.nr_socket = __NR_socket;
             fp.nr_clone = __NR_clone;
             fp.nr_sendto = __NR_sendto;
+            if (termios2_refused_) {
+                fp.nr_ioctl = __NR_ioctl;
+                auto req = termios2::requests();
+                fp.ioctl_trace.assign(req.begin(), req.end());
+            }
         }
         filter = build_seccomp_filter(fp);
         if (filter.size() > 0xffff) {

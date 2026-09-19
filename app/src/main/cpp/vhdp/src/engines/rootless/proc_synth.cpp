@@ -1,5 +1,7 @@
 #include "engines/rootless/proc_synth.hpp"
 
+#include <fcntl.h>
+#include <sys/syscall.h>
 #include <sys/sysinfo.h>
 #include <sys/utsname.h>
 #include <time.h>
@@ -23,6 +25,77 @@ double boottime_seconds() {
     timespec ts{};
     ::clock_gettime(CLOCK_BOOTTIME, &ts);
     return static_cast<double>(ts.tv_sec) + static_cast<double>(ts.tv_nsec) / 1e9;
+}
+
+// A version-4 UUID in the text form /proc/sys/kernel/random/* uses, from 16 bytes.
+std::string format_uuid(unsigned char (&b)[16]) {
+    b[6] = static_cast<unsigned char>((b[6] & 0x0f) | 0x40);
+    b[8] = static_cast<unsigned char>((b[8] & 0x3f) | 0x80);
+    char s[40];
+    std::snprintf(s, sizeof(s),
+                  "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n", b[0],
+                  b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13],
+                  b[14], b[15]);
+    return s;
+}
+
+std::uint64_t splitmix64(std::uint64_t& state) {
+    std::uint64_t z = (state += 0x9e3779b97f4a7c15ull);
+    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ull;
+    z = (z ^ (z >> 27)) * 0x94d049bb133111ebull;
+    return z ^ (z >> 31);
+}
+
+// random/uuid: a fresh random UUID on every read, as the kernel gives.
+std::string synth_random_uuid() {
+    unsigned char b[16] = {};
+    long n = ::syscall(SYS_getrandom, b, sizeof(b), 0);
+    if (n != static_cast<long>(sizeof(b))) {
+        int fd = ::open("/dev/urandom", O_RDONLY | O_CLOEXEC);
+        if (fd < 0 || ::read(fd, b, sizeof(b)) != static_cast<ssize_t>(sizeof(b))) {
+            timespec ts{};
+            ::clock_gettime(CLOCK_MONOTONIC, &ts);
+            std::uint64_t st = static_cast<std::uint64_t>(ts.tv_nsec) ^
+                               (static_cast<std::uint64_t>(ts.tv_sec) << 32) ^
+                               static_cast<std::uint64_t>(::getpid());
+            for (int i = 0; i < 16; i += 8) {
+                std::uint64_t v = splitmix64(st);
+                for (int k = 0; k < 8; ++k) {
+                    b[i + k] = static_cast<unsigned char>(v >> (8 * k));
+                }
+            }
+        }
+        if (fd >= 0) {
+            ::close(fd);
+        }
+    }
+    return format_uuid(b);
+}
+
+// random/boot_id: one UUID for the whole session, so a program that reads it twice (a shell
+// prompt does, on every prompt) is not told the machine rebooted in between. The host keeps its
+// own boot_id to itself; the boot instant is what every process can work out (the realtime clock
+// minus the time since boot), rounded to a minute. Computed once and kept: the two clock reads
+// are not one operation, so a value at a minute boundary would otherwise flip between reads, and
+// a clock step (NTP settling after boot) would move it as well.
+std::string synth_boot_id() {
+    static const std::string id = [] {
+        timespec rt{};
+        timespec bt{};
+        ::clock_gettime(CLOCK_REALTIME, &rt);
+        ::clock_gettime(CLOCK_BOOTTIME, &bt);
+        std::int64_t boot_minute = (static_cast<std::int64_t>(rt.tv_sec) - bt.tv_sec + 30) / 60;
+        std::uint64_t st = static_cast<std::uint64_t>(boot_minute) ^ 0x7668647062696421ull;
+        unsigned char b[16];
+        for (int i = 0; i < 16; i += 8) {
+            std::uint64_t v = splitmix64(st);
+            for (int k = 0; k < 8; ++k) {
+                b[i + k] = static_cast<unsigned char>(v >> (8 * k));
+            }
+        }
+        return format_uuid(b);
+    }();
+    return id;
 }
 
 std::string read_small(const std::string& path) {
@@ -245,7 +318,8 @@ std::string synth_vmstat() {
 bool has_proc_stand_in(std::string_view rel) noexcept {
     for (std::string_view name : {"uptime", "loadavg", "stat", "version", "filesystems", "swaps",
                                   "vmstat", "sys/kernel/hostname", "sys/kernel/osrelease",
-                                  "sys/kernel/ostype", "sys/kernel/pid_max"}) {
+                                  "sys/kernel/ostype", "sys/kernel/pid_max",
+                                  "sys/kernel/random/boot_id", "sys/kernel/random/uuid"}) {
         if (rel == name) {
             return true;
         }
@@ -285,6 +359,12 @@ std::optional<std::string> synth_proc_global(std::string_view rel, pid_t last_pi
     }
     if (rel == "sys/kernel/ostype") {
         return std::string("Linux\n");
+    }
+    if (rel == "sys/kernel/random/boot_id") {
+        return synth_boot_id();
+    }
+    if (rel == "sys/kernel/random/uuid") {
+        return synth_random_uuid();
     }
     if (rel == "sys/kernel/pid_max") {
         return std::string(last_pid >= 32768 ? "4194304\n" : "32768\n");

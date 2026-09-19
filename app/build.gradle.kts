@@ -158,7 +158,7 @@ gradle.taskGraph.whenReady {
 }
 
 android {
-    namespace = "com.xdrac"
+    namespace = "com.dracxterm"
     compileSdk = 36
 
     // Pinned so a CI runner and a developer machine produce the same native code.
@@ -167,11 +167,11 @@ android {
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
-        applicationId = "com.xdrac"
+        applicationId = "com.dracxterm"
         minSdk = 24            // forkpty/openpty + WindowInsets IME animation path supported; runtime-guarded below
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.0.5"
+        versionCode = 6
+        versionName = "1.0.6"
 
         // The shipped prebuilts (proot, busybox, talloc, shmem, loader) and the VHDP libraries
         // are provided for BOTH arm64-v8a and x86_64 (see src/main/jniLibs/<abi> and the CMake

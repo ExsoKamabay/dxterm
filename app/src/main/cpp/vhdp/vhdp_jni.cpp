@@ -1,4 +1,4 @@
-// JNI bridge between com.xdrac.vhdp.VhdpNative (Kotlin) and the libvhdp C ABI
+// JNI bridge between com.dracxterm.vhdp.VhdpNative (Kotlin) and the libvhdp C ABI
 // (include/vhdp/vhdp.h, next to this file). Only the public C ABI is used.
 //
 // Scope is diagnostics plus an honest session attempt: whatever the library reports is
@@ -541,18 +541,18 @@ const JNINativeMethod kMethods[] = {
     {"nativeAbiVersion", "()I", reinterpret_cast<void*>(nativeAbiVersion)},
     {"nativeVersion", "()[B", reinterpret_cast<void*>(nativeVersion)},
     {"nativeStatusName", "(I)[B", reinterpret_cast<void*>(nativeStatusName)},
-    {"nativeCapabilities", "()Lcom/xdrac/vhdp/VhdpResult;",
+    {"nativeCapabilities", "()Lcom/dracxterm/vhdp/VhdpResult;",
      reinterpret_cast<void*>(nativeCapabilities)},
-    {"nativeDoctor", "(I)Lcom/xdrac/vhdp/VhdpResult;", reinterpret_cast<void*>(nativeDoctor)},
-    {"nativeInspectRootfs", "([B)Lcom/xdrac/vhdp/VhdpResult;",
+    {"nativeDoctor", "(I)Lcom/dracxterm/vhdp/VhdpResult;", reinterpret_cast<void*>(nativeDoctor)},
+    {"nativeInspectRootfs", "([B)Lcom/dracxterm/vhdp/VhdpResult;",
      reinterpret_cast<void*>(nativeInspectRootfs)},
-    {"nativeConfigureRootfs", "([B)Lcom/xdrac/vhdp/VhdpResult;",
+    {"nativeConfigureRootfs", "([B)Lcom/dracxterm/vhdp/VhdpResult;",
      reinterpret_cast<void*>(nativeConfigureRootfs)},
-    {"nativeDpkgPlan", "([B)Lcom/xdrac/vhdp/VhdpResult;",
+    {"nativeDpkgPlan", "([B)Lcom/dracxterm/vhdp/VhdpResult;",
      reinterpret_cast<void*>(nativeDpkgPlan)},
-    {"nativeProjectionPlan", "()Lcom/xdrac/vhdp/VhdpResult;",
+    {"nativeProjectionPlan", "()Lcom/dracxterm/vhdp/VhdpResult;",
      reinterpret_cast<void*>(nativeProjectionPlan)},
-    {"nativeRun", "([B[[BJ)Lcom/xdrac/vhdp/VhdpResult;", reinterpret_cast<void*>(nativeRun)},
+    {"nativeRun", "([B[[BJ)Lcom/dracxterm/vhdp/VhdpResult;", reinterpret_cast<void*>(nativeRun)},
 };
 
 } // namespace
@@ -567,7 +567,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
                             vhdp_abi_version(), VHDP_ABI_VERSION);
         return JNI_ERR;
     }
-    jclass result = env->FindClass("com/xdrac/vhdp/VhdpResult");
+    jclass result = env->FindClass("com/dracxterm/vhdp/VhdpResult");
     if (result == nullptr) {
         return JNI_ERR;
     }
@@ -580,7 +580,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     if (gResultClass == nullptr) {
         return JNI_ERR;
     }
-    jclass native = env->FindClass("com/xdrac/vhdp/VhdpNative");
+    jclass native = env->FindClass("com/dracxterm/vhdp/VhdpNative");
     if (native == nullptr) {
         return JNI_ERR;
     }

@@ -40,7 +40,7 @@ your local working copy only.
 How the app decides, at runtime
 -------------------------------
 
-One class: com.xdrac.rootfs.RootfsSourceResolver. It lists this directory through
+One class: com.dracxterm.rootfs.RootfsSourceResolver. It lists this directory through
 AssetManager and classifies the names; BootManager asks it and does nothing else to
 work out the mode. No BuildConfig field, no Gradle task name, no APK name.
 

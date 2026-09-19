@@ -72,6 +72,7 @@ enum class Handler : std::uint16_t {
     execveat,
     fd_meta_write,
     fchown_fd,
+    ioctl, // terminal ioctls the host refuses (termios2.hpp)
     // sockets
     socket,
     connect,

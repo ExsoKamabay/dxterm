@@ -55,25 +55,25 @@
         android:background="@color/divider" />
 
     <!-- Main terminal surface, wrapped so strong horizontal swipes switch workspaces -->
-    <com.xdrac.WorkspaceSwipeContainer
+    <com.dracxterm.WorkspaceSwipeContainer
         android:id="@+id/swipeContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <com.xdrac.TerminalView
+        <com.dracxterm.TerminalView
             android:id="@+id/terminal"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/term_bg"
             android:focusable="true"
             android:focusableInTouchMode="true" />
-    </com.xdrac.WorkspaceSwipeContainer>
+    </com.dracxterm.WorkspaceSwipeContainer>
 
     <!-- Extra-keys toolbar: rides directly above the IME (see MainActivity insets handling).
          Horizontal fading edge signals that the row scrolls, so the last key never looks
          "cut off"; clipToPadding=false keeps the trailing key's margin visible. -->
-    <com.xdrac.ExtraKeysView
+    <com.dracxterm.ExtraKeysView
         android:id="@+id/extraKeys"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

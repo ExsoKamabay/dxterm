@@ -5,6 +5,121 @@ Rilis dracxterm, versi terbaru di atas. Format tanggalnya YYYY-MM-DD.
 `versionCode` adalah nomor internal Google Play. Ia hanya boleh naik, dan satu
 angka tidak boleh dipakai ulang untuk unggahan yang berbeda.
 
+## [1.0.6] - 2026-09-20
+
+`versionCode` 6. Satu bug yang membuat Kali Linux tidak pernah sampai ke prompt,
+dua perbaikan lingkungan yang muncul saat memburunya, dan pengujian ulang empat
+image di perangkat. Tidak ada fitur baru dan tidak ada perubahan tampilan.
+
+### Kali Linux berhenti di banner, tidak pernah menampilkan prompt
+
+Gejalanya: pemasangan Kali selesai tanpa error, terminal menggambar banner, lalu
+diam. Tidak ada prompt, Ctrl-C tidak terasa, panah atas tidak memanggil riwayat,
+dan editor layar penuh kacau. Perintah yang diketik sebenarnya tetap dijalankan,
+hanya tanpa prompt dan tanpa readline. Debian tidak terpengaruh sama sekali.
+
+Shell-nya hidup, dan itu bagian yang menyesatkan. `bash -l` yang menggantung
+terlihat sedang `read()` dari fd 0, dengan hanya SIGCHLD yang ditangkap dan
+hanya SIGQUIT yang diabaikan, tanda shell **non-interaktif**. Shell login
+non-interaktif tetap membaca `/etc/profile` dan `~/.profile`, jadi banner tetap
+tergambar; yang tidak pernah terjadi adalah prompt.
+
+Yang membuatnya memutuskan begitu: `isatty()`. Sejak glibc 2.42, yang dipakai
+Kali 2026.x, `tcgetattr()` (dan karenanya `isatty()`) memanggil ioctl `TCGETS2`
+alih-alih `TCGETS`, supaya baud rate bebas dan split speed bisa diwakili.
+Kebijakan SELinux Android mendaftar ioctl tty mana yang boleh dipakai sebuah
+aplikasi pada pseudo-terminalnya sendiri, dan termios2 tidak ada di daftar itu.
+Hasilnya, di perangkat nyata: `TCGETS` boleh, `TCGETS2` menjawab EACCES,
+`isatty()` palsu, dan setiap program yang dibangun di atas glibc 2.42
+menyimpulkan tidak ada terminal. Debian 13 masih memakai glibc 2.41 dengan
+`TCGETS`, jadi lolos.
+
+Perbaikannya di mesin, bukan di distro. VHDP sekarang memeriksa sekali per sesi
+apakah host menolak termios2, dengan mencoba `TCGETS2` pada sepasang pty baru
+yang membawa label SELinux yang sama dengan terminal sesi. Kalau ditolak,
+`TCGETS2`/`TCSETS2`/`TCSETSW2`/`TCSETSF2` dari guest dijalankan sebagai
+`TCGETS`/`TCSETS`/`TCSETSW`/`TCSETSF` pada buffer yang sama: 36 byte pertama
+kedua struktur identik, dan untuk pembacaan supervisor mengisi `c_ispeed` dan
+`c_ospeed` dari bit `CBAUD`/`CIBAUD` persis seperti kernel menurunkannya. Hanya
+baud rate non-standar (`BOTHER`) yang tidak terwakili; sebuah pseudo-terminal
+tidak punya kecepatan jalur, dan host yang menolak termios2 juga tidak memberi
+guest jalur serial.
+
+Filter seccomp ikut menyaring per argumen, jadi hanya empat nomor request itu
+yang berhenti di supervisor dan ioctl lain tetap lewat tanpa biaya. Di host
+Linux biasa, yang mengizinkan termios2, probe-nya negatif dan tidak ada yang
+berubah. `VHDP_TERMIOS2=translate` memaksa terjemahan untuk pengujian.
+
+Efek yang terlihat di distro dengan pustaka baru: prompt kembali, riwayat
+perintah dan readline jalan, `tty` menjawab nama pty, `stty` bekerja, job
+control dan Ctrl-C kembali, dan editor layar penuh menggambar dengan benar.
+
+### Pemasangan paket berhenti di "cannot open security status notification channel"
+
+Muncul saat menguji Kali Full: `sudo dpkg -i paket.deb` dan `sudo apt install`
+berhenti dengan pesan itu, dan paketnya tidak terpasang. Kali Nano dan Minimal
+tidak terpengaruh, yang sempat membuatnya tampak seperti masalah image.
+
+Bukan image, melainkan versi dpkg. Android memasang `selinuxfs` di
+`/sys/fs/selinux`, dan guest melihat mount itu di `/proc/self/mounts`, jadi
+libselinux di dalam distro menyimpulkan SELinux aktif (`selinuxenabled`
+mengembalikan 0). Isi `/sys/fs/selinux` sendiri tertutup untuk domain aplikasi.
+dpkg 1.23.7 yang dibawa Kali Full membuka kanal status SELinux di awal setiap
+operasi dan menganggap penolakan itu fatal; dpkg 1.23.5 di Nano dan Minimal
+masih melewatinya. Distro mana pun akan kena begitu dpkg-nya cukup baru.
+
+Sekarang, kalau host menolak selinuxfs-nya sendiri, VHDP menyembunyikan
+`/sys/fs/selinux` dari guest: yang dilihat guest adalah kernel tanpa SELinux,
+persis yang diperiksa libselinux sebelum memakainya. Tidak ada yang hilang,
+karena aplikasi Android memang tidak pernah bisa membaca policy atau menyetel
+konteks. Di host Linux yang SELinux-nya benar-benar bisa dipakai, probe-nya
+negatif dan tidak ada yang berubah.
+
+### Berkas yang dibuat di terminal memakai hak standar Linux
+
+Proses aplikasi Android berjalan dengan `umask` 077, dan sesi terminal mewarisi
+itu. Akibatnya setiap berkas dan direktori yang dibuat di dalam distro hanya
+bisa dibaca pemiliknya: `dpkg-deb --build` menolak direktori `DEBIAN` bermode
+700 ("control directory has bad permissions 700"), dan berkas yang ditulis skrip
+paket tidak terbaca oleh layanan yang dituju. Anak PTY sekarang menyetel `umask`
+022, yaitu nilai yang dipakai login Linux biasa (`login.defs`, `pam_umask`), dan
+pemulihan dpkg menjalankan skripnya dengan mask yang sama.
+
+### Prompt tidak lagi mencetak "Permission denied"
+
+Pada perangkat yang menutup `/proc/sys/kernel` untuk aplikasi, skrip prompt
+systemd 258+ yang dibawa Kali membaca `/proc/sys/kernel/random/boot_id` dan
+`/proc/sys/kernel/random/uuid` di setiap prompt dan menghasilkan dua sampai tiga
+baris `Permission denied` setiap kali. Keduanya kini punya stand-in di VHDP,
+seperti `/proc/stat` dan `/proc/uptime` sebelumnya: `boot_id` tetap sama selama
+perangkat menyala (diturunkan dari saat boot, yang bisa dihitung setiap proses),
+`uuid` acak tiap kali dibaca. Stand-in hanya dipakai kalau host benar-benar
+menolak berkasnya.
+
+### Self-test backend memanggil API yang belum ada di Android 7
+
+`minSdk` aplikasi ini 24, tetapi pemilihan backend memakai
+`Process.waitFor(timeout)` dan `destroyForcibly()`, keduanya baru ada di API 26.
+Di Android 7.0 dan 7.1 panggilan itu melempar `NoSuchMethodError` justru di
+jalur yang tugasnya memutuskan apakah perangkat sanggup menjalankan VHDP. Di
+bawah API 26 keduanya kini punya pengganti: status keluar di-polling, dan
+`destroy()` di Android sudah mengirim SIGKILL seperti `destroyForcibly()`.
+
+### Pengujian
+
+Empat image diuji di perangkat nyata dari berkas rootfs lokal, tanpa unduhan:
+Kali Nano, Kali Minimal, Kali Full, dan Debian 13. Di samping perintah dasar dan
+fitur terminal, tiap image diuji untuk perintah superuser, pembuatan dan
+pemasangan paket `.deb` sendiri, serta pemasangan paket dari arsip distronya.
+Suite CTest VHDP di repositori upstream bertambah dua kasus untuk terjemahan
+termios2 dan aturan filter seccomp-nya.
+
+### Keterbatasan yang tersisa
+
+Jalur cadangan PRoot, yang dipakai hanya kalau VHDP gagal self-test di sebuah
+perangkat, belum menerjemahkan termios2. Di sana distro dengan glibc 2.42 masih
+membuka shell tanpa prompt.
+
 ## [1.0.5] - 2026-09-20
 
 `versionCode` 5. Nomor 1.0.4 dilewati dan tidak pernah dipakai untuk build yang

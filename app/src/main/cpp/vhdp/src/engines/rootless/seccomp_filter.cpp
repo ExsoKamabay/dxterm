@@ -65,6 +65,21 @@ std::vector<sock_filter> build_seccomp_filter(const FilterPolicy& p) {
         f.push_back(stmt(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
         f.push_back(stmt(BPF_RET | BPF_K, trace_action()));
     }
+    if (p.nr_ioctl >= 0 && !p.ioctl_trace.empty() && p.ioctl_trace.size() < 64) {
+        // ioctl(fd, request, arg): trace the listed requests, allow every other one. The kernel
+        // reads the request as an unsigned int, so its low 32 bits are the whole of it.
+        const auto n = static_cast<std::uint8_t>(p.ioctl_trace.size());
+        f.push_back(jump(BPF_JMP | BPF_JEQ | BPF_K, static_cast<std::uint32_t>(p.nr_ioctl), 0,
+                         static_cast<std::uint8_t>(n + 3)));
+        f.push_back(stmt(BPF_LD | BPF_W | BPF_ABS, kOffArgs + 8));
+        for (std::uint8_t i = 0; i < n; ++i) {
+            // A match jumps over the remaining comparisons and the ALLOW, onto the TRACE.
+            f.push_back(jump(BPF_JMP | BPF_JEQ | BPF_K, p.ioctl_trace[i],
+                             static_cast<std::uint8_t>(n - i), 0));
+        }
+        f.push_back(stmt(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+        f.push_back(stmt(BPF_RET | BPF_K, trace_action()));
+    }
 
     // Allowed numbers compressed into contiguous ranges [lo, hi].
     std::vector<long> nrs = p.allow;

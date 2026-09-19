@@ -32,6 +32,7 @@ set(VHDP_LIBRARY_SOURCES
   engines/rootless/link_store.cpp
   engines/rootless/proc_synth.cpp
   engines/rootless/seccomp_filter.cpp
+  engines/rootless/termios2.cpp
   engines/rootless/tracee_mem.cpp
   engines/rootless/bootstrap.c
   platform/linux/proc.cpp

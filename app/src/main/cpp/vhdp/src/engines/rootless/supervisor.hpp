@@ -61,6 +61,7 @@ enum class Fixup : std::uint8_t {
     emulated_return,
     rename_links, // a rename involving emulated hard links: update their records on success
     dirents,      // getdents64: emulated hard links are listed as regular files
+    termios2_get, // TCGETS2 answered with TCGETS: fill in the speeds after the termios part
 };
 
 struct PendingSyscall {
@@ -271,6 +272,12 @@ private:
     // The host refuses NETLINK_AUDIT sockets (an Android app domain). Guests then get the answer
     // of a kernel built without audit: shadow's useradd/groupadd abort on any other error.
     bool audit_refused_ = false;
+    // The host mounts selinuxfs but refuses it to this process (an Android app domain). The
+    // guest then sees no /sys/fs/selinux at all, which is what libselinux tests for.
+    bool selinuxfs_hidden_ = false;
+    // The host allows TCGETS but refuses the termios2 ioctls on its pseudo-terminals (an Android
+    // app domain): guests' TCGETS2/TCSETS*2 are then made as TCGETS/TCSETS* (termios2.hpp).
+    bool termios2_refused_ = false;
     // The supervisor's own process runs under a seccomp filter (an Android app's policy), which
     // every guest inherits: only then can a seccomp SIGSYS come from the host.
     bool host_policy_ = false;

@@ -28,11 +28,36 @@ gambar ada di
 | ![xset Appearance](Screenshot/07-xset-appearance-dracxterm.jpg) | ![xset Diagnostics](Screenshot/08-xset-diagnostics-vhdp-dracxterm.jpg) |
 | 7. `xset`, pengaturan yang digambar di dalam terminal. Halaman Appearance merangkum tema, font, kursor, dan padding. | 8. Halaman Diagnostics, baru di 1.0.5: versi libvhdp, backend yang menjalankan sesi, dan hasil probe aktif. |
 
-## Yang baru di 1.0.5
+## Yang baru di 1.0.6
 
-Rilis ini mengganti mesin yang menjalankan distro Linux, menambah dukungan
-x86_64, dan menutup sejumlah bug yang terasa langsung di terminal. Rinciannya
-ada di [`CHANGELOG.md`](CHANGELOG.md).
+Kali Linux kini terbuka sampai prompt. Sebelum rilis ini, pemasangan Kali
+berjalan sampai akhir lalu terminal berhenti di banner: tidak ada prompt, Ctrl-C
+diam, riwayat perintah tidak jalan, dan editor layar penuh berantakan. Debian
+baik-baik saja, jadi masalahnya tampak acak.
+
+Penyebabnya satu. Pustaka sistem Kali yang baru menanyakan keadaan terminal
+dengan cara yang ditolak kebijakan keamanan Android, jadi shell menyimpulkan
+"tidak ada terminal di sini" lalu berjalan diam: tetap membaca berkas profil
+(karena itu banner tetap muncul) tetapi tidak pernah menampilkan prompt. Mesin
+yang menjalankan distro sekarang menjawab pertanyaan itu dengan cara yang
+diizinkan, sehingga shell tahu ia punya terminal.
+
+Perbaikannya ada di lapisan mesin, bukan tambalan khusus Kali, jadi distro mana
+pun yang memakai pustaka sistem baru ikut aman.
+
+Dua hal lain ditemukan saat mengujinya. Pemasangan paket di Kali Full berhenti
+dengan `cannot open security status notification channel`, karena dpkg versi
+baru menyangka SELinux bisa dipakai di dalam sandbox aplikasi; sekarang distro
+melihat kernel tanpa SELinux, seperti keadaan sebenarnya, dan `dpkg -i` maupun
+`apt install` berjalan. Dan berkas yang dibuat di dalam terminal memakai hak
+standar Linux (umask 022, bukan 077 milik proses aplikasi Android), sehingga
+`dpkg-deb --build` dan skrip paket tidak lagi gagal. Prompt juga tidak lagi
+mencetak `Permission denied` di perangkat yang menutup sebagian `/proc`.
+
+Diuji di perangkat nyata untuk Kali Nano, Kali Minimal, Kali Full, dan Debian.
+Rinciannya ada di [`CHANGELOG.md`](CHANGELOG.md).
+
+## Yang baru di 1.0.5
 
 Sampai 1.0.3, shell di dalam distro ditopang PRoot. Sekarang yang menjalankannya
 adalah VHDP, engine rootless berbasis `ptrace` yang dipercepat `seccomp`,
@@ -288,10 +313,10 @@ terminal), `libvhdp.so`, dan `libvhdpjni.so` (jembatan JNI ke libvhdp).
 
 ## Versi dan paket
 
-Rilis saat ini 1.0.5, `versionCode` 5, dengan `applicationId` `com.xdrac`.
-Nomor 1.0.4 dilewati. APK 1.0.5 ditandatangani dengan kunci yang sama dengan
-rilis 1.0.3 di GitHub, jadi bisa dipasang sebagai pembaruan tanpa menghapus
-data.
+Rilis saat ini 1.0.6, `versionCode` 6, dengan `applicationId` `com.dracxterm`.
+Nomor 1.0.4 dilewati. APK-nya ditandatangani dengan kunci yang sama seperti
+rilis-rilis sebelumnya, jadi bisa dipasang di atas pemasangan lama sebagai
+pembaruan, tanpa menghapus rootfs dan isi home.
 
 Riwayat perubahan tiap rilis ada di [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -443,7 +468,7 @@ Tidak ada product flavor.
 
 Build debug dan build release ditandatangani dengan kunci yang berbeda, dan
 Android menolak memasang yang satu di atas yang lain. Pindah jenis build berarti
-`adb uninstall com.xdrac` lebih dulu, dan itu menghapus rootfs beserta isi home
+`adb uninstall com.dracxterm` lebih dulu, dan itu menghapus rootfs beserta isi home
 di dalam distro. Cadangkan dulu isi home kalau masih dibutuhkan.
 
 ### Langkah 3: siapkan keystore
@@ -560,7 +585,7 @@ Kalau ada lebih dari satu perangkat, tambahkan `-s <serial>` ke setiap perintah
 `adb` di bawah.
 
 Pasang APK-nya. Kalau perangkat masih memuat build debug, jalankan dulu
-`adb uninstall com.xdrac` (lihat catatan di Langkah 2).
+`adb uninstall com.dracxterm` (lihat catatan di Langkah 2).
 
 ```bash
 adb install -r app/build/outputs/apk/release/app-release.apk
@@ -577,7 +602,7 @@ Buka aplikasinya dari launcher, atau lewat `adb`. `MainActivity` tidak
 diekspor, jadi yang dibuka adalah layar penyiapan:
 
 ```bash
-adb shell am start -n com.xdrac/.rootfs.ProvisioningActivity
+adb shell am start -n com.dracxterm/.rootfs.ProvisioningActivity
 ```
 
 Selama pemasangan distro, log harus memuat baris-baris berikut, tanpa
@@ -585,7 +610,7 @@ Selama pemasangan distro, log harus memuat baris-baris berikut, tanpa
 
 ```text
 [DOWNLOAD] verifying SHA-256 of <nama-arsip>.part
-[GUEST] backend for /data/user/0/com.xdrac/files/rootfs: VHDP (self-test passed ...)
+[GUEST] backend for /data/user/0/com.dracxterm/files/rootfs: VHDP (self-test passed ...)
 [RECOVERY] finished, exit=0
 rootfs found at ... -> launching via guest backend VHDP
 ```
@@ -757,6 +782,15 @@ Versi upstream, lisensi, dan written offer untuk source code-nya ada di
   yang memuat `libvhdp.so`, `libphdp.so`, `libvhdp-loader.so`, maupun perintah
   `vhdp` boleh dirilis dari sisi lisensi; lihat
   [`app/src/main/cpp/vhdp/NOTICE`](app/src/main/cpp/vhdp/NOTICE).
+- **Jalur cadangan PRoot belum mengikuti pustaka sistem terbaru.** Kalau VHDP
+  gagal self-test di sebuah perangkat, sesi jatuh ke PRoot, dan di sana distro
+  dengan pustaka sistem baru (Kali 2026, Ubuntu 25.10+, dan seterusnya) masih
+  membuka shell tanpa prompt seperti sebelum 1.0.6. Backend yang sedang dipakai
+  terlihat di `xset vhdp` dan di logcat sebagai `[GUEST] backend for ...`.
+- **Kali Full berat.** Arsipnya 1,7 GB dan sekitar 9,5 GB setelah dipasang,
+  dengan pemasangan yang bisa memakan waktu lebih dari satu jam di ponsel. Kali
+  Nano atau Minimal jauh lebih cepat, dan sisa perkakasnya bisa ditambah lewat
+  `apt`.
 - **Sesi Linux berjalan lewat penerjemahan syscall**, entah VHDP atau PRoot, jadi
   beban kerja yang banyak memanggil syscall (kompilasi, `apt`, Ollama) lebih
   lambat daripada biner native. Ini batas pendekatan rootless, bukan bug.

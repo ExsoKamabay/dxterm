@@ -25,6 +25,8 @@ struct FilterPolicy {
     long nr_socket = -1;
     long nr_clone = -1;  // trace clone() only when CLONE_UNTRACED is set
     long nr_sendto = -1; // trace sendto() only with a destination address
+    long nr_ioctl = -1;  // with ioctl_trace: trace ioctl() only for these requests
+    std::vector<std::uint32_t> ioctl_trace;
 };
 
 std::vector<sock_filter> build_seccomp_filter(const FilterPolicy& policy);
