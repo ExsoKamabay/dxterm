@@ -9,11 +9,6 @@ root, akun, atau layanan apa pun.
 
 ## Screenshot
 
-Diambil dari APK release 1.0.5 di WayDroid (Android 13, x86_64), layar logis
-1080x2400, dengan Debian 13 amd64 yang dipasang dari katalog. Keterangan tiap
-gambar ada di
-[`Screenshot/deskripsi-screenshot-01-08-dracxterm.txt`](Screenshot/deskripsi-screenshot-01-08-dracxterm.txt).
-
 | | |
 |---|---|
 | ![Pemilihan distro](Screenshot/01-pilih-distro-dracxterm.jpg) | ![Pemasangan distro](Screenshot/02-pasang-distro-dracxterm.jpg) |
@@ -23,7 +18,7 @@ gambar ada di
 | ![Superuser dan paket .deb](Screenshot/05-superuser-deb-dracxterm.jpg) | ![htop di workspace kedua](Screenshot/06-htop-multi-workspace-dracxterm.jpg) |
 | 5. `sudo -i` menjadi root, lalu paket `.deb` diunduh, dipasang dengan `dpkg -i`, dijalankan, dan dihapus. `exit` kembali ke user biasa. | 6. `htop` layar penuh di workspace kedua. Tiap workspace punya shell dan PTY sendiri. |
 | ![xset Appearance](Screenshot/07-xset-appearance-dracxterm.jpg) | ![xset Diagnostics](Screenshot/08-xset-diagnostics-vhdp-dracxterm.jpg) |
-| 7. `xset`, pengaturan yang digambar di dalam terminal. Halaman Appearance merangkum tema, font, kursor, dan padding. | 8. Halaman Diagnostics, baru di 1.0.5: versi libvhdp, backend yang menjalankan sesi, dan hasil probe aktif. |
+| 7. `xset`, pengaturan yang digambar di dalam terminal. Halaman Appearance merangkum tema, font, kursor, dan padding. | 8. Halaman Diagnostics: mesin yang sedang menjalankan sesi Linux, dan tombol untuk menjalankan pemeriksaan. |
 
 ## Yang baru di 1.0.6
 
