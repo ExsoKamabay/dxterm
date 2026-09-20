@@ -27,32 +27,27 @@ gambar ada di
 
 ## Yang baru di 1.0.6
 
-Kali Linux kini terbuka sampai prompt. Sebelum rilis ini, pemasangan Kali
-berjalan sampai akhir lalu terminal berhenti di banner: tidak ada prompt, Ctrl-C
-diam, riwayat perintah tidak jalan, dan editor layar penuh berantakan. Debian
-baik-baik saja, jadi masalahnya tampak acak.
+Kali Linux kini terbuka sampai prompt dan langsung bisa dipakai. Sebelum rilis
+ini, pemasangan Kali selesai tanpa pesan error lalu layar berhenti di banner:
+tidak ada prompt, Ctrl-C tidak terasa, panah atas tidak memanggil riwayat, dan
+editor layar penuh menggambar berantakan. Perintah yang diketik sebenarnya tetap
+jalan, hanya tanpa prompt, sehingga terminal terasa macet. Debian waktu itu
+baik-baik saja, jadi masalahnya terlihat acak.
 
-Penyebabnya satu. Pustaka sistem Kali yang baru menanyakan keadaan terminal
-dengan cara yang ditolak kebijakan keamanan Android, jadi shell menyimpulkan
-"tidak ada terminal di sini" lalu berjalan diam: tetap membaca berkas profil
-(karena itu banner tetap muncul) tetapi tidak pernah menampilkan prompt. Mesin
-yang menjalankan distro sekarang menjawab pertanyaan itu dengan cara yang
-diizinkan, sehingga shell tahu ia punya terminal.
+Sekarang Kali berperilaku seperti distro lain: prompt muncul, riwayat perintah
+bekerja, Ctrl-C menghentikan perintah yang sedang berjalan, ukuran jendela
+terbaca dengan benar saat font diperbesar atau papan ketik muncul, dan editor
+layar penuh tampil rapi. Perbaikannya tidak khusus Kali, jadi distro lain dengan
+pustaka sistem sebaru itu ikut aman.
 
-Perbaikannya ada di lapisan mesin, bukan tambalan khusus Kali, jadi distro mana
-pun yang memakai pustaka sistem baru ikut aman.
+Ikut beres di rilis ini: pemasangan paket di Kali Full yang tadinya berhenti di
+tengah jalan kini selesai, membuat paket `.deb` sendiri tidak lagi ditolak karena
+hak berkas, prompt tidak lagi mencetak baris "Permission denied" di sebagian
+ponsel, dan pemilihan mesin distro bekerja lagi di Android 7.
 
-Dua hal lain ditemukan saat mengujinya. Pemasangan paket di Kali Full berhenti
-dengan `cannot open security status notification channel`, karena dpkg versi
-baru menyangka SELinux bisa dipakai di dalam sandbox aplikasi; sekarang distro
-melihat kernel tanpa SELinux, seperti keadaan sebenarnya, dan `dpkg -i` maupun
-`apt install` berjalan. Dan berkas yang dibuat di dalam terminal memakai hak
-standar Linux (umask 022, bukan 077 milik proses aplikasi Android), sehingga
-`dpkg-deb --build` dan skrip paket tidak lagi gagal. Prompt juga tidak lagi
-mencetak `Permission denied` di perangkat yang menutup sebagian `/proc`.
-
-Diuji di perangkat nyata untuk Kali Nano, Kali Minimal, Kali Full, dan Debian.
-Rinciannya ada di [`CHANGELOG.md`](CHANGELOG.md).
+Diuji di ponsel arm64 untuk Kali Nano, Kali Minimal, Kali Full, dan Debian 13,
+memakai berkas distro dari penyimpanan lokal, lalu diulang di lingkungan x86_64.
+Rincian tiap rilis ada di [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Yang baru di 1.0.5
 
@@ -779,11 +774,11 @@ Versi upstream, lisensi, dan written offer untuk source code-nya ada di
   yang memuat `libvhdp.so`, `libphdp.so`, `libvhdp-loader.so`, maupun perintah
   `vhdp` boleh dirilis dari sisi lisensi; lihat
   [`app/src/main/cpp/vhdp/NOTICE`](app/src/main/cpp/vhdp/NOTICE).
-- **Jalur cadangan PRoot belum mengikuti pustaka sistem terbaru.** Kalau VHDP
-  gagal self-test di sebuah perangkat, sesi jatuh ke PRoot, dan di sana distro
-  dengan pustaka sistem baru (Kali 2026, Ubuntu 25.10+, dan seterusnya) masih
-  membuka shell tanpa prompt seperti sebelum 1.0.6. Backend yang sedang dipakai
-  terlihat di `xset vhdp` dan di logcat sebagai `[GUEST] backend for ...`.
+- **Jalur cadangan belum mengikuti distro terbaru.** Kalau mesin utama tidak
+  bisa jalan di sebuah perangkat, sesi otomatis memakai mesin cadangan, dan di
+  sana distro dengan pustaka sistem terbaru masih membuka shell tanpa prompt
+  seperti sebelum 1.0.6. Mesin yang sedang dipakai terlihat di halaman
+  Diagnostics pada pengaturan terminal (ketik `xset`).
 - **Kali Full berat.** Arsipnya 1,7 GB dan sekitar 9,5 GB setelah dipasang,
   dengan pemasangan yang bisa memakan waktu lebih dari satu jam di ponsel. Kali
   Nano atau Minimal jauh lebih cepat, dan sisa perkakasnya bisa ditambah lewat

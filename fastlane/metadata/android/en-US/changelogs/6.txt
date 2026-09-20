@@ -1,8 +1,8 @@
-Kali Linux now opens all the way to a prompt. Before, the screen stopped at the
-banner: the shell ran, but did not know it had a terminal.
+Kali Linux now opens all the way to a prompt and is usable right away. Before,
+the screen stopped at the banner and the terminal felt stuck.
 
-- The fix is in the engine, so other distros with a new system library gain too.
-- Command history, Ctrl-C, window size and full-screen editors work again.
-- Installing .deb and apt packages no longer fails on Kali Full.
-- New files get standard Linux permissions, so dpkg-deb --build works.
-- Tested on real hardware: Kali Nano, Minimal, Full and Debian.
+- The prompt, command history, Ctrl-C and full-screen editors work again.
+- The window size is read correctly when the font or keyboard changes.
+- Installing packages on Kali Full runs to completion.
+- Building your own .deb package is no longer refused.
+- Tested on a phone: Kali Nano, Minimal, Full and Debian.

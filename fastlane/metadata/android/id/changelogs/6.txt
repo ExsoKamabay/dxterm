@@ -1,8 +1,8 @@
-Kali Linux kini terbuka sampai prompt. Sebelumnya layar berhenti di banner:
-shell jalan, tetapi tidak tahu ia punya terminal.
+Kali Linux kini terbuka sampai prompt dan langsung bisa dipakai. Sebelumnya
+layar berhenti di banner dan terminal terasa macet.
 
-- Perbaikan ada di mesin, jadi distro lain dengan pustaka baru ikut aman.
-- Riwayat perintah, Ctrl-C, ukuran layar, dan editor layar penuh bekerja lagi.
-- Pemasangan paket .deb dan apt tidak lagi gagal di Kali Full.
-- Berkas baru memakai hak standar Linux, jadi dpkg-deb --build bekerja.
-- Diuji di perangkat nyata: Kali Nano, Minimal, Full, dan Debian.
+- Prompt, riwayat perintah, Ctrl-C, dan editor layar penuh bekerja lagi.
+- Ukuran layar terbaca benar saat font atau papan ketik berubah.
+- Memasang paket di Kali Full berjalan sampai selesai.
+- Membuat paket .deb sendiri tidak lagi ditolak.
+- Diuji di ponsel: Kali Nano, Minimal, Full, dan Debian.
