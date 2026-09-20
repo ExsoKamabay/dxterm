@@ -1,8 +1,5 @@
 # dracxterm
 
-Emulator terminal untuk Android arm64 dan x86_64. Mesin ANSI/VT, PTY, dan render
-UTF-8-nya ditulis dari nol dengan C++; antarmukanya Kotlin. Tidak perlu root.
-
 Bisa dipakai apa adanya sebagai shell BusyBox, atau menjalankan distribusi Linux
 di dalam sandbox aplikasi. Sesi Linux dijalankan VHDP, sebuah rootless supervisor
 berbasis `ptrace` (dipercepat `seccomp`) yang ikut di dalam APK; PRoot tetap
