@@ -1,14 +1,13 @@
-// Guest system/device/arch PROJECTION plan, decided natively by VHDP (feature 4).
+// Guest system/device/arch PROJECTION plan, decided natively by VHDP.
 //
-// The terminal's stability and compatibility depend on what hardware/system view the guest sees.
-// VHDP owns that decision here: it reports the host architecture/kernel/page-size it can read from
-// Android ("take data from Android"), and decides which real host trees (/dev, /proc, /sys) to
-// project into the guest, checking each for availability. The backend that runs the session (the
-// rootless engine, or proot as the fallback) then APPLIES the plan as binds. This is the seam
-// where VHDP can substitute synthesized data for a tree Android restricts (the rootless engine
-// already does that for global /proc, see engines/rootless/proc_synth.*) or present an edited
-// virtual view -- the backend only applies whatever binds VHDP hands it, so that customization
-// needs no change below this layer.
+// A guest's stability and compatibility depend on what hardware/system view it sees. VHDP owns
+// that decision here: it reports the host architecture/kernel/page-size it can read from the
+// device, and decides which real host trees (/dev, /proc, /sys) to project into the guest,
+// checking each for availability. The caller then APPLIES the plan as binds when it configures
+// the session. This is the seam where VHDP can substitute synthesized data for a tree the host
+// restricts (the rootless engine already does that for global /proc, see
+// engines/rootless/proc_synth.*) or present an edited virtual view -- the caller only applies
+// whatever binds VHDP hands it, so that customization needs no change below this layer.
 //
 // Pure inspection (no engine/exec), so it runs in an app process.
 #include "core/reports.hpp"
@@ -31,9 +30,9 @@ namespace {
 // Search (X_OK), deliberately not read (R_OK). On Android, SELinux refuses an untrusted_app
 // permission to LIST /dev and /sys while still allowing it to traverse them and open the nodes
 // inside -- /dev/null, /dev/zero, /dev/urandom, /dev/ptmx. Testing R_OK therefore reported both
-// trees unavailable on every real device (they passed only on a permissive emulator), the backend
+// trees unavailable on every real device (they passed only on a permissive emulator), the caller
 // dropped their binds, and the guest was left with no device nodes at all: writing to /dev/null
-// silently created a regular file inside the rootfs instead. What the backend needs to know is
+// silently created a regular file inside the rootfs instead. What the caller needs to know is
 // whether the guest will be able to reach through the directory, which is exactly X_OK.
 bool projectable(const char* p, std::string& why) {
     struct stat st{};
@@ -65,8 +64,8 @@ std::string build_projection_json() {
     w.key("page_size").value(static_cast<std::int64_t>(platform::page_size_sysconf()));
     w.end_object();
 
-    // System projection: the real host trees to graft into the guest. `available` lets the backend
-    // skip one the OS hides; `ro` is false because proot binds these read-write by default.
+    // System projection: the real host trees to graft into the guest. `available` lets the caller
+    // skip one the OS hides; `ro` is false because the plan asks for read-write binds.
     w.key("system_binds").begin_array();
     for (const char* d : {"/dev", "/proc", "/sys"}) {
         std::string why;

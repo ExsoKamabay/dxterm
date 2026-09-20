@@ -88,7 +88,7 @@ object DpkgRecoveryEngine {
     // absent files and never aborts the whole script on a single failure.
     private val RECOVERY_SH = """
         set -u
-        log() { echo "[drac-recovery] ${'$'}*"; }
+        log() { echo "[vhdp-recovery] ${'$'}*"; }
         log "start"
 
         # 1) Ownership: the system tree must be root-owned so apt/dpkg (root via sudo) can write it.
@@ -110,7 +110,7 @@ object DpkgRecoveryEngine {
                 if [ -s "${'$'}b" ]; then cp -a "${'$'}b" "${'$'}S" && log "restored from ${'$'}b" && break; fi
             done
         fi
-        [ -s "${'$'}S" ] && cp -a "${'$'}S" "${'$'}DB/status.drac-bak" 2>/dev/null || true   # rollback point
+        [ -s "${'$'}S" ] && cp -a "${'$'}S" "${'$'}DB/status.vhdp-bak" 2>/dev/null || true   # rollback point
 
         # 4) Finish the interrupted transaction; roll the status DB back if it fails.
         #    rc propagates the REAL outcome so the caller only writes its success marker when
@@ -121,7 +121,7 @@ object DpkgRecoveryEngine {
                 log "dpkg --configure -a OK"
             else
                 log "dpkg --configure -a FAILED -> rolling back status"
-                [ -s "${'$'}DB/status.drac-bak" ] && cp -a "${'$'}DB/status.drac-bak" "${'$'}S"
+                [ -s "${'$'}DB/status.vhdp-bak" ] && cp -a "${'$'}DB/status.vhdp-bak" "${'$'}S"
                 rc=1
             fi
         fi

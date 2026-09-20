@@ -55,7 +55,7 @@ class RootfsConfigurator {
             "if [ -n \"\$BASH_VERSION\" ] && [ -f \"\$HOME/.bashrc\" ]; then\n" +
             "    . \"\$HOME/.bashrc\"\n" +
             "else\n" +
-            "    export PS1='\\[\\e[35m\\]\\u@Xterm\\[\\e[0m\\]:\\[\\e[36m\\]\\w\\[\\e[0m\\]\\$ '\n" +
+            "    export PS1='\\[\\e[35m\\]\\u@vhdp\\[\\e[0m\\]:\\[\\e[36m\\]\\w\\[\\e[0m\\]\\$ '\n" +
             "fi\n"
         )
 
@@ -95,7 +95,7 @@ class RootfsConfigurator {
         val present = text.startsWith("dracos:") || text.contains("\ndracos:")
         if (!present) {
             Log.i(ShellLocator.TAG, "[CONFIG] creating normal user 'dracos'")
-            appendLine(passwd, "dracos:x:1000:1000:dracXterm user:/home/dracos:/bin/bash")
+            appendLine(passwd, "dracos:x:1000:1000:dracos:/home/dracos:/bin/bash")
             appendLine(File(rootfs, "etc/group"), "dracos:x:1000:")
             val shadow = File(rootfs, "etc/shadow")
             if (shadow.exists()) appendLine(shadow, "dracos:!:19999:0:99999:7:::")  // login pw disabled

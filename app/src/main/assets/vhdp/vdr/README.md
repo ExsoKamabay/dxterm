@@ -1,9 +1,9 @@
-# vdr — Virtual Drivers / Guest Services
+# vdr: Virtual Drivers / Guest Services
 
 Folder ini menyimpan **adapter yang mengekspos resource host ke guest**. Ini
 melanjutkan maksud awal folder `vdr`. Setiap driver punya lifecycle, deklarasi
-permission, probe, policy, test, dan cleanup — bukan emulasi hardware, melainkan
-proyeksi/broker resource yang benar-benar ada.
+permission, probe, policy, test, dan cleanup. Driver tidak mengemulasikan
+hardware; ia memproyeksikan atau menjadi perantara resource host yang memang ada.
 
 Sumber kode: [`drivers.hpp`](drivers.hpp) / [`drivers.cpp`](drivers.cpp). Katalog
 lengkap juga muncul di `phdp capabilities --json` pada field `drivers`.

@@ -173,8 +173,8 @@ static long userns_child(uint32_t uid, uint32_t gid, const char* mountpoint) {
     /* Mount on the caller's own throwaway directory, never on a well-known path
      * such as /tmp. The unshare above is supposed to make that harmless, but it
      * only is when the kernel really performed it: under a ptrace supervisor
-     * like PRoot, unshare() and mount() are answered with a fake success and the
-     * mountpoint is recorded in the supervisor's own table, so mounting over
+     * that emulates mounts, unshare() and mount() are answered with a fake success
+     * and the mountpoint is recorded in the supervisor's own table, so mounting over
      * /tmp made every later access to /tmp fail with ENOENT for the rest of that
      * session, with the real directory still on disk. */
     char sub[256];

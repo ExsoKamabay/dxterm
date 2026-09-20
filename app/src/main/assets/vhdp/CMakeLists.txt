@@ -4,7 +4,6 @@ project(VHDP
   VERSION 1.0.0
   DESCRIPTION "Virtual Hardware Driver Platform"
   LANGUAGES C CXX ASM)
-# Version tracks upstream VHDP "1.0.0 BETA" (see third_party/README.md provenance).
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)

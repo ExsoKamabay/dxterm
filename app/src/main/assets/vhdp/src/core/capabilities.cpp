@@ -1,7 +1,6 @@
-// Capability matrix. Single source of truth for `phdp capabilities` and the
-// upstream docs/CAPABILITIES.md (not part of the copy embedded in the app).
-// Every `supported`/`partial` claim for the Linux host profile names the CTest
-// test(s) that exercise it.
+// Capability matrix. Single source of truth for `phdp capabilities` and
+// docs/CAPABILITIES.md. Every `supported`/`partial` claim for the Linux host
+// profile names the CTest test(s) that exercise it.
 #include "common/json.hpp"
 #include "core/context.hpp"
 #include "core/reports.hpp"
@@ -48,8 +47,8 @@ const std::vector<ProfileEntry>& capability_profiles() {
         {"linux-aarch64", "Linux aarch64 host, same-architecture guest, rootless engine", kUnt,
          "compiled for Android arm64 only; no aarch64 Linux test run"},
         {"terminal-unprivileged",
-         "Android ARM64 CLI from Termux or adb shell, same-architecture guest, when the ptrace "
-         "probe passes",
+         "Android ARM64 CLI from a terminal app or adb shell, same-architecture guest, when the "
+         "ptrace probe passes",
          kUnt, "android-arm64-release artifacts build with the official NDK; device tests NOT RUN"},
         {"android-emulator-x86_64", "Android x86_64 emulator CLI, same-architecture guest", kUnt,
          "android-x86_64-debug artifacts build; emulator tests NOT RUN"},
@@ -57,11 +56,12 @@ const std::vector<ProfileEntry>& capability_profiles() {
          "guest programs start through the userland loader (libvhdp-loader.so in "
          "nativeLibraryDir), which maps them PROT_EXEC from app storage; host policy refusals are "
          "answered (seccomp traps, link(2), NETLINK_AUDIT, denied /proc files). Device QA: "
-         "arm64 Android 15 phone and x86_64 Android 13 (WayDroid) running a Debian rootfs through "
-         "phdp from the app, incl. apt/dpkg, job control and procps"},
+         "arm64 Android 15 phone and x86_64 Android 13 running a Debian rootfs through phdp from "
+         "an app, incl. apt/dpkg, job control and procps"},
         {"rooted", "rooted device with real namespaces/chroot/cgroups", kBack,
          "rooted engine not implemented"},
-        {"vm", "full guest kernel via AVF/KVM/QEMU system", kBack, "VM engine not implemented"},
+        {"vm", "full guest kernel through a hypervisor (AVF/KVM)", kBack,
+         "VM engine not implemented"},
         {"cross-architecture", "guest ABI different from the host (e.g. x86_64 rootfs on arm64)",
          kBack, "no emulator adapter integrated; ABI mismatch is detected and reported"},
     };
@@ -151,8 +151,8 @@ const std::vector<FeatureEntry>& capability_features() {
          kUnsup,
          kUnsup,
          {},
-         "no AAR is published; an app embeds the C ABI through its own JNI layer (dracxterm) and "
-         "runs sessions through phdp from nativeLibraryDir"},
+         "no AAR is published; an app embeds the C ABI through its own JNI layer and runs "
+         "sessions through phdp from nativeLibraryDir"},
         {"exec.static_elf",
          "static same-architecture ELF from the rootfs",
          kSup,
@@ -329,7 +329,8 @@ const std::vector<FeatureEntry>& capability_features() {
          kBack,
          kBack,
          {"T-PTY-JOB-CONTROL"},
-         "test uses the host busybox when present, otherwise skipped"},
+         "test drives the fixture shell on a PTY (command list and exit status); stopping and "
+         "resuming jobs is not covered by an automated test"},
         {"proc.signals",
          "signal forwarding and 128+N exit status",
          kSup,
@@ -430,7 +431,7 @@ const std::vector<FeatureEntry>& capability_features() {
          {},
          ""},
         {"guest.containers_kvm_ebpf",
-         "Docker, KVM, eBPF, iptables, FUSE",
+         "nested containers, KVM, eBPF, netfilter, FUSE",
          kUnsup,
          kUnsup,
          kUnsup,

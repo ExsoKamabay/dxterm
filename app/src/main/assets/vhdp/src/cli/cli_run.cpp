@@ -275,24 +275,24 @@ int run_command(const RunOptions& o) {
 
     // Preflight for the ptrace-based engines. The rootless engine drives the guest with ptrace,
     // and Linux allows only ONE tracer per process. When phdp is itself already being traced --
-    // most often because it runs inside a terminal that is already a rootless session (the
-    // dracxterm terminal is one: its shell runs under this engine's supervisor, or under the
-    // PRoot fallback), or under strace/gdb -- PTRACE_SEIZE of the guest fails deep in the
-    // engine with a raw "ESRCH/EPERM". Detect it up front and explain it, so `vhdp run` fails
-    // clearly and SAFELY in a nested terminal instead of surfacing a cryptic ptrace error. Only
-    // the ptrace engines (auto/rootless) are gated; doctor/inspect/capabilities and a normal,
-    // non-traced shell (TracerPid 0, e.g. adb shell or Termux) are unaffected.
+    // most often because it runs inside a shell that is already a rootless session (its shell
+    // runs under this engine's supervisor), or under a debugger or syscall tracer --
+    // PTRACE_SEIZE of the guest fails deep in the engine with a raw "ESRCH/EPERM". Detect it up
+    // front and explain it, so `phdp run` fails clearly and SAFELY in a nested session instead
+    // of surfacing a cryptic ptrace error. Only the ptrace engines (auto/rootless) are gated;
+    // doctor/inspect/capabilities and a normal, non-traced shell (TracerPid 0, e.g. adb shell)
+    // are unaffected.
     if (o.engine == "auto" || o.engine == "rootless") {
         long tracer = tracer_pid();
         if (tracer > 0) {
             std::fprintf(stderr,
                          "phdp: error: cannot run the rootless engine here: this process is already "
-                         "traced by PID %ld (a ptrace supervisor: the terminal's own vhdp session, "
-                         "proot, strace or gdb).\nLinux allows only one tracer per process, so vhdp "
-                         "cannot ptrace a guest from inside it. Run `vhdp run` from a shell that is "
-                         "NOT supervised (e.g. adb shell or Termux), or just use the surrounding "
-                         "terminal, which is already a Linux environment. `vhdp doctor`, `inspect` "
-                         "and `capabilities` work here normally.\n",
+                         "traced by PID %ld (a ptrace supervisor: an enclosing vhdp session, a "
+                         "debugger or a syscall tracer).\nLinux allows only one tracer per "
+                         "process, so vhdp cannot ptrace a guest from inside it. Run `phdp run` "
+                         "from a shell that is NOT supervised (e.g. adb shell), or just use the "
+                         "surrounding session, which is already a Linux environment. `phdp "
+                         "doctor`, `inspect` and `capabilities` work here normally.\n",
                          tracer);
             return kExitStartFailure;
         }

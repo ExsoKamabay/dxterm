@@ -146,15 +146,15 @@ NamespaceProbe probe_user_namespaces() {
     NamespaceProbe out;
 
     // The probe unshares a mount namespace and mounts a tmpfs in it. That is only
-    // contained when the kernel really performs it. A ptrace supervisor such as
-    // PRoot answers unshare() and mount() with a fake success and records the
-    // mountpoint in its own table, so the probe would both report capabilities the
+    // contained when the kernel really performs it. A ptrace supervisor that
+    // emulates mounts answers unshare() and mount() with a fake success and records
+    // the mountpoint in its own table, so the probe would both report capabilities the
     // process does not have and leave the supervisor believing something is mounted
     // where nothing is. Report instead of probing.
     if (long tracer = tracer_pid(); tracer > 0) {
         out.detail = "skipped: this process is traced by PID " + std::to_string(tracer) +
-                     " (a ptrace supervisor such as PRoot), which emulates unshare(2) and "
-                     "mount(2); the result would describe the supervisor, not the kernel";
+                     " (a ptrace supervisor), which may emulate unshare(2) and mount(2); the "
+                     "result would describe the supervisor, not the kernel";
         return out;
     }
 
@@ -374,7 +374,7 @@ bool android_app_context() {
     if (selinux_context().find(":untrusted_app") != std::string::npos) {
         return true;
     }
-    // Without SELinux labels (a container such as WayDroid, a permissive build) the domain says
+    // Without SELinux labels (an Android container, a permissive build) the domain says
     // nothing, but an application uid on an Android host is still an app sandbox with the same
     // storage rules. AID_USER_OFFSET 100000, AID_APP_START..AID_APP_END 10000..19999.
     if (!is_android_host()) {

@@ -5,6 +5,56 @@ Rilis dracxterm, versi terbaru di atas. Format tanggalnya YYYY-MM-DD.
 `versionCode` adalah nomor internal Google Play. Ia hanya boleh naik, dan satu
 angka tidak boleh dipakai ulang untuk unggahan yang berbeda.
 
+## [Belum dirilis]
+
+Hasil pemeriksaan ulang seluruh fitur di dua perangkat: ponsel Android 15 arm64
+dan WayDroid x86_64. Empat hal yang dulu gagal diam-diam sekarang bekerja.
+
+APK di halaman rilis 1.0.6 sudah diganti dengan build yang memuat perbaikan ini.
+Nomor versinya tetap 1.0.6, jadi aplikasi tidak melihatnya sebagai versi baru.
+Kalau Anda sudah memasang 1.0.6, unduh ulang berkasnya; tanda tangannya sama,
+jadi bisa langsung dipasang menimpa yang lama.
+
+### Terminal tanpa distro tidak lagi menutup aplikasi
+
+Menolak tawaran pemasangan distro seharusnya memberi Anda terminal sederhana.
+Yang terjadi sebaliknya: layar berkedip sekali lalu aplikasi menghilang, seakan
+baru saja mogok. Hal yang sama terjadi lewat tombol "Jalankan shell BusyBox dulu"
+pada layar gagal unduh.
+
+Penyebabnya bukan di aplikasi: kedua perangkat uji menolak menjalankan BusyBox
+yang ikut di dalam APK, dan shell-nya mati seketika. Sekarang aplikasi
+mencobanya dulu. Kalau perangkat menolak, sesi memakai shell milik perangkat,
+dan terminalnya terbuka seperti biasa: `ls`, `cat`, `ps`, `grep`, dan `echo`
+jalan, serta `~/sdcard` bisa dibuka. Ini tetap bukan Linux, jadi `apt` dan
+`sudo` baru ada setelah distro terpasang.
+
+### Ollama bisa dipasang lagi
+
+Perintah `ollama` selalu berhenti dengan galat 404. Versi yang dipatok masih
+berstatus kandidat rilis, lalu dihapus penerbitnya, jadi berkasnya memang sudah
+tidak ada untuk siapa pun.
+
+Sekarang yang dipatok rilis stabil v0.34.2. Ketik `ollama`, jawab `y`, tunggu
+unduhan 1,5 GB, dan runtime-nya terpasang di dalam distro. Diuji sampai jalan:
+server naik, `ollama list` menjawab, dan versinya terbaca dari dalam terminal.
+
+### `ollama` di perangkat x86_64 menjawab di awal
+
+Di emulator, WayDroid, dan ChromeOS perintah itu menanyakan konfirmasi unduhan
+1,5 GB lebih dulu, baru kemudian ditolak karena berkasnya hanya ada untuk arm64.
+Sekarang jawabannya muncul sebelum ada yang diunduh, lengkap dengan nama
+arsitektur perangkat Anda.
+
+### Perintah bawaan tidak lagi tertutup di Kali
+
+Di Kali, `ifconfig` yang jalan adalah milik distro, bukan milik aplikasi, karena
+urutan pencarian perintah di Kali berbeda dari Debian. Akibatnya tampilan
+jaringan bisa kosong di perangkat yang menutup data itu untuk aplikasi. Sekarang
+`sudo`, `su`, `fakeroot`, `whoami`, `id`, `logname`, dan `ifconfig` milik
+aplikasi selalu yang terpakai, di semua distro. Menyalinnya juga jadi aman saat
+ruang kerja lain sedang memakai perintah yang sama.
+
 ## [1.0.6] - 2026-09-20
 
 `versionCode` 6. Rilis perbaikan. Kali Linux akhirnya bisa dipakai setelah

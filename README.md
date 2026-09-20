@@ -134,14 +134,14 @@ sini hanya berlaku di dalam aplikasi, bukan root ponsel, tetapi cukup untuk
 Tampilannya tersedia dalam Bahasa Indonesia dan Inggris, dan tombol gantinya ada
 di dalam aplikasi, jadi kedua bahasa selalu ikut terpasang.
 
-Akses ke penyimpanan ponsel bersifat pilihan dan tidak pernah diminta saat
-aplikasi dibuka. Kalau Anda menyalakannya, penyimpanan internal muncul di
-`~/sdcard`, dan kartu SD di `~/sdcard-1` bila ada. Kalau tidak, semuanya tetap
-jalan.
+Aplikasi tidak pernah meminta akses penyimpanan ponsel saat dibuka. Anda yang
+menyalakannya, lewat `xset`, dan saat itu juga penyimpanan internal muncul di
+`~/sdcard` pada shell yang sedang jalan, kartu SD di `~/sdcard-1` bila ada. Kalau
+tidak dinyalakan, semuanya tetap jalan.
 
 Ollama bisa dipasang dari dalam terminal kalau Anda memintanya. Berkasnya tidak
-ikut di dalam APK: yang diunduh adalah rilis resmi Ollama v0.32.14-rc0, sekitar
-1,5 GB, dan berkasnya diperiksa dulu sebelum dipasang.
+ikut di dalam APK: yang diunduh adalah rilis resmi Ollama v0.34.2, sekitar 1,5 GB,
+dan berkasnya diperiksa dulu sebelum dipasang. Hanya untuk ponsel arm64.
 
 Tidak ada analitik, iklan, pelacak, atau telemetri. Aplikasi menghubungi
 jaringan hanya kalau Anda memintanya mengunduh sesuatu.
@@ -182,8 +182,10 @@ Tidak ada yang diunduh sampai Anda menekan tombolnya. Mengunduh adalah
 satu-satunya alasan aplikasi ini membuka koneksi jaringan.
 
 Menolak adalah pilihan yang sah, bukan kondisi error. Kalau Anda menolak,
-aplikasi membuka terminal dengan shell BusyBox yang ikut di dalam APK, dan
-terminal itu berfungsi penuh. Katalog distro bisa dibuka lagi kapan saja nanti.
+aplikasi tetap membuka terminal. Shell-nya BusyBox yang ikut di dalam APK, dan di
+perangkat yang menolak menjalankan BusyBox aplikasi memakai shell milik perangkat
+supaya terminalnya tetap terbuka. Katalog distro bisa dibuka lagi kapan saja
+nanti.
 
 ### Unduhan
 
@@ -228,9 +230,11 @@ Link itu dibuat ulang setelah aplikasi diperbarui, karena pembaruan mengganti
 nama direktori tempat biner-binernya tinggal, dan link lama akan menunjuk ke
 path yang sudah tidak ada.
 
-Perintah bawaannya `busybox ash`. Aplikasi berpindah sendiri ke rootfs begitu
-distro terpasang, jadi tidak ada yang perlu Anda atur untuk pindah dari BusyBox
-ke Debian atau Kali.
+Perintah bawaannya `busybox ash`. Sebelum dipakai, aplikasi menjalankannya sekali
+untuk memastikan perangkat ini memang mengizinkannya; kalau tidak, sesi memakai
+shell milik perangkat dan perkakas sistemnya. Aplikasi berpindah sendiri ke rootfs
+begitu distro terpasang, jadi tidak ada yang perlu Anda atur untuk pindah dari
+BusyBox ke Debian atau Kali.
 
 Backend yang menjalankan sesi dipilih sekali per pemasangan. Aplikasi menjalankan
 self-test VHDP di perangkat itu (engine rootless, userland loader, identitas yang
@@ -257,7 +261,7 @@ tetap hidup saat Anda pindah ke aplikasi lain.
 | APK membawa image | Ekstrak offline, lalu terminal Linux |
 | Arsip sudah pernah diunduh | Pasang dari arsip itu, lalu terminal Linux |
 | Tidak ada arsip, belum ditolak | Tampilkan katalog dan tunggu keputusan Anda |
-| Tidak ada arsip, tawaran ditolak | Terminal BusyBox, berfungsi penuh |
+| Tidak ada arsip, tawaran ditolak | Terminal tanpa distro: BusyBox, atau shell perangkat kalau BusyBox ditolak |
 | Ada arsip tapi gagal dipasang | Berhenti dengan alasan yang jelas |
 
 ## Yang dibutuhkan
@@ -648,15 +652,30 @@ toggle bahasa sendiri dan kedua terjemahan harus selalu ada di perangkat.
 
 ### Mengubah kode VHDP atau biner prebuilt
 
-Sumber VHDP ada di dua tempat. `app/src/main/cpp/vhdp` dibangun bersama aplikasi
-menjadi `libvhdp.so` plus jembatan JNI-nya, dan `app/src/main/assets/vhdp`
-adalah salinannya yang ikut dikemas sebagai sumber untuk biner CLI. Cermin
-salinan itu setiap kali pohon pertama berubah:
+Sumber VHDP di repo ini adalah salinan. Yang menentukan isinya adalah proyek
+VHDP sendiri, dan setiap berkas yang ikut dikirim harus sama persis dengan yang
+ada di sana. Salinannya ada di dua tempat: `app/src/main/cpp/vhdp` dibangun
+bersama aplikasi menjadi `libvhdp.so` plus jembatan JNI-nya, dan
+`app/src/main/assets/vhdp` ikut dikemas sebagai sumber untuk biner CLI.
+
+Ambil perubahan dari proyek VHDP ke kedua salinan, lalu pastikan tidak ada yang
+berbeda:
 
 ```bash
-rsync -a --delete --exclude vhdp_jni.cpp --exclude bin/ \
-      app/src/main/cpp/vhdp/ app/src/main/assets/vhdp/
+VHDP=~/Desktop/Virtual-Hardware-Driver-Platform
+for M in app/src/main/cpp/vhdp app/src/main/assets/vhdp; do
+    rsync -rc --existing --exclude .git/ "$VHDP/" "$M/"
+done
+diff -rq app/src/main/cpp/vhdp "$VHDP"
+diff -rq app/src/main/assets/vhdp app/src/main/cpp/vhdp
 ```
+
+Dua perbandingan itu hanya boleh menyisakan yang memang bukan milik VHDP:
+`vhdp_jni.cpp` (jembatan milik aplikasi ini), `bin/` (biner CLI yang sudah
+dibangun), dan folder yang tidak ikut dikirim karena tidak dipakai saat
+membangun aplikasi, yaitu `tests`, `examples`, `fuzz`, `benchmarks`, `docs`,
+dan `tools`. Kalau ingin menjalankan tes atau contoh VHDP, kerjakan di proyek
+aslinya, bukan di salinan ini.
 
 Biner CLI-nya dibangun terpisah oleh `prebuilts/vhdp-cli/build.sh`, yang
 menghasilkan `libphdp.so` dan `libvhdp-loader.so` ke `jniLibs/<abi>/` serta
@@ -757,8 +776,24 @@ Program yang mencari folder home lewat data pengguna sistem, bukan lewat
 `/root/.ssh/config`. Sebutkan berkasnya langsung kalau perlu, misalnya
 `ssh -F ~/.ssh/config -i ~/.ssh/id_ed25519`.
 
-Ollama hanya tersedia untuk arm64. Di x86_64 perintah `ollama` masih menanyakan
-konfirmasi unduhan, lalu aplikasi menolaknya tanpa mengunduh apa pun.
+Ollama hanya tersedia untuk arm64, karena penerbitnya memang tidak membuat versi
+x86_64 untuk Linux. Di emulator, WayDroid, dan ChromeOS perintah `ollama` menyebut
+hal itu begitu diketik dan tidak mengunduh apa pun.
+
+Terminal tanpa distro terbatas. Di kedua perangkat uji, Android menolak
+menjalankan BusyBox yang ikut di dalam APK, jadi sesi itu memakai shell bawaan
+perangkat dan perkakas di `/system/bin`. Perintah sehari-hari seperti `ls`, `cat`,
+`ps`, dan `grep` jalan, tetapi ini bukan lingkungan Linux: tidak ada `apt`, tidak
+ada `sudo`, dan perkakas Linux lain baru ada setelah Anda memasang distro.
+
+Perkakas yang membaca tabel jaringan kernel tidak bisa bekerja penuh. Android
+menutup jalur itu untuk aplikasi, jadi `nmap` dengan pilihan bawaannya berhenti
+di `cannot bind AF_NETLINK socket`, `tcpdump -D` tidak melihat antarmuka apa pun,
+dan `ss` maupun `ip` mengembalikan daftar kosong. Pemindaian tetap bisa dijalankan
+kalau penemuan host dan pencarian nama dimatikan, misalnya
+`nmap -Pn -n -p 80 example.com`. Koneksi biasa, DNS, `apt`, dan `ping` jalan
+seperti biasa, dan `ifconfig` bawaan aplikasi tetap menampilkan jaringan yang
+dilihat perangkat.
 
 Kalau mesin utama tidak bisa jalan di sebuah perangkat, sesi otomatis memakai
 mesin cadangan. Di jalur cadangan itu, distro dengan pustaka sistem terbaru

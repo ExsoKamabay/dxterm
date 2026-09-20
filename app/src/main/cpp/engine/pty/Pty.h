@@ -31,6 +31,12 @@ public:
     int masterFd() const { return masterFd_; }
     bool alive() const { return masterFd_ >= 0; }
 
+    // How the shell ended, for the log line the session writes when the terminal closes
+    // itself. Reaps the child without blocking; -1 while it is still running or already
+    // reaped. 127 is what the failed-exec child exits with, and that number is the whole
+    // difference between "the user typed exit" and "the shell could never start".
+    int reapStatus();
+
 private:
     int masterFd_ = -1;
     pid_t pid_ = -1;

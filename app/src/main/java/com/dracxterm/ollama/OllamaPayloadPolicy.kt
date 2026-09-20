@@ -37,7 +37,7 @@ object OllamaPayloadPolicy {
     }
 
     /** Exact OLLAMA_RUNNER_DIR values that denote a hardware accelerator runner. Source:
-     *  llama/server/CMakePresets.json at tag v0.32.14-rc0. */
+     *  llama/server/CMakePresets.json at tag v0.34.2. */
     private val ACCELERATOR_RUNNERS = setOf(
         "cuda_v12", "cuda_v13",
         "cuda_jetpack5", "cuda_jetpack6",

@@ -24,14 +24,13 @@ public:
                                        "cgroup capabilities; UID 0 alone is not evidence");
                 break;
             case EngineKind::emulator:
-                r.reason = "backend-required: no user-mode emulator adapter (e.g. QEMU user) is "
-                           "integrated; cross-architecture guests are unsupported";
+                r.reason = "backend-required: no user-mode emulator adapter is integrated; "
+                           "cross-architecture guests are unsupported";
                 break;
             case EngineKind::vm:
-                r.reason = "backend-required: no full-system VM backend (AVF/KVM/QEMU system) is "
-                           "integrated";
-                r.details.emplace_back("AVF custom VMs require system/privileged apps; QEMU TCG is "
-                                       "emulation, not acceleration");
+                r.reason = "backend-required: no full-system VM backend (AVF/KVM) is integrated";
+                r.details.emplace_back("AVF custom VMs require system/privileged apps; software "
+                                       "CPU emulation is not acceleration");
                 break;
             default:
                 r.reason = "backend-required";

@@ -227,7 +227,7 @@ VHDP_API vhdp_status_t vhdp_capabilities_json(vhdp_context* context, char* buf, 
 VHDP_API vhdp_status_t vhdp_inspect_rootfs_json(vhdp_context* context, const char* rootfs_path,
                                                 char* buf, size_t cap, size_t* needed);
 
-/* Configure an already-extracted rootfs for first boot: proot bind mountpoints, working DNS and
+/* Configure an already-extracted rootfs for first boot: bind mountpoints, working DNS and
  * hosts, a login profile, and a normal 'dracos' user with passwordless sudo. Pure filesystem
  * work (no engine/ptrace), so it runs in an app process too. Idempotent (resolv.conf is the one
  * deliberate overwrite). Writes a JSON report {input, rootfs, status, actions[]} into buf. */
@@ -237,13 +237,14 @@ VHDP_API vhdp_status_t vhdp_configure_rootfs(vhdp_context* context, const char* 
 /* Decide dpkg/apt recovery for a rootfs. Inspects the package-manager state and writes a JSON plan
  * {input, rootfs, is_dpkg_rootfs, status_db, locks[], needs_recovery, script} into buf. VHDP owns
  * the decision and the recovery script but does NOT execute it (running dpkg needs to exec guest
- * binaries): the caller runs `script` through the proot execution backend as a fake-root pass. */
+ * binaries): the caller runs `script` in a session with guest uid 0 (a fake-root pass). */
 VHDP_API vhdp_status_t vhdp_dpkg_plan_json(vhdp_context* context, const char* rootfs_path,
                                            char* buf, size_t cap, size_t* needed);
 
 /* Decide the guest system/device/arch projection: the host arch/kernel/page-size VHDP reads from
  * the device, plus which host trees (/dev, /proc, /sys) to project into the guest. Writes a JSON
- * plan {host, system_binds[], status} into buf; the execution backend (proot) applies the binds. */
+ * plan {host, system_binds[], status} into buf; the caller applies the binds when it configures
+ * the session. */
 VHDP_API vhdp_status_t vhdp_projection_plan_json(vhdp_context* context, char* buf, size_t cap,
                                                  size_t* needed);
 

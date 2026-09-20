@@ -21,8 +21,17 @@ ODIR="@OLLAMA_HOME@"
 DEF_HOST="@HOST@"
 DEF_MODELS="@MODELS@"
 VERSION="@VERSION@"
+ARTIFACT="@ARTIFACT@"
 ARTIFACT_MB="@ARTIFACT_MB@"
 INSTALL_MB="@INSTALL_MB@"
+REQUIRED_ABI="@REQUIRED_ABI@"
+DEVICE_ABI="@DEVICE_ABI@"
+# 1 when this device can run the pinned artifact at all, decided by the SAME test the installer's
+# preflight uses (OllamaConfig.abiSupported, which scans every supported ABI). DEVICE_ABI below is
+# only the primary ABI, shown so the message names the machine; it must not decide anything, or a
+# device that lists arm64-v8a second -- a translating x86_64 host -- would be refused a runtime it
+# can actually execute.
+ABI_SUPPORTED="@ABI_SUPPORTED@"
 
 REQ="$ODIR/install.request"
 STATE="$ODIR/install.state"
@@ -43,11 +52,26 @@ mkdir -p "$ODIR" 2>/dev/null || true
 # ---------------------------------------------------------------------------------------------
 # 1. Is the runtime installed?  Lazy provisioning: nothing is downloaded until `ollama` is run.
 # ---------------------------------------------------------------------------------------------
+# The pinned artifact is built for ONE architecture. On a device of any other ABI the app
+# refuses the install in its own preflight, so the offer below would be an invitation the app
+# then declines. Say that here instead, before the prompt, and name the device's real ABI.
+if [ ! -x "$BIN" ] && [ "$ABI_SUPPORTED" != "1" ]; then
+    echo "OLLAMA RUNTIME UNAVAILABLE ON THIS DEVICE" >&2
+    echo >&2
+    echo "  Pinned release : $VERSION (official)" >&2
+    echo "  Artifact       : $ARTIFACT (built for $REQUIRED_ABI)" >&2
+    echo "  This device    : $DEVICE_ABI" >&2
+    echo >&2
+    echo "The official build is an $REQUIRED_ABI binary, so it cannot run here. Nothing was" >&2
+    echo "downloaded. Everything else in the terminal works normally." >&2
+    exit 69
+fi
+
 if [ ! -x "$BIN" ]; then
     echo "OLLAMA RUNTIME NOT INSTALLED" >&2
     echo >&2
-    echo "  Pinned release : $VERSION (official, pre-release)" >&2
-    echo "  Artifact       : ollama-linux-arm64.tar.zst (~${ARTIFACT_MB} MB download)" >&2
+    echo "  Pinned release : $VERSION (official)" >&2
+    echo "  Artifact       : $ARTIFACT (~${ARTIFACT_MB} MB download)" >&2
     echo "  Installed size : ~${INSTALL_MB} MB (NVIDIA CUDA runners are not installed)" >&2
     echo "  Install path   : $PREFIX" >&2
     echo "  Models path    : $DEF_MODELS" >&2

@@ -115,8 +115,9 @@ endif()
 # nativeLibraryDir and may still map app files PROT_EXEC. It is a freestanding static PIE with
 # no dynamic relocations, so it must not pick up vhdp_flags (stack protector, sanitizers,
 # fortify) and needs the assembly syscall gateway whatever VHDP_USE_ASM says.
-# Built together with the CLI: AGP cannot package executables from the app's embedded CMake,
-# so prebuilts/vhdp-cli/build.sh ships it as jniLibs/<abi>/libvhdp-loader.so.
+# Built together with the CLI. On Android it is installed next to libvhdp in the app's
+# native library directory as libvhdp-loader.so, the name platform::find_userland_loader
+# looks for; anywhere else $VHDP_LOADER can name it.
 if(VHDP_BUILD_CLI)
   add_executable(vhdp_loader
     engines/rootless/loader/loader.c

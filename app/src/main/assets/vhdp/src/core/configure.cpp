@@ -1,10 +1,9 @@
 // First-boot configuration of a freshly extracted rootfs, performed natively by VHDP.
 //
-// This is the "configure rootfs" capability: proot bind mountpoints, working DNS + hosts, a
-// login profile, and a normal 'dracos' user with passwordless sudo. It is pure filesystem work
-// (no engine, no ptrace, no execve), so it runs even inside an Android app process where the
-// rootless engine cannot. It mirrors, byte for byte, what the app used to do in Kotlin
-// (RootfsConfigurator) so moving ownership into the library changes nothing on disk.
+// This is the "configure rootfs" capability: bind mountpoints, working DNS + hosts, a login
+// profile, and a normal 'dracos' user with passwordless sudo. It is pure filesystem work (no
+// engine, no ptrace, no execve), so it runs even inside an Android app process where the
+// rootless engine cannot.
 //
 // Idempotent by construction: existing files are never overwritten (write_if_absent), lines are
 // appended at most once, and the one deliberate exception is /etc/resolv.conf, which is force
@@ -80,7 +79,7 @@ bool write_all(const std::string& p, std::string_view content) {
 }
 
 // Write only when nothing exists at the path (a dangling symlink counts as existing and is left
-// alone, matching the Kotlin writeIfAbsent).
+// alone).
 bool write_if_absent(const std::string& p, std::string_view content) {
     if (path_exists(p)) {
         return false;
@@ -151,7 +150,7 @@ std::string build_configure_json(const std::string& rootfs_in) {
         actions.push_back({id, std::move(detail)});
     };
 
-    // 1. proot bind mountpoints (bound at launch; the guest needs them to exist).
+    // 1. Bind mountpoints (bound at launch; the guest needs them to exist).
     for (const char* d : {"dev", "proc", "sys", "tmp", "root", "etc"}) {
         mkdirs(root + "/" + d);
     }
@@ -224,7 +223,7 @@ std::string build_configure_json(const std::string& rootfs_in) {
                         "if [ -n \"$BASH_VERSION\" ] && [ -f \"$HOME/.bashrc\" ]; then\n"
                         "    . \"$HOME/.bashrc\"\n"
                         "else\n"
-                        "    export PS1='\\[\\e[35m\\]\\u@Xterm\\[\\e[0m\\]:"
+                        "    export PS1='\\[\\e[35m\\]\\u@vhdp\\[\\e[0m\\]:"
                         "\\[\\e[36m\\]\\w\\[\\e[0m\\]$ '\n"
                         "fi\n")) {
         did("root_profile", "written");
@@ -240,7 +239,7 @@ std::string build_configure_json(const std::string& rootfs_in) {
     const std::string passwd = etc + "/passwd";
     if (path_exists(passwd)) {
         if (!has_user_dracos(read_all(passwd))) {
-            append_line_once(passwd, "dracos:x:1000:1000:dracXterm user:/home/dracos:/bin/bash");
+            append_line_once(passwd, "dracos:x:1000:1000:dracos:/home/dracos:/bin/bash");
             append_line_once(etc + "/group", "dracos:x:1000:");
             if (path_exists(etc + "/shadow")) {
                 append_line_once(etc + "/shadow", "dracos:!:19999:0:99999:7:::"); // login disabled

@@ -9,8 +9,6 @@ of the License in the LICENSE file distributed with this work or at:
 
     http://www.apache.org/licenses/LICENSE-2.0
 
-The VHDP implementation is original work. It does not copy source code from
-PRoot, QEMU, or other projects; upstream references were read only to
-understand platform contracts and boundaries, not copied. VHDP has no
-vendored third-party dependencies. The only external toolchain is the
-Android NDK, used as a compiler and not redistributed as part of this source.
+The VHDP implementation is original work. VHDP has no vendored third-party
+dependencies. The only external toolchain is the Android NDK, used as a
+compiler and not redistributed as part of this source.

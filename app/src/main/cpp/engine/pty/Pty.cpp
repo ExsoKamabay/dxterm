@@ -75,6 +75,31 @@ bool Pty::start(const std::vector<std::string>& argv,
         umask(022);
 
         execve(cargv[0], cargv.data(), cenv.data());
+
+        // execve only returns when it FAILED. A bare _exit here is what the terminal looked
+        // like when the BusyBox fallback stopped working: the parent saw EOF on the PTY the
+        // moment this child died, closed the session and finished the activity, so the user
+        // got a blank screen and an app that closed itself with nothing written anywhere.
+        // Say what happened on the terminal the user is looking at, then leave. Only
+        // async-signal-safe calls are allowed here (post-fork, pre-exec), so the message is
+        // assembled by hand -- no snprintf, no strerror.
+        {
+            int err = errno;
+            char msg[512];
+            size_t n = 0;
+            auto put = [&](const char* s) { while (*s && n < sizeof(msg) - 1) msg[n++] = *s++; };
+            put("dracXterm: cannot start ");
+            put(cargv[0]);
+            put(": errno ");
+            char num[16];
+            size_t d = 0;
+            if (err == 0) { num[d++] = '0'; }
+            for (int v = err; v > 0 && d < sizeof(num); v /= 10) num[d++] = static_cast<char>('0' + v % 10);
+            while (d > 0 && n < sizeof(msg) - 1) msg[n++] = num[--d];
+            put("\r\n");
+            ssize_t ignored = write(STDERR_FILENO, msg, n);
+            (void) ignored;
+        }
         _exit(127);   // exec failed
     }
 
@@ -83,6 +108,17 @@ bool Pty::start(const std::vector<std::string>& argv,
     pid_ = pid;
     // Non-blocking would complicate the read loop; keep blocking + poll in Session.
     return true;
+}
+
+int Pty::reapStatus() {
+    if (pid_ <= 0) return -1;
+    int status = 0;
+    pid_t r = ::waitpid(pid_, &status, WNOHANG);
+    if (r != pid_) return -1;
+    pid_ = -1;
+    if (WIFEXITED(status)) return WEXITSTATUS(status);
+    if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
+    return -1;
 }
 
 ssize_t Pty::readMaster(uint8_t* buf, size_t len) {

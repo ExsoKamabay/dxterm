@@ -1,97 +1,108 @@
 # Keamanan dan Threat Model VHDP
 
-## Pernyataan batas yang tegas
+## Batas yang tegas
 
-VHDP rootless engine memberi **compatibility isolation** (path translation),
-**bukan security isolation**. Ia **tidak diizinkan dan tidak didukung untuk
-menjalankan rootfs yang hostile**. UID/GID 0 yang terlihat guest adalah emulasi
-dan **bukan** root di host. Untuk workload tak tepercaya, gunakan VM terisolasi
-dengan boundary yang sesuai (backend VM belum diimplementasikan di rilis ini).
+Engine rootless VHDP memberi isolasi kompatibilitas (penerjemahan path). Ia
+tidak memberi isolasi keamanan, dan tidak boleh dipakai untuk menjalankan rootfs
+yang bermusuhan. UID/GID 0 yang terlihat guest adalah emulasi, bukan root di
+host. Untuk workload yang tidak tepercaya, gunakan VM terisolasi; backend VM
+belum diimplementasikan di rilis ini.
 
-## Aset yang harus dilindungi
+## Aset yang dilindungi
 
-Parser/importer harus aman menghadapi input tak tepercaya: isi rootfs, ELF, nama
-path, symlink, config, environment, argument, sumber bind, dan pesan driver. Yang
-dilindungi: berkas host di luar mount yang diizinkan, kredensial/secret host,
-integritas proses host, dan file descriptor host.
+Parser dan importer harus aman terhadap input yang tidak tepercaya: isi rootfs,
+ELF, nama path, symlink, config, environment, argumen, sumber bind, dan pesan
+driver. Yang dilindungi: berkas host di luar mount yang diizinkan, kredensial dan
+rahasia host, integritas proses host, dan file descriptor host.
 
 ## Kontrol yang diterapkan
 
-- **Path translation fail-closed.** Resolver bekerja di ruang guest; `..` tidak
-  bisa naik di atas root guest; symlink absolut diinterpretasikan relatif root
-  guest; loop symlink → `ELOOP`; path/fd yang menunjuk ke luar mount ditolak
-  `EACCES`. Diuji: `T-FS-DOTDOT`, `T-FS-SYMLINK-ESCAPE`, `T-UNIT-RESOLVER-ESCAPE`,
-  `T-FS-INHERITED-FD`, `T-FS-MAGIC-LINK`.
-- **Syscall fail-closed.** Nomor tak dikenal, ABI asing (compat/x32), dan syscall
+- Penerjemahan path fail-closed. Resolver bekerja di ruang guest; `..` tidak
+  bisa naik di atas root guest; symlink absolut ditafsirkan relatif root guest;
+  loop symlink menghasilkan `ELOOP`; path atau fd yang menunjuk ke luar mount
+  ditolak `EACCES`. Diuji: `T-FS-DOTDOT`, `T-FS-SYMLINK-ESCAPE`,
+  `T-UNIT-RESOLVER-ESCAPE`, `T-FS-INHERITED-FD`, `T-FS-MAGIC-LINK`.
+- Syscall fail-closed. Nomor tak dikenal, ABI asing (compat/x32), dan syscall
   berbahaya (`mount`, `unshare`, `setns`, `chroot`, `open_by_handle_at`,
-  `io_uring`, `pidfd_getfd`, dst.) ditolak dengan errno + diagnostic; tidak ada
-  pass-through diam-diam. Diuji: `T-SYS-UNSUPPORTED`, `T-UNIT-SYSCALL-TABLE`.
-- **`no_new_privs` selalu diset**; setuid/file-capability tidak pernah memberi
-  privilege host. Loader indirection juga menetralkan bit setuid.
-- **Environment disanitasi.** Hanya allowlist (`TERM`, `COLORTERM`, `LANG`,
-  `LC_ALL`, `TZ`) yang diwariskan; secret host tidak diteruskan default.
-- **FD ditutup.** Semua fd `>2` jadi close-on-exec di child; hanya stdin/stdout/
-  stderr/PTY yang diperlukan yang diwariskan.
-- **Bind eksplisit, dikanonikalisasi, read-only default** (`:rw` opt-in).
-- **Batas ukuran** dari input guest: path `PATH_MAX`, argv/env 256 KiB, argumen
+  `io_uring`, `pidfd_getfd`, dan lainnya) ditolak dengan errno dan diagnostic.
+  Tidak ada pass-through diam-diam. Diuji: `T-SYS-UNSUPPORTED`,
+  `T-UNIT-SYSCALL-TABLE`.
+- `no_new_privs` selalu diset, sehingga setuid dan file capability tidak pernah
+  memberi hak di host. Loader indirection juga menetralkan bit setuid.
+- Environment disaring. Hanya `TERM`, `COLORTERM`, `LANG`, `LC_ALL`, dan `TZ`
+  yang diwariskan dari host; rahasia host tidak diteruskan secara default.
+- FD ditutup. Semua fd di atas 2 menjadi close-on-exec di child; hanya
+  stdin/stdout/stderr dan PTY yang diperlukan yang diwariskan.
+- Bind eksplisit, dikanonikalisasi, dan read-only secara default (`:rw` harus
+  diminta).
+- Batas ukuran untuk input dari guest: path `PATH_MAX`, argv/env 256 KiB, argumen
   exec 512 KiB, tabel program header ELF 64 KiB, `PT_INTERP` `PATH_MAX`.
-- **Cleanup process-tree** deterministik + `PTRACE_O_EXITKILL` agar tree mati bila
-  supervisor mati. Diuji: `T-LIFE-TREE-CANCEL`, `T-LIFE-100-CYCLES`.
-- **Signal ke luar session ditolak** (`ESRCH`).
-- **ELF/config decoder** memakai aritmetika overflow-safe, decoding little-endian
-  eksplisit, dan tidak mengalokasi berdasarkan angka dari input tanpa batas.
-- **Async-signal-safety** di jalur post-`fork`/pre-`exec` (hanya raw syscall).
+- Pembersihan pohon proses yang deterministik dan `PTRACE_O_EXITKILL`, sehingga
+  pohon proses ikut mati bila supervisor mati. Diuji: `T-LIFE-TREE-CANCEL`,
+  `T-LIFE-100-CYCLES`.
+- Signal ke proses di luar sesi ditolak (`ESRCH`).
+- Decoder ELF dan config memakai aritmetika yang aman dari overflow, decoding
+  little-endian eksplisit, dan tidak mengalokasi berdasarkan angka dari input
+  tanpa batas.
+- Jalur setelah `fork` dan sebelum `exec` async-signal-safe (hanya raw syscall).
 
-## Sisa risiko yang diketahui (didokumentasikan, bukan diklaim aman)
+## Sisa risiko yang diketahui
 
-- **Rename/TOCTOU.** Antara resolusi path oleh VHDP dan lookup oleh kernel, sebuah
-  rename/symlink-swap konkuren dapat mengubah target. Ini melekat pada pendekatan
-  path-translation dan menjadi alasan rootless engine bukan sandbox. Kernel lama
-  tanpa `openat2` memperbesar jendela ini.
-- **`--proc host`** mengekspos informasi proses host (read-only) ke guest.
-- **Reuse PID** untuk tracee yang bukan child langsung: setelah di-reap oleh parent
-  aslinya, ada jendela kecil sebelum VHDP mengamati exit-nya.
-- **Abstract `AF_UNIX`** tetap terjangkau saat `--network none` (bukan path).
-- **Emulasi hardlink.** Nama hardlink diwakili symlink penanda ke
-  `<mount>/.vhdp-hardlinks/<id>` dan resolver mengikutinya *see-through* (lstat,
-  `O_NOFOLLOW` dan `readlink` melihat file biasa). Guest yang menulis sendiri
-  symlink berbentuk sama ikut diperlakukan begitu — tetap di dalam mount-nya, jadi
-  bukan jalan keluar, tapi guest bisa membuat dua nama tampak sebagai satu file.
-  Store juga terlihat oleh pembaca host di tree yang sama, dan objeknya tetap ada
-  bila sebuah sesi mati sebelum collapse. Aktif hanya bila host menolak `link(2)`.
-- **Stand-in `/proc` global.** Isinya disintesis (uptime, loadavg, stat, vmstat,
-  dst.) dari sumber yang diizinkan, jadi bukan kebenaran kernel: tool yang memakai
-  angka itu untuk keputusan keamanan/akuntansi tidak boleh dipercaya. `status`
-  proses sesi memperlihatkan identitas yang diemulasikan, bukan uid host.
+Risiko berikut didokumentasikan, tidak diklaim aman.
 
-## Untuk packaging Android (AAR)
+- Rename/TOCTOU. Di antara resolusi path oleh VHDP dan lookup oleh kernel,
+  rename atau pertukaran symlink yang berjalan bersamaan bisa mengubah target.
+  Ini melekat pada pendekatan penerjemahan path dan menjadi alasan engine
+  rootless tidak disebut sandbox. Kernel lama tanpa `openat2` memperlebar
+  jendela ini.
+- `--proc host` membuka informasi proses host (read-only) ke guest.
+- Pemakaian ulang PID untuk tracee yang bukan anak langsung: setelah di-reap oleh
+  induk aslinya, ada jendela kecil sebelum VHDP melihat bahwa proses itu keluar.
+- Socket `AF_UNIX` abstract tetap bisa dijangkau saat `--network none` karena
+  tidak berbentuk path.
+- Emulasi hardlink. Nama hardlink diwakili symlink penanda ke
+  `<mount>/.vhdp-hardlinks/<id>` dan resolver mengikutinya secara see-through
+  (`lstat`, `O_NOFOLLOW`, dan `readlink` melihat berkas biasa). Guest yang
+  menulis sendiri symlink berbentuk sama ikut diperlakukan begitu. Symlink itu
+  tetap berada di dalam mount-nya, jadi tidak membuka jalan keluar, tetapi guest
+  bisa membuat dua nama tampak sebagai satu berkas. Store juga terlihat oleh
+  pembaca host di pohon yang sama, dan objeknya tertinggal bila sebuah sesi mati
+  sebelum objek dikembalikan ke namanya. Mekanisme ini aktif hanya bila host
+  menolak `link(2)`.
+- Pengganti `/proc` global. Isinya disintesis (uptime, loadavg, stat, vmstat,
+  dan lainnya) dari sumber yang diizinkan, jadi tidak sama dengan data kernel.
+  Tool yang memakai angka itu untuk keputusan keamanan atau akuntansi tidak
+  boleh dipercaya. `status` proses sesi menampilkan identitas guest, bukan uid
+  host.
 
-- Jalankan engine di service non-exported dan, bila kompatibel, isolated process.
-- Broker hanya file descriptor/resource yang diizinkan.
+## Packaging Android
+
+- Jalankan engine di service yang tidak diekspor dan, bila memungkinkan, di
+  isolated process.
+- Hanya teruskan file descriptor dan resource yang diizinkan.
 - Jangan menurunkan `targetSdkVersion`, membypass SELinux, memakai exploit, atau
-  menyamarkan executable. Aplikasi modern (targetSdk ≥ 29) **tidak boleh**
-  meng-`execve` rootfs dari storage app yang writable, dan VHDP tidak
-  melakukannya: satu-satunya berkas yang di-`execve` adalah `phdp` dan
+  menyamarkan executable. Aplikasi dengan targetSdk 29 ke atas tidak boleh
+  meng-`execve` rootfs dari penyimpanan aplikasi yang bisa ditulis, dan VHDP
+  tidak melakukannya: berkas yang di-`execve` hanya `phdp` dan
   `libvhdp-loader.so` dari direktori pustaka native (dipasang installer,
   read-only). Kode guest dimuat loader itu lewat `mmap(PROT_EXEC)` atas berkas
-  aplikasi — jalur yang memang diizinkan platform — sehingga W^X tetap dihormati.
-  Konsekuensinya jujur: kode guest berjalan di konteks keamanan aplikasi dengan
-  izin aplikasi, sama seperti kode lain yang dimuat aplikasi itu, dan tidak
-  mendapat privilese apa pun di luar itu. Lihat `phdp capabilities` (profil
-  `android-app`) dan [ARCHITECTURE.md](ARCHITECTURE.md).
+  aplikasi, jalur yang memang diizinkan platform, sehingga W^X tetap dihormati.
+  Kode guest berjalan di konteks keamanan aplikasi dengan izin aplikasi, sama
+  seperti kode lain yang dimuat aplikasi itu, dan tidak mendapat hak di luar
+  itu. Lihat `phdp capabilities` (profil `android-app`) dan
+  [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Rooted backend (belum diimplementasikan)
+## Backend rooted (belum diimplementasikan)
 
-Bila kelak ada: harus opt-in dengan peringatan keras, tidak bind `/` host writable
-secara default, root helper sekecil mungkin dengan protokol tervalidasi yang segera
-menurunkan capability.
+Bila kelak dibuat, backend ini harus opt-in dengan peringatan yang jelas, tidak
+mem-bind `/` host dalam mode tulis secara default, dan memakai root helper
+sekecil mungkin dengan protokol tervalidasi yang segera melepas capability.
 
-## Lisensi & provenance
+## Lisensi dan provenance
 
-Implementasi original; tidak menyalin PRoot/QEMU/proyek GPL lain. Lihat
-[docs/adr/0007-licensing.md](docs/adr/0007-licensing.md).
+Implementasi original. Lihat [docs/adr/0007-licensing.md](docs/adr/0007-licensing.md).
 
 ## Melaporkan masalah keamanan
 
-Ini proyek fondasi tanpa jaminan. Sebelum audit eksternal, jangan
-mengandalkannya sebagai batas keamanan terhadap kode hostile.
+Project ini belum diaudit pihak luar. Sebelum audit, jangan mengandalkannya
+sebagai batas keamanan terhadap kode yang bermusuhan.

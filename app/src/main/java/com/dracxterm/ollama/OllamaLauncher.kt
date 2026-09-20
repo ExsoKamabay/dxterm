@@ -1,6 +1,7 @@
 package com.dracxterm.ollama
 
 import android.content.Context
+import android.os.Build
 import android.system.Os
 import android.util.Log
 import java.io.File
@@ -87,8 +88,17 @@ object OllamaLauncher {
             .replace("@HOST@", OllamaConfig.ENV_HOST)
             .replace("@MODELS@", OllamaConfig.ENV_MODELS)
             .replace("@VERSION@", OllamaConfig.TAG)
+            .replace("@ARTIFACT@", OllamaConfig.ARTIFACT)
             .replace("@ARTIFACT_MB@", (OllamaConfig.ARTIFACT_BYTES / 1_000_000).toString())
             .replace("@INSTALL_MB@", "60")
+            // The artifact serves one ABI. The launcher refuses on a device that cannot run it,
+            // instead of taking a yes the installer's preflight then refuses
+            // (OllamaInstaller.install). The verdict comes from OllamaConfig.abiSupported() -- the
+            // same call the preflight makes -- so the two can never disagree; the names below are
+            // for the message only.
+            .replace("@ABI_SUPPORTED@", if (OllamaConfig.abiSupported()) "1" else "0")
+            .replace("@REQUIRED_ABI@", OllamaConfig.REQUIRED_ABI)
+            .replace("@DEVICE_ABI@", (Build.SUPPORTED_ABIS ?: emptyArray()).firstOrNull() ?: "unknown")
         target.writeText(body)
         runCatching { Os.chmod(target.absolutePath, 0x1ED) }   // 0755
         // Guarantee the shared ~/.ollama exists so the launcher can always write its state files.
@@ -146,7 +156,7 @@ object OllamaLauncher {
         fun line(s: String) { runCatching { log.appendText(s + "\n") } }
 
         line("=== drac-Xterm Ollama provisioning ===")
-        line("release   : ${OllamaConfig.TAG} (pinned, official pre-release)")
+        line("release   : ${OllamaConfig.TAG} (pinned, official release)")
         line("artifact  : ${OllamaConfig.ARTIFACT} (${OllamaConfig.ARTIFACT_BYTES} bytes)")
         line("sha256    : ${OllamaConfig.ARTIFACT_SHA256}")
         line("install   : ${OllamaConfig.GUEST_PREFIX}")

@@ -202,8 +202,9 @@ class ProvisioningActivity : AppCompatActivity() {
         if (binding.consent.visibility == View.VISIBLE) {
             val entries = RootfsCatalog.entriesFor(this)
             catalogEntries = entries
-            binding.consentArch.text = getString(
-                R.string.consent_arch,
+            binding.consentArch.text = resources.getQuantityString(
+                R.plurals.consent_arch,
+                entries.size,
                 Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown",
                 entries.size
             )
@@ -526,8 +527,9 @@ class ProvisioningActivity : AppCompatActivity() {
         // Name the architecture before the list rather than leaving it implicit. The
         // list IS the answer to "what can this device run", so saying which device was
         // detected makes the filtering visible instead of mysterious.
-        binding.consentArch.text = getString(
-            R.string.consent_arch,
+        binding.consentArch.text = resources.getQuantityString(
+            R.plurals.consent_arch,
+            entries.size,
             Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown",
             entries.size
         )

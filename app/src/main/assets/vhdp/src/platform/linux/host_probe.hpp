@@ -51,7 +51,7 @@ std::string kernel_machine();
 long page_size_sysconf();
 unsigned long page_size_auxv();
 // openat2 availability. A process under a seccomp filter (every Android app process,
-// Termux included) can be killed with SIGSYS for a syscall outside the filter's
+// terminal apps included) can be killed with SIGSYS for a syscall outside the filter's
 // allowlist instead of getting ENOSYS, so there the syscall is never issued in-process:
 // with allow_child it is tried in a disposable child, otherwise it is not probed.
 Openat2Probe probe_openat2(bool allow_child);
@@ -67,8 +67,9 @@ std::optional<int> android_sdk_level();
 bool android_app_context(); // untrusted_app* SELinux domain, or an app uid on an Android host
 
 // PID of the process tracing this one (TracerPid in /proc/self/status), or 0 when
-// untraced. Non-zero means a ptrace supervisor -- PRoot, strace, gdb -- is between
-// this process and the kernel, so its syscalls may be emulated rather than real.
+// untraced. Non-zero means a ptrace supervisor (another rootless session, a debugger,
+// a syscall tracer) is between this process and the kernel, so its syscalls may be
+// emulated rather than real.
 long tracer_pid();
 // File name of the userland loader shipped next to libvhdp / phdp.
 inline constexpr const char* kUserlandLoaderName = "libvhdp-loader.so";

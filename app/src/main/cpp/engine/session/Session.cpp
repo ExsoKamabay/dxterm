@@ -2,6 +2,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <cerrno>
+#include <android/log.h>
 
 namespace xterm {
 
@@ -58,6 +59,14 @@ void Session::readerLoop() {
         }
     }
     running_.store(false);
+    // Say how the shell ended. The app closes the last workspace when the shell exits, so
+    // without this line a shell that could never start (exec failure, status 127) and a
+    // shell the user ended with `exit` look identical from outside: the app just closes.
+    const int status = pty_.reapStatus();
+    if (status >= 0) {
+        __android_log_print(ANDROID_LOG_INFO, "xterm-native", "session ended (exit status %d)%s",
+                            status, status == 127 ? " -- the shell could not be started" : "");
+    }
     generation_.fetch_add(1, std::memory_order_relaxed);  // wake the UI to show exit
 }
 

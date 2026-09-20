@@ -52,6 +52,9 @@
     <string name="stage_linux_ready">Linux ready</string>
     <string name="lang_toggle">English</string>
     <string name="lang_switch_to">Bahasa Indonesia</string>
-    <string name="consent_arch">Device: %1$s · %2$d distros available</string>
+    <plurals name="consent_arch">
+        <item quantity="one">Device: %1$s · %2$d distro available</item>
+        <item quantity="other">Device: %1$s · %2$d distros available</item>
+    </plurals>
     <string name="busybox_fallback">Start the BusyBox shell for now</string>
 </resources>

@@ -33,8 +33,12 @@ Required:
   Android/BusyBox provides none of these, so the binary cannot be executed here.
 
 Resolution:
-  Start drac-Xterm with the Linux rootfs provisioned (the bundled Kali ARM64 image
-  is extracted to the app's private storage on first run), then run `ollama` again
+  Install a Linux distro from the app's first-run screen, then run `ollama` again
   from inside the Linux shell.
+
+  On an ARM64 phone that is all it takes. On an x86_64 device (emulator, WayDroid,
+  ChromeOS) there is no Ollama build to install: the pinned release is ARM64 only,
+  so `ollama` will say so and download nothing. Everything else in the terminal
+  works there normally.
 EOF
 exit 1

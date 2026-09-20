@@ -7,9 +7,16 @@ import java.io.File
 /**
  * Every constant the Ollama integration depends on, in one place.
  *
- * The pinned release is v0.32.14-rc0. [ARTIFACT_SHA256] comes from that release's own
- * sha256sum.txt and matches the GitHub asset digest, so two independent sources agree on
- * it. The archive layout comes from the release workflow's tar file list.
+ * The pinned release is v0.34.2, a STABLE release. [ARTIFACT_SHA256] comes from that
+ * release's own sha256sum.txt and matches the GitHub asset digest, so two independent
+ * sources agree on it. The archive layout comes from the release workflow's tar file list.
+ *
+ * Why a stable tag and not a pre-release: the previous pin, v0.32.14-rc0, was a
+ * pre-release. Upstream deleted it, and with it the asset, so every install attempt ended
+ * in "HTTP 404 fetching the pinned release artifact" -- the feature was simply gone. A
+ * stable tag is kept; a release candidate is not. Bumping this pin means changing the four
+ * constants below together (tag, artifact, size, digest) and re-running an install on a
+ * device.
  *
  * The install prefix shape is not a preference. `ml/path.go:LibOllamaPath` resolves the
  * runtime library root on Linux as `dirname(EvalSymlinks(os.Executable()))/../lib/ollama`,
@@ -26,12 +33,12 @@ object OllamaConfig {
     const val TAG_LOG = "dracXterm"
 
     // ---- Pinned official release (never silently substituted) ----------------------------------
-    const val TAG = "v0.32.14-rc0"
+    const val TAG = "v0.34.2"
     const val ARTIFACT = "ollama-linux-arm64.tar.zst"
-    const val ARTIFACT_BYTES = 1_542_906_646L
+    const val ARTIFACT_BYTES = 1_549_897_885L
     /** From the release's official sha256sum.txt (line "./ollama-linux-arm64.tar.zst"), which
      *  matches the GitHub asset `digest` field byte-for-byte. */
-    const val ARTIFACT_SHA256 = "45b01ab0ed4b1079a80a9287d0346951cff15935de61d00663c4afc83e57bd43"
+    const val ARTIFACT_SHA256 = "8edcfe99eb7546d9422cfa8297d341dcd50e090e192ce1a8092a6ab6d182867b"
 
     const val DOWNLOAD_URL =
         "https://github.com/ollama/ollama/releases/download/$TAG/$ARTIFACT"

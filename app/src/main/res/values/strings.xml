@@ -33,7 +33,10 @@
     <string name="consent_title">Pasang Linux</string>
     <string name="consent_body">Pilih distro Linux yang ingin dipasang. File akan diperiksa sebelum instalasi dimulai.\n\nSetiap distro dikelola oleh pengembangnya masing-masing.</string>
     <string name="consent_body_resume">Unduhan %1$s sebelumnya berhenti di %2$s dan bisa dilanjutkan dari sana.\n\nSetiap distro dikelola oleh pengembangnya masing-masing.</string>
-    <string name="consent_arch">Perangkat: %1$s · %2$d distro tersedia</string>
+    <plurals name="consent_arch">
+        <item quantity="one">Perangkat: %1$s · %2$d distro tersedia</item>
+        <item quantity="other">Perangkat: %1$s · %2$d distro tersedia</item>
+    </plurals>
     <string name="consent_pick_distro">Pilih distro</string>
     <string name="consent_no_images">Tidak ada image Linux untuk arsitektur perangkat ini (%1$s). dracxterm akan menjalankan shell BusyBox saja.</string>
     <string name="consent_size_line">Unduhan %1$s · membutuhkan sekitar %2$s ruang kosong.</string>

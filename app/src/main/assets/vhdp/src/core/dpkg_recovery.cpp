@@ -4,14 +4,14 @@
 // recovery recipe (the shell script below); it inspects the rootfs's package-manager state and
 // reports what is wrong and what to run. It does NOT execute anything here: this entry point is
 // pure inspection, callable from an app process without starting a session -- so the caller runs
-// the returned script through a fake-root session on whichever backend runs the rootfs (VHDP's
-// own rootless engine, or proot as the fallback). The orchestration/logic stays in VHDP.
+// the returned script in a fake-root session (guest uid 0) of the rootless engine. The
+// orchestration/logic stays in VHDP.
 //
-// Root cause repaired (same as before): with a non-root login (dracos), /var/lib/dpkg ends up
-// owned by uid 1000, and a sudo-acquired root in a fake-root guest does not inherit the
-// launch-time DAC bypass, so dpkg cannot write its own state. The script normalises system-tree ownership to
-// root:root inside a single fake-root pass (the only context where chown succeeds), clears stale
-// locks, repairs the status DB, and finishes the interrupted transaction.
+// Root cause repaired: with a non-root login (dracos), /var/lib/dpkg ends up owned by uid 1000,
+// and a sudo-acquired root in a fake-root guest does not inherit the launch-time DAC bypass, so
+// dpkg cannot write its own state. The script normalises system-tree ownership to root:root
+// inside a single fake-root pass (the only context where chown succeeds), clears stale locks,
+// repairs the status DB, and finishes the interrupted transaction.
 #include "core/reports.hpp"
 
 #include "common/json.hpp"
@@ -40,11 +40,11 @@ bool exists(const std::string& p) {
     return ::lstat(p.c_str(), &st) == 0;
 }
 
-// POSIX sh, run as fake-root (uid 0) inside the guest by the proot backend. Every step tolerates
+// POSIX sh, run as fake-root (uid 0) inside the guest by the caller. Every step tolerates
 // absent files and never aborts the whole script on a single failure; rc reflects the REAL dpkg
 // outcome so the caller only records success when the transaction actually completed.
-constexpr const char* kRecoveryScript = R"DRACSH(set -u
-log() { echo "[drac-recovery] $*"; }
+constexpr const char* kRecoveryScript = R"VHDPSH(set -u
+log() { echo "[vhdp-recovery] $*"; }
 log "start"
 
 # 1) Ownership: the system tree must be root-owned so apt/dpkg (root via sudo) can write it.
@@ -66,7 +66,7 @@ if [ ! -s "$S" ]; then
         if [ -s "$b" ]; then cp -a "$b" "$S" && log "restored from $b" && break; fi
     done
 fi
-[ -s "$S" ] && cp -a "$S" "$DB/status.drac-bak" 2>/dev/null || true   # rollback point
+[ -s "$S" ] && cp -a "$S" "$DB/status.vhdp-bak" 2>/dev/null || true   # rollback point
 
 # 4) Finish the interrupted transaction; roll the status DB back if it fails.
 rc=0
@@ -75,13 +75,13 @@ if command -v dpkg >/dev/null 2>&1; then
         log "dpkg --configure -a OK"
     else
         log "dpkg --configure -a FAILED -> rolling back status"
-        [ -s "$DB/status.drac-bak" ] && cp -a "$DB/status.drac-bak" "$S"
+        [ -s "$DB/status.vhdp-bak" ] && cp -a "$DB/status.vhdp-bak" "$S"
         rc=1
     fi
 fi
 log "done (rc=$rc)"
 exit "$rc"
-)DRACSH";
+)VHDPSH";
 
 } // namespace
 

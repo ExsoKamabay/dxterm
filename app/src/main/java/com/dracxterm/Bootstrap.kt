@@ -67,6 +67,7 @@ object Bootstrap {
         // Gated on the file, not the marker: recreating a shell rc the user deleted is
         // right, and rewriting one they edited is not.
         if (!File(home, ".ashrc").exists()) writeAshrc(home)
+        if (!File(home, ".systemshellrc").exists()) writeSystemShellRc(home)
         // `xset` guest command (refreshed every launch so upgrades land) for the no-rootfs busybox path.
         installXsetCommand(ctx, usrBin)
 
@@ -140,8 +141,16 @@ object Bootstrap {
                 "TMPDIR=$tmp",
                 "TERM=xterm-256color",
                 "LANG=C.UTF-8",
-                "PATH=$usrBin:$nativeLib:/system/bin",
-                "ENV=$home/.ashrc"
+                // BusyBox first where it runs, because those applets are the Linux-shaped ones.
+                // Where it does not (see [busyboxRuns]) the applet links are landmines: every one
+                // of them dies with "Bad system call". The device's own /system/bin goes first
+                // there, so ls, cat, ps, grep and the rest resolve to tools that work.
+                "PATH=" + if (busyboxRuns(usrBin)) "$usrBin:$nativeLib:/system/bin"
+                          else "/system/bin:$usrBin:$nativeLib",
+                // The rc belongs to whichever shell actually runs: BusyBox ash reads the themed
+                // one, the system shell reads a plain one it can parse (it would print bash's
+                // \[ \] prompt markers literally).
+                "ENV=" + if (busyboxRuns(usrBin)) "$home/.ashrc" else "$home/.systemshellrc"
             ) + prootEnv
         }
 
@@ -156,7 +165,7 @@ object Bootstrap {
             // Through the link, not the binary: argv[0] has to read "ash" for BusyBox to
             // dispatch to the shell. Handing it the packaged path gets "applet not found",
             // the shell exits at once, and the terminal closes itself on launch.
-            arrayOf("$usrBin/ash")
+            arrayOf(noGuestShell(usrBin))
         }
         // The host-side cwd handed to execve is always a real host directory ($HOME);
         // the backend re-roots the guest itself (vhdp --cwd, proot), so this stays valid
@@ -547,25 +556,54 @@ object Bootstrap {
         }
     }
 
-    /** Install PATH-based compatibility shims (sudo/su/fakeroot) into the guest's /usr/local/bin ,
-     *  the first standard directory on PATH, so they shadow the distro binaries that cannot work
-     *  under PRoot. The session already runs as fake-root (uid 0), so each shim strips privilege-
+    /** Install PATH-based compatibility shims (sudo/su/fakeroot) into the guest's /usr/local/sbin
+     *  and /usr/local/bin, the standard directories a login profile keeps ahead of the distro's
+     *  own, so they shadow the distro binaries that cannot work under a fake-root guest. The
+     *  session already runs as fake-root (uid 0), so each shim strips privilege-
      *  escalation syntax and execs the target as root, letting habitual `sudo apt …`, `sudo -i`,
      *  `sudo su`, `su -c`, and existing scripts keep working. Shipped as assets (no fragile in-Kotlin
      *  shell string). Host-side + refreshed every launch, so it also repairs an ALREADY-provisioned
      *  rootfs without re-provisioning. Non-fatal by design, never blocks the terminal. */
     private fun installCompatShims(ctx: Context, rootfsDir: File) {
-        val binDir = File(rootfsDir, "usr/local/bin").apply { runCatching { mkdirs() } }
         // sudo/su/fakeroot: escalation shims (present the SUPER_USER identity).
         // whoami/id/logname: identity shims that keep the presented user in sync with $DRAC_SU, so
-        // the normal-user default reports 'dracos'/1000 and super-user reports 'root'/0. They sit in
-        // /usr/local/bin (first on PATH) so they shadow the distro's coreutils versions.
+        // the normal-user default reports 'dracos'/1000 and super-user reports 'root'/0.
+        //
+        // Written into /usr/local/sbin AND /usr/local/bin, because one of them is not reliably
+        // ahead of the distro's own directories. The app spawns the shell with
+        // /usr/local/sbin:/usr/local/bin first, but `bash -l` then re-reads the guest's profile:
+        // Kali's /etc/profile.d/kali.sh prepends /usr/local/sbin:/usr/sbin:/sbin, which puts
+        // /usr/sbin AHEAD of /usr/local/bin. On an image that carries net-tools (Kali nano and
+        // up) the distro's /usr/sbin/ifconfig then shadowed the shim, and the guest was back to
+        // asking the kernel for interfaces an app's uid may not read. /usr/local/sbin is first in
+        // every PATH seen here -- the app's own, Debian's root and non-root branches, and Kali's
+        // -- so a copy there wins whatever the profile does, and the /usr/local/bin copy keeps
+        // working for anything that drops the sbin directories.
+        val dirs = arrayOf("usr/local/sbin", "usr/local/bin")
+            .map { File(rootfsDir, it).apply { runCatching { mkdirs() } } }
         for (name in arrayOf("sudo", "su", "fakeroot", "whoami", "id", "logname", "ifconfig")) {
-            val f = File(binDir, name)
-            runCatching {
-                ctx.assets.open("compat/$name").use { i -> f.outputStream().use { i.copyTo(it) } }
-                Os.chmod(f.absolutePath, 0x1ED)   // 0755 = rwxr-xr-x
-            }.onFailure { Log.w(ShellLocator.TAG, "[COMPAT] shim $name install failed: ${it.message}") }
+            val bytes = runCatching { ctx.assets.open("compat/$name").use { it.readBytes() } }
+                .onFailure { Log.w(ShellLocator.TAG, "[COMPAT] shim $name unreadable: ${it.message}") }
+                .getOrNull() ?: continue
+            for (dir in dirs) {
+                val f = File(dir, name)
+                // Write a temporary file and rename it over the target, rather than truncating the
+                // target in place. Two reasons, both reachable: a second workspace can be running
+                // `sudo` from this very path while a new session spawns, and a truncated script is
+                // read as a syntax error rather than a command; and a path that is a SYMLINK is
+                // followed by an ordinary write, so a distro that ships /usr/local/sbin/sudo as a
+                // link to /usr/bin/sudo would have had its real binary overwritten. rename(2)
+                // replaces the name atomically and replaces the link itself, so neither can happen.
+                val tmp = File(dir, ".$name.new")
+                runCatching {
+                    tmp.outputStream().use { it.write(bytes) }
+                    Os.chmod(tmp.absolutePath, 0x1ED)   // 0755 = rwxr-xr-x
+                    if (!tmp.renameTo(f)) throw java.io.IOException("rename to ${f.absolutePath} failed")
+                }.onFailure {
+                    runCatching { tmp.delete() }
+                    Log.w(ShellLocator.TAG, "[COMPAT] shim $name -> ${dir.name} failed: ${it.message}")
+                }
+            }
         }
     }
 
@@ -717,6 +755,59 @@ object Bootstrap {
         }
         runCatching { File(home, ".ashrc").writeText(ashrc) }
     }
+
+    /** Answer of the BusyBox probe for this process: null until it has been asked once. */
+    @Volatile private var busyboxUsable: Boolean? = null
+
+    /** Prompt for the device's own shell, used only where BusyBox cannot run (see [busyboxRuns]).
+     *  Written without the \[ \] width markers and without \w, which that shell prints
+     *  literally; $PWD is expanded at prompt time instead, so the path still follows the cwd. */
+    private fun writeSystemShellRc(home: String) {
+        val esc = "\u001B"
+        val rc = "PS1='" + esc + "[35mdracos" + esc + "[0m:" + esc + "[36m\$PWD" + esc + "[0m\$ '\n"
+        runCatching { File(home, ".systemshellrc").writeText(rc) }
+    }
+
+    /**
+     * The shell for a session with no Linux image, and the reason this is not simply BusyBox.
+     *
+     * BusyBox is what the app falls back to when the user declines the distro offer, and the
+     * whole promise of that path is "a working terminal, not an error state". On some devices
+     * the platform refuses to run it at all: every invocation dies with SIGSYS (Bad system
+     * call) the moment it starts, because the shipped binary issues a syscall the device's own
+     * policy for app processes does not allow. Measured on an Android 15 arm64 phone, where
+     * `ls`, `id` and `busybox --list` all die the same way. The shell then exits within
+     * milliseconds, the terminal reads EOF, the last workspace closes and the app disappears
+     * off the screen -- which reads as a crash on launch.
+     *
+     * So the shell is chosen by asking, not by assuming: run BusyBox once and see whether it
+     * survives. It is one fork/exec of a command that does nothing, a few milliseconds at
+     * session start, and the answer is cached for the process. Where BusyBox runs, nothing
+     * changes. Where it does not, the session gets the device's own /system/bin/sh, which is
+     * always present, and the user gets a terminal that opens and stays open.
+     */
+    private fun busyboxRuns(usrBin: String): Boolean {
+        busyboxUsable?.let { return it }
+        var status = -1
+        val ok = runCatching {
+            val p = ProcessBuilder(listOf("$usrBin/ash", "-c", ":"))
+                .redirectErrorStream(true).start()
+            // A shell that cannot start does so immediately; a second is an eternity here.
+            if (!p.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)) { p.destroyForcibly(); false }
+            else { status = p.exitValue(); status == 0 }
+        }.getOrDefault(false)
+        busyboxUsable = ok
+        if (!ok) {
+            // The status is worth having in the log: 159 is 128+SIGSYS, the device's syscall
+            // policy killing it, while 127 would mean the binary or the applet link is missing.
+            Log.w(TAG, "[BUSYBOX] the shipped BusyBox cannot run on this device (exit status " +
+                "$status); using /system/bin/sh for the no-image session")
+        }
+        return ok
+    }
+
+    private fun noGuestShell(usrBin: String): String =
+        if (busyboxRuns(usrBin)) "$usrBin/ash" else "/system/bin/sh"
 
     /**
      * Replace a symlink, including one that no longer resolves.
