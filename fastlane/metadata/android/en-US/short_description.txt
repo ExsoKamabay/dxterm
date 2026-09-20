@@ -1,1 +1,1 @@
-Native terminal emulator with an optional rootless Linux environment
+An Android terminal that can also run Linux, no root needed

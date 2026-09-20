@@ -1,11 +1,11 @@
 # dracxterm
 
-Bisa dipakai apa adanya sebagai shell BusyBox, atau menjalankan distribusi Linux
-di dalam sandbox aplikasi. Sesi Linux dijalankan VHDP, sebuah rootless supervisor
-berbasis `ptrace` (dipercepat `seccomp`) yang ikut di dalam APK; PRoot tetap
-dikirim sebagai fallback dan dipakai otomatis kalau VHDP gagal self-test di
-perangkat itu. Tujuannya satu: memberi shell yang benar di ponsel, tanpa meminta
-root, akun, atau layanan apa pun.
+dracxterm adalah terminal untuk Android. Begitu dibuka, Anda sudah bisa
+mengetik perintah. Kalau mau lebih jauh, aplikasi ini bisa memasang Linux di
+dalam ruang penyimpanannya sendiri, lalu Anda bekerja seperti di komputer.
+
+Ponsel tidak perlu di-root. Tidak ada akun yang harus dibuat, dan tidak ada
+layanan yang harus dipasang lebih dulu.
 
 ## Screenshot
 
@@ -22,27 +22,28 @@ root, akun, atau layanan apa pun.
 
 ## Yang baru di 1.0.6
 
-Kali Linux kini terbuka sampai prompt dan langsung bisa dipakai. Sebelum rilis
-ini, pemasangan Kali selesai tanpa pesan error lalu layar berhenti di banner:
-tidak ada prompt, Ctrl-C tidak terasa, panah atas tidak memanggil riwayat, dan
-editor layar penuh menggambar berantakan. Perintah yang diketik sebenarnya tetap
-jalan, hanya tanpa prompt, sehingga terminal terasa macet. Debian waktu itu
-baik-baik saja, jadi masalahnya terlihat acak.
+Kali Linux sekarang terbuka sampai prompt dan bisa langsung dipakai.
 
-Sekarang Kali berperilaku seperti distro lain: prompt muncul, riwayat perintah
-bekerja, Ctrl-C menghentikan perintah yang sedang berjalan, ukuran jendela
-terbaca dengan benar saat font diperbesar atau papan ketik muncul, dan editor
-layar penuh tampil rapi. Perbaikannya tidak khusus Kali, jadi distro lain dengan
+Sebelumnya tidak begitu. Pemasangan Kali selesai tanpa pesan error, lalu layar
+berhenti di banner. Prompt tidak muncul, Ctrl-C tidak terasa, panah atas tidak
+memanggil riwayat, dan editor layar penuh menggambar berantakan. Perintah yang
+diketik tetap jalan, hanya tidak terlihat, jadi terminalnya terasa macet. Debian
+waktu itu baik-baik saja, yang membuat masalahnya terlihat acak.
+
+Sekarang Kali berperilaku seperti distro lain di sini. Prompt muncul, riwayat
+perintah jalan, Ctrl-C menghentikan perintah yang sedang berjalan, ukuran layar
+terbaca benar saat huruf diperbesar atau papan ketik muncul, dan editor layar
+penuh tampil rapi. Perbaikannya tidak khusus Kali, jadi distro lain dengan
 pustaka sistem sebaru itu ikut aman.
 
-Ikut beres di rilis ini: pemasangan paket di Kali Full yang tadinya berhenti di
-tengah jalan kini selesai, membuat paket `.deb` sendiri tidak lagi ditolak karena
-hak berkas, prompt tidak lagi mencetak baris "Permission denied" di sebagian
-ponsel, dan pemilihan mesin distro bekerja lagi di Android 7.
+Ada perbaikan lain yang ikut terbawa. Pemasangan paket di Kali Full yang dulu
+berhenti di tengah jalan kini selesai, membuat paket `.deb` sendiri tidak lagi
+ditolak, dan prompt berhenti mencetak baris "Permission denied" di sebagian
+ponsel.
 
-Diuji di ponsel arm64 untuk Kali Nano, Kali Minimal, Kali Full, dan Debian 13,
-memakai berkas distro dari penyimpanan lokal, lalu diulang di lingkungan x86_64.
-Rincian tiap rilis ada di [`CHANGELOG.md`](CHANGELOG.md).
+Semuanya diuji di ponsel arm64 untuk Kali Nano, Kali Minimal, Kali Full, dan
+Debian 13, memakai berkas distro dari penyimpanan lokal, lalu diulang di
+lingkungan x86_64. Rincian tiap rilis ada di [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Yang baru di 1.0.5
 
@@ -93,63 +94,57 @@ pernah dipakai untuk build yang beredar.
 
 ## Yang bisa dilakukan
 
-Terminalnya mendukung warna dan escape sequence ANSI/VT, scrollback, layar
-alternatif, serta UTF-8 penuh termasuk karakter lebar CJK dan combining mark.
-Ada seleksi teks, pencarian isi buffer, clipboard, bracketed paste, dan mouse
-tracking untuk program yang memerlukannya.
+Terminalnya menangani warna, kursor, scrollback, dan layar alternatif yang
+dipakai program layar penuh seperti nano, vim, atau htop. Teks UTF-8 tampil
+benar, termasuk aksara lebar seperti CJK. Anda bisa memilih teks, mencari isi
+layar, menyalin, dan menempel. Program yang memakai mouse juga bekerja.
 
-Sampai lima workspace bisa dibuka sekaligus, masing-masing punya shell, PTY,
-direktori kerja, dan riwayat sendiri. Berpindah antar workspace dengan usap.
-Sesi tetap hidup saat aplikasi ditinggalkan, dijaga oleh foreground service.
+Sampai lima ruang kerja bisa dibuka sekaligus. Masing-masing punya shell,
+direktori kerja, dan riwayat sendiri, dan Anda berpindah dengan mengusap layar.
+Sesi tetap hidup saat Anda pindah ke aplikasi lain.
 
-Di bawah keyboard ada bar tombol tambahan yang bisa digulir: panah, gulir ke
-dasar, zoom, Ctrl dan Alt yang bisa dikunci, Esc, Tab, Home, End, PgUp, PgDn,
-pencarian, tempel, dan backspace. Cubit layar untuk mengubah ukuran font.
+Di bawah papan ketik ada baris tombol tambahan yang bisa digeser: panah, gulir
+ke dasar, zoom, Ctrl dan Alt yang bisa dikunci, Esc, Tab, Home, End, PgUp,
+PgDn, cari, tempel, dan backspace. Cubit layar untuk memperbesar huruf.
 
-Ketik `xset` di terminal untuk membuka pengaturan. Semuanya digambar di dalam
-terminal itu sendiri, dengan pratinjau langsung, dan tersimpan otomatis setiap
-kali diubah:
+Ketik `xset` untuk membuka pengaturan. Semuanya digambar di dalam terminal,
+berubah langsung saat Anda geser, dan tersimpan sendiri:
 
 | Menu | Isinya |
 |---|---|
-| Appearance | Ringkasan pengaturan yang paling sering dipakai, dalam satu layar. |
-| Theme | Preset tema, warna foreground, background, dan cursor. |
-| Font | JetBrains Mono atau font sistem, ukuran 7 sampai 28 dp, spasi baris, spasi huruf, padding, dan opsi bold sebagai warna terang. |
+| Appearance | Pengaturan yang paling sering dipakai, dalam satu layar. |
+| Theme | Preset tema, warna teks, latar, dan kursor. |
+| Font | JetBrains Mono atau font sistem, ukuran 7 sampai 28 dp, jarak baris, jarak huruf, dan padding. |
 | Cursor | Bentuk block, bar, underline, atau hollow; kedip; warna. |
-| Background | Warna latar dan kontras foreground-nya. |
-| Performance | Kedalaman scrollback, 200 sampai 20000 baris. |
+| Background | Warna latar dan kontras teksnya. |
+| Performance | Panjang scrollback, 200 sampai 20000 baris. |
 | Storage Access | Sakelar akses penyimpanan, berlaku langsung di shell yang sedang jalan. |
-| Diagnostics | Versi libvhdp, ABI, arsitektur build, profil yang terdeteksi, kebijakan exec storage, backend yang dipakai sesi ini, dan probe aktif. |
-| Backup | Ekspor dan impor konfigurasi sebagai JSON, serta reset ke bawaan. |
-| About | Informasi perangkat dan aplikasi, serta alamat kontak pengembang. |
+| Diagnostics | Keterangan mesin yang menjalankan sesi Linux, dan tombol untuk memeriksanya. |
+| Backup | Ekspor dan impor pengaturan sebagai JSON, serta kembali ke bawaan. |
+| About | Keterangan perangkat dan aplikasi, serta alamat kontak. |
 
-Di dalam guest ada perintah `vhdp`: `vhdp doctor` untuk diagnostik host,
-`vhdp inspect <rootfs>` untuk memeriksa sebuah rootfs, dan `vhdp capabilities`
-untuk matriks kemampuan per profil. `vhdp run` ditolak dari dalam terminal,
-karena Linux hanya mengizinkan satu tracer per proses dan shell itu sudah
-ditrace oleh sesi yang sedang berjalan.
+Di dalam distro Anda masuk sebagai pengguna biasa bernama `dracos`.
+`sudo PERINTAH`, `su -c PERINTAH`, dan `fakeroot PERINTAH` menjalankan satu
+perintah sebagai root. `sudo -i`, `sudo -s`, `su`, `su -`, dan `sudo su` membuka
+shell root dengan prompt `#`, dan `exit` mengembalikan Anda ke `dracos`. Root di
+sini hanya berlaku di dalam aplikasi, bukan root ponsel, tetapi cukup untuk
+`apt-get install`, `dpkg -i paket.deb`, menulis ke `/etc` atau `/usr`, dan
+`chown`.
 
-Di dalam distro Anda login sebagai user biasa `dracos`. `sudo PERINTAH`,
-`su -c PERINTAH`, dan `fakeroot PERINTAH` menjalankan perintah sebagai root;
-`sudo -i`, `sudo -s`, `su`, `su -`, dan `sudo su` membuka shell root dengan
-prompt `#`, dan `exit` kembali ke `dracos`. Root di sini diemulasikan di dalam
-sandbox aplikasi, bukan root perangkat, tetapi cukup untuk `apt-get install`,
-`dpkg -i paket.deb`, `apt install ./paket.deb`, menulis ke `/etc` atau `/usr`,
-dan `chown`. Perangkat tidak perlu di-root.
+Tampilannya tersedia dalam Bahasa Indonesia dan Inggris, dan tombol gantinya ada
+di dalam aplikasi, jadi kedua bahasa selalu ikut terpasang.
 
-Antarmukanya tersedia dalam Bahasa Indonesia dan Inggris. Toggle bahasanya ada
-di dalam aplikasi, jadi kedua terjemahan selalu ikut terpasang.
-
-Akses penyimpanan opsional dan tidak pernah diminta saat aplikasi dibuka. Kalau
-diberikan, penyimpanan internal muncul di `~/sdcard`, dan volume lepas-pasang di
-`~/sdcard-1` kalau memang ada. Kalau ditolak, semuanya tetap jalan.
+Akses ke penyimpanan ponsel bersifat pilihan dan tidak pernah diminta saat
+aplikasi dibuka. Kalau Anda menyalakannya, penyimpanan internal muncul di
+`~/sdcard`, dan kartu SD di `~/sdcard-1` bila ada. Kalau tidak, semuanya tetap
+jalan.
 
 Ollama bisa dipasang dari dalam terminal kalau Anda memintanya. Berkasnya tidak
-ikut di dalam APK; yang diunduh adalah artefak rilis resmi Ollama v0.32.14-rc0,
-sekitar 1,5 GB, yang dicocokkan SHA-256 sebelum dipasang.
+ikut di dalam APK: yang diunduh adalah rilis resmi Ollama v0.32.14-rc0, sekitar
+1,5 GB, dan berkasnya diperiksa dulu sebelum dipasang.
 
-Tidak ada analitik, iklan, pelacak, atau telemetri. Aplikasi membuka koneksi
-hanya kalau Anda memintanya mengunduh sesuatu.
+Tidak ada analitik, iklan, pelacak, atau telemetri. Aplikasi menghubungi
+jaringan hanya kalau Anda memintanya mengunduh sesuatu.
 
 ## Alur aplikasi
 
@@ -171,11 +166,11 @@ Kalau belum ada, langkah berikutnya ditentukan oleh apakah build ini membawa
 image di dalam APK atau tidak. Jawabannya dibaca dari isi `assets/rootfs/` di
 dalam APK, bukan dari nama berkas APK atau flag build:
 
-- **Ada arsip di dalam APK.** Arsipnya langsung diekstrak. Tidak ada daftar
-  distro, tidak ada panel persetujuan, dan tidak ada jaringan yang disentuh.
-- **Tidak ada arsip.** Aplikasi menampilkan katalog dari
-  `assets/rootfsURLS.json`, sudah disaring sesuai ABI perangkat, lengkap dengan
-  ukuran unduhan dan ruang yang dibutuhkan tiap pilihan.
+Kalau ada arsip di dalam APK, arsip itu langsung dipasang: tanpa daftar distro,
+tanpa panel persetujuan, dan tanpa menyentuh jaringan. Kalau tidak ada, aplikasi
+menampilkan daftar dari `assets/rootfsURLS.json` yang sudah disaring sesuai
+prosesor perangkat, lengkap dengan ukuran unduhan dan ruang yang dibutuhkan tiap
+pilihan.
 
 Sebelum itu, aplikasi juga memeriksa apakah ada arsip yang sudah pernah Anda
 unduh dan tertinggal di direktori aplikasi. Kalau ada, pemasangan dilanjutkan
@@ -210,10 +205,10 @@ Kalau digest tidak cocok, arsipnya ditolak dan tidak ada yang diekstrak.
 
 ### Ekstraksi dan konfigurasi
 
-Arsip yang lolos verifikasi diekstrak ke direktori privat aplikasi, lalu
-dikonfigurasi: pengguna non-root di dalam guest, resolver DNS, dan titik masuk
-shell-nya. Setelah itu isinya diperiksa sekali lagi, kali ini untuk memastikan
-yang terpasang memang bisa dijalankan, bukan sekadar berhasil diekstrak.
+Berkas yang lolos pemeriksaan dipasang ke direktori privat aplikasi, lalu
+disiapkan: pengguna biasa di dalam distro, pengaturan DNS, dan shell yang akan
+dibuka. Sesudah itu aplikasi memeriksa sekali lagi bahwa yang terpasang memang
+bisa dijalankan.
 
 Setelah ekstraksi sukses, arsip unduhannya dihapus untuk mengembalikan ruang.
 
@@ -310,31 +305,31 @@ Riwayat perubahan tiap rilis ada di [`CHANGELOG.md`](CHANGELOG.md).
 ## Unduh dan pasang
 
 Ambil APK dari [Releases](https://github.com/ExsoKamabay/dxterm/releases).
-Tiap berkas punya `.sha256` di sebelahnya. Periksa dulu sebelum memasang:
+Tiap berkas punya berkas `.sha256` di sebelahnya. Cocokkan dulu sebelum
+memasang, supaya Anda tahu berkasnya utuh:
 
 ```bash
-sha256sum -c dracxterm-1.0.5-vc5-release.apk.sha256
+sha256sum -c dracxterm-1.0.6-vc6-release.apk.sha256
 ```
 
 Lalu pasang lewat `adb`:
 
 ```bash
-adb install -r dracxterm-1.0.5-vc5-release.apk
+adb install -r dracxterm-1.0.6-vc6-release.apk
 ```
 
-Atau salin APK ke perangkat dan buka dari file manager. Android akan meminta
+Atau salin APK ke ponsel dan buka lewat pengelola berkas. Android akan meminta
 izin memasang aplikasi dari sumber tidak dikenal.
 
 ## Memasang distro Linux
 
-Saat pertama dibuka, aplikasi menampilkan daftar image yang cocok dengan ABI
-perangkat, beserta ukuran unduhan dan ruang yang dibutuhkan. Setelah Anda
-memilih dan menyetujui, aplikasi mengunduh arsipnya, mencocokkan SHA-256 dengan
-digest yang sudah dipin di dalam APK, lalu mengekstraknya. Kalau digest tidak
-cocok, arsip ditolak dan tidak diekstrak.
+Saat pertama dibuka, aplikasi menampilkan distro yang cocok dengan ponsel Anda,
+lengkap dengan ukuran unduhan dan ruang yang dibutuhkan. Setelah Anda memilih,
+berkasnya diunduh, dicocokkan dengan sidik jari yang sudah tersimpan di dalam
+aplikasi, lalu dipasang. Kalau sidik jarinya tidak cocok, berkas itu ditolak dan
+tidak jadi dipasang.
 
-Sebelum ada distro yang terpasang, terminal tetap bisa dipakai memakai shell
-BusyBox yang ikut di dalam APK.
+Sebelum ada distro yang terpasang, terminalnya sudah bisa dipakai apa adanya.
 
 Empat image tersedia untuk `arm64-v8a`:
 
@@ -735,55 +730,55 @@ Versi upstream, lisensi, dan written offer untuk source code-nya ada di
 
 ## Keterbatasan yang diketahui
 
-- **64-bit saja.** Perangkat `armeabi-v7a` dan x86 32-bit tidak didukung karena
-  biner yang ikut dikirim hanya dibangun untuk `arm64-v8a` dan `x86_64`.
-- **Katalog x86_64 masih satu entri uji coba.** Hanya Debian 13 amd64 yang
-  tersedia, dan pemasangannya baru diuji di WayDroid.
-- **Backup Android aktif.** `android:allowBackup` masih `true` dan aplikasi
-  belum punya aturan pengecualian. Artinya data aplikasi, termasuk isi rootfs
-  dan riwayat shell, bisa ikut terbawa oleh backup atau transfer perangkat.
-  Matikan backup untuk aplikasi ini lewat Settings kalau Anda mengetik hal
-  sensitif di terminal.
-- **Semua image bergantung pada satu mirror.** Kelima URL di katalog menunjuk
-  ke aset rilis `ExsoKamabay/rootless`. Kalau rilis itu dihapus atau reponya
-  hilang, tidak ada distro yang bisa dipasang sampai katalognya dipindah.
-  Digest ketiga image Kali masih bisa diturunkan ulang dari `kali.download`, dan
-  digest Debian amd64 dari `SHA256SUMS` bertanda tangan milik linuxcontainers
-  yang disimpan di mirror. Digest Debian arm64 tidak bisa: host yang dulu
-  menerbitkannya sudah tutup.
-- **Tidak ada CI di repo ini.** Rilis diuji manual: APK dibangun ulang lalu
-  dicoba di perangkat sambil membaca logcat, seperti di
-  [Langkah 6](#langkah-6-uji-di-perangkat). Unit test JVM dan suite
-  instrumentation sudah dihapus di 1.0.5. Suite CTest VHDP ada di repositori
-  upstream, tidak di salinan yang disematkan di sini.
-- **Home menurut `getpwuid` adalah `/root`.** Kernel melihat sesi guest sebagai
-  uid 0, sementara shell menampilkan user `dracos`. Program yang memakai `$HOME`
-  tidak terpengaruh, tetapi program yang mencari home lewat
-  `getpwuid(geteuid())` membaca konfigurasinya dari `/root`. Contohnya `ssh`,
-  yang membaca `/root/.ssh/config` alih-alih `~/.ssh/config`. Untuk `ssh`,
-  sebutkan berkasnya langsung dengan `-F ~/.ssh/config -i ~/.ssh/id_ed25519`.
-- **Ollama hanya untuk arm64.** Artefak yang dipin adalah
-  `ollama-linux-arm64.tar.zst`. Di x86_64 perintah `ollama` masih menanyakan
-  konfirmasi unduhan, lalu aplikasi menolaknya tanpa mengunduh apa pun.
-- **VHDP berlisensi Apache-2.0** (kompatibel satu arah dengan GPL-3.0), jadi APK
-  yang memuat `libvhdp.so`, `libphdp.so`, `libvhdp-loader.so`, maupun perintah
-  `vhdp` boleh dirilis dari sisi lisensi; lihat
-  [`app/src/main/cpp/vhdp/NOTICE`](app/src/main/cpp/vhdp/NOTICE).
-- **Jalur cadangan belum mengikuti distro terbaru.** Kalau mesin utama tidak
-  bisa jalan di sebuah perangkat, sesi otomatis memakai mesin cadangan, dan di
-  sana distro dengan pustaka sistem terbaru masih membuka shell tanpa prompt
-  seperti sebelum 1.0.6. Mesin yang sedang dipakai terlihat di halaman
-  Diagnostics pada pengaturan terminal (ketik `xset`).
-- **Kali Full berat.** Arsipnya 1,7 GB dan sekitar 9,5 GB setelah dipasang,
-  dengan pemasangan yang bisa memakan waktu lebih dari satu jam di ponsel. Kali
-  Nano atau Minimal jauh lebih cepat, dan sisa perkakasnya bisa ditambah lewat
-  `apt`.
-- **Sesi Linux berjalan lewat penerjemahan syscall**, entah VHDP atau PRoot, jadi
-  beban kerja yang banyak memanggil syscall (kompilasi, `apt`, Ollama) lebih
-  lambat daripada biner native. Ini batas pendekatan rootless, bukan bug.
-- **Engine rootless adalah isolasi kompatibilitas, bukan sandbox keamanan.**
-  UID 0 yang terlihat di dalam guest adalah emulasi. Jangan menjalankan rootfs
-  yang tidak Anda percayai.
+Hanya perangkat 64-bit. Ponsel dengan prosesor 32-bit (`armeabi-v7a` dan x86)
+tidak didukung.
+
+Daftar distro untuk x86_64 baru berisi satu entri, Debian 13 amd64, dan
+pemasangannya baru dicoba di WayDroid.
+
+Backup bawaan Android masih aktif untuk aplikasi ini, dan belum ada aturan
+pengecualian. Artinya data aplikasi, termasuk isi distro dan riwayat shell, bisa
+ikut terbawa saat backup atau pindah perangkat. Matikan backup untuk aplikasi
+ini lewat Setelan kalau Anda mengetik hal sensitif di terminal.
+
+Semua berkas distro diambil dari satu tempat, yaitu rilis
+`ExsoKamabay/rootless`. Kalau rilis itu hilang, tidak ada distro yang bisa
+dipasang sampai daftarnya dipindah. Sidik jari ketiga berkas Kali masih bisa
+dicocokkan ulang dengan yang diterbitkan Kali, dan Debian amd64 dengan berkas
+tanda tangan milik linuxcontainers yang ikut disimpan di mirror. Untuk Debian
+arm64 hal itu tidak bisa lagi, karena penerbit aslinya sudah tutup.
+
+Repositori ini tidak punya CI. Tiap rilis diuji dengan tangan: APK dibangun
+ulang lalu dicoba di perangkat sambil log dibaca, seperti di
+[Langkah 6](#langkah-6-uji-di-perangkat).
+
+Program yang mencari folder home lewat data pengguna sistem, bukan lewat
+`$HOME`, akan membaca `/root`. Contohnya `ssh`, yang membaca
+`/root/.ssh/config`. Sebutkan berkasnya langsung kalau perlu, misalnya
+`ssh -F ~/.ssh/config -i ~/.ssh/id_ed25519`.
+
+Ollama hanya tersedia untuk arm64. Di x86_64 perintah `ollama` masih menanyakan
+konfirmasi unduhan, lalu aplikasi menolaknya tanpa mengunduh apa pun.
+
+Kalau mesin utama tidak bisa jalan di sebuah perangkat, sesi otomatis memakai
+mesin cadangan. Di jalur cadangan itu, distro dengan pustaka sistem terbaru
+masih membuka shell tanpa prompt seperti sebelum 1.0.6. Mesin yang sedang
+dipakai terlihat di halaman Diagnostics pada pengaturan terminal (ketik `xset`).
+
+Kali Full berat. Unduhannya 1,7 GB dan sekitar 9,5 GB setelah dipasang, dengan
+pemasangan yang bisa lebih dari satu jam di ponsel. Kali Nano atau Minimal jauh
+lebih ringan, dan perkakas lain bisa ditambah lewat `apt`.
+
+Linux di dalam aplikasi berjalan lewat lapisan penerjemah, jadi pekerjaan berat
+seperti kompilasi atau `apt` lebih lambat daripada di komputer. Ini konsekuensi
+menjalankan Linux tanpa root, bukan bug.
+
+Lapisan itu menjaga kecocokan, bukan keamanan. Status root yang Anda lihat di
+dalam distro sifatnya tiruan. Jangan menjalankan berkas distro yang tidak Anda
+percayai.
+
+Lisensi VHDP adalah Apache-2.0 dan cocok dengan GPL-3.0 yang dipakai aplikasi
+ini; lihat [`app/src/main/cpp/vhdp/NOTICE`](app/src/main/cpp/vhdp/NOTICE).
 
 ## Lisensi
 

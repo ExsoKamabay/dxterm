@@ -1,51 +1,45 @@
-dracxterm is a terminal emulator for Android devices with an arm64-v8a or x86_64
-processor. The terminal engine, meaning the ANSI/VT parser, screen buffer, PTY handling and UTF-8 rendering, is
-written from scratch in C++ and driven by a Kotlin user interface. No device root
-required.
+dracxterm is a terminal for Android. Use it as it comes to type commands, or install
+Linux inside it and work the way you would on a computer. No root needed.
 
 <b>Terminal</b>
 
 <ul>
-<li>ANSI/VT escape sequences: colours, cursor shapes, scrollback, alternate screen</li>
-<li>Full UTF-8 with wide-character (CJK) and combining-mark support</li>
-<li>Text selection, buffer search, clipboard copy and bracketed paste</li>
-<li>Mouse tracking for applications that request it</li>
-<li>Up to five independent workspaces, each with its own shell, PTY, working directory
-and history; swipe to switch</li>
-<li>A foreground service keeps running sessions alive when you leave the app</li>
-<li>Extra key bar: arrows, Ctrl, Alt, Esc, Tab, Home, End, PgUp/PgDn, paste, search, zoom</li>
-<li>Pinch to zoom, JetBrains Mono or a system font</li>
+<li>Colours, cursor shapes, scrollback and the alternate screen for full-screen programs</li>
+<li>UTF-8 text, including wide scripts such as CJK</li>
+<li>Select text, search the screen, copy and paste</li>
+<li>Mouse support for programs that use it</li>
+<li>Up to five workspaces, each with its own shell and history. Swipe to switch</li>
+<li>Sessions keep running when you switch to another app</li>
+<li>An extra key row: arrows, Ctrl, Alt, Esc, Tab, Home, End, PgUp, PgDn, paste, search
+and zoom</li>
+<li>Pinch the screen to change the font size</li>
 </ul>
 
-<b>Configuration</b>
+<b>Settings</b>
 
-Type <i>xset</i> in the terminal to open a settings dashboard drawn inside the terminal
-itself: themes, fonts, text size and spacing, cursor style, scrollback depth, padding,
-storage access and device information, plus configuration export and import. A
-Diagnostics page shows which engine runs the session and the result of its self-test.
+Type <i>xset</i> in the terminal to open the settings. They are drawn inside the terminal
+with a live preview: theme, font, text size and spacing, cursor shape, scrollback length,
+storage access and device details. Settings can be exported and imported again.
 
-<b>Linux environment</b>
+<b>Linux</b>
 
-Out of the box the app runs a BusyBox shell, which is a complete working terminal on its
-own. For a full distribution, dracxterm can set up a Linux root filesystem and run it in
-the app sandbox through VHDP, a rootless engine that ships inside the APK. If VHDP
-fails its self-test on a device, the session falls back to PRoot on its own. Inside
-the distro, sudo, su and apt work as expected, and .deb packages install with dpkg.
+With nothing installed, the app already gives you a working shell. If you want a full
+distribution, the app can install one inside its own storage. Inside the distro,
+<i>sudo</i>, <i>su</i> and <i>apt</i> work as usual, and .deb packages install with
+<i>dpkg</i>.
 
-A build either carries an image or it does not, and the app adapts on its own. Without
-one it is a small download: on first run it lists the images your device can actually
-run, fetches the one you pick, and checks it against a pinned SHA-256 before unpacking
-anything. A build that does carry an image sets it up on first run with no network and
-nothing to agree to. Either way it is the same app, same package, same version, so one
-replaces the other in place.
+On first run the app lists the distros your device can run, with the download size for
+each. Downloaded files are checked before anything is installed, so a corrupted or
+altered file never gets unpacked. There is also a build that already carries its distro,
+and that one installs with no network at all.
 
 <b>Storage</b>
 
-Storage access is optional and is never requested at startup. Grant it from Settings and
-internal storage appears at ~/sdcard, with a valid external volume at ~/sdcard-1. Deny
-it and every other feature still works.
+Access to phone storage is optional and is never requested at startup. Turn it on and
+internal storage shows up at ~/sdcard, an SD card at ~/sdcard-1. Leave it off and
+everything else still works.
 
 <b>Privacy</b>
 
-No analytics, no advertising, no tracking libraries, no telemetry, no account. The app
-opens a network connection only when you ask it to download something.
+No ads, no tracking, no account, and nothing sent to the developer. The app goes online
+only when you ask it to download something.

@@ -7,46 +7,45 @@ angka tidak boleh dipakai ulang untuk unggahan yang berbeda.
 
 ## [1.0.6] - 2026-09-20
 
-`versionCode` 6. Rilis perbaikan. Kali Linux kini benar-benar bisa dipakai setelah
-dipasang, pemasangan paket di dalam distro berjalan, dan hak berkas di dalam
-terminal mengikuti kebiasaan Linux. Tampilan, izin, dan daftar distro tidak
-berubah.
+`versionCode` 6. Rilis perbaikan. Kali Linux akhirnya bisa dipakai setelah
+dipasang, pemasangan paket di dalam distro berjalan sampai selesai, dan hak
+berkas di dalam terminal mengikuti kebiasaan Linux. Tampilan, izin, dan daftar
+distro tidak berubah.
 
 ### Kali Linux terbuka sampai prompt
 
-Sebelumnya, pemasangan Kali selesai tanpa pesan error lalu layar berhenti di
-banner. Tidak ada prompt, Ctrl-C tidak terasa, panah atas tidak memanggil
-riwayat, dan editor layar penuh menggambar berantakan. Perintah yang diketik
-sebenarnya tetap jalan, hanya tanpa prompt, sehingga terminal terasa macet.
-Debian saat itu baik-baik saja, jadi masalahnya terlihat acak.
+Dulu, pemasangan Kali selesai tanpa pesan error lalu layar berhenti di banner.
+Prompt tidak muncul, Ctrl-C tidak terasa, panah atas tidak memanggil riwayat,
+dan editor layar penuh menggambar berantakan. Perintah yang diketik tetap jalan,
+hanya tidak terlihat, jadi terminalnya terasa macet. Debian waktu itu baik-baik
+saja, yang membuat masalahnya terlihat acak.
 
-Sekarang Kali terbuka seperti distro lain: prompt muncul, riwayat perintah
-bekerja, Ctrl-C menghentikan perintah yang berjalan, ukuran jendela terbaca
-dengan benar saat font diperbesar atau papan ketik muncul, dan editor layar
-penuh seperti nano, vim, atau htop tampil rapi.
+Sekarang Kali berperilaku seperti distro lain di aplikasi ini: prompt muncul,
+riwayat perintah jalan, Ctrl-C menghentikan perintah yang sedang berjalan,
+ukuran layar terbaca benar saat huruf diperbesar atau papan ketik muncul, dan
+editor seperti nano, vim, atau htop tampil rapi.
 
-Perbaikannya berlaku untuk semua distro, bukan hanya Kali. Distro lain yang
-memakai pustaka sistem sebaru itu ikut aman.
+Perbaikannya berlaku untuk semua distro. Distro lain yang memakai pustaka sistem
+sebaru Kali ikut aman.
 
 ### Memasang paket di Kali Full
 
 `sudo dpkg -i` dan `sudo apt install` di Kali Full berhenti di tengah jalan dan
-paketnya tidak terpasang. Sekarang pemasangan paket berjalan sampai selesai, di
-semua varian Kali maupun Debian.
+paketnya tidak terpasang. Sekarang pemasangan paket selesai, baik di semua
+varian Kali maupun di Debian.
 
-### Membuat paket sendiri dan hak berkas
+### Membuat paket sendiri
 
-Berkas yang dibuat di dalam terminal dulu hanya bisa dibaca pemiliknya. Akibat
-yang paling terasa: membuat paket `.deb` sendiri dengan `dpkg-deb --build`
-selalu ditolak. Sekarang hak berkasnya mengikuti kebiasaan login Linux, jadi
-pembuatan paket berhasil dan skrip pemasangan paket tidak lagi tersandung hak
-akses.
+Membuat paket `.deb` sendiri dengan `dpkg-deb --build` selalu ditolak karena hak
+berkas di dalam terminal terlalu rapat. Hak berkasnya kini seperti login Linux
+biasa, jadi paket bisa dibuat dan skrip pemasangan paket tidak lagi tersandung
+hak akses.
 
 ### Prompt yang bersih
 
-Di sebagian ponsel, setiap prompt Kali mencetak dua sampai tiga baris
-"Permission denied" sebelum baris perintah. Prompt sekarang bersih di perangkat
-tersebut.
+Di sebagian ponsel, tiap prompt Kali mencetak dua sampai tiga baris
+"Permission denied" sebelum baris perintah. Prompt di perangkat itu sekarang
+bersih.
 
 ### Perangkat Android lama
 
@@ -55,22 +54,22 @@ sekarang bekerja sampai ke versi Android paling awal yang didukung aplikasi ini.
 
 ### Diuji di perangkat
 
-Semuanya diuji di ponsel arm64 (Android 16) memakai berkas distro dari
-penyimpanan lokal, tanpa unduhan: Kali Nano, Kali Minimal, Kali Full, dan Debian
-13. Tiap distro melewati 52 pemeriksaan yang sama: perintah dasar, keluaran
-panjang, penghentian proses, perintah dengan hak superuser beserta status
-keluarnya, pembuatan dan pemasangan paket `.deb` sendiri, dan pemasangan paket
-dari arsip distronya. Pengujian yang sama diulang di lingkungan x86_64, termasuk
-jalur pemasangan lewat katalog online.
+Empat distro diuji di ponsel arm64 (Android 16) dari berkas yang sudah ada di
+penyimpanan, tanpa unduhan: Kali Nano, Kali Minimal, Kali Full, dan Debian 13.
+Tiap distro melewati 52 pemeriksaan yang sama: perintah sehari-hari, keluaran
+panjang, menghentikan proses, perintah dengan hak root beserta status keluarnya,
+membuat dan memasang paket `.deb` sendiri, dan memasang paket dari arsip
+distronya. Pengujian yang sama diulang di lingkungan x86_64, termasuk
+pemasangan lewat daftar distro online.
 
-### Keterbatasan yang tersisa
+### Yang masih terbatas
 
 Aplikasi punya mesin cadangan yang dipakai otomatis kalau mesin utama tidak bisa
 jalan di sebuah perangkat. Di jalur cadangan itu, distro dengan pustaka sistem
 terbaru masih membuka shell tanpa prompt. Mesin yang sedang dipakai terlihat di
 halaman Diagnostics pada pengaturan terminal (ketik `xset`).
 
-Kali Full berukuran 1,7 GB dan sekitar 9,5 GB setelah dipasang, dengan
+Kali Full berat: unduhannya 1,7 GB dan sekitar 9,5 GB setelah dipasang, dengan
 pemasangan yang bisa lebih dari satu jam di ponsel. Kali Nano atau Minimal jauh
 lebih ringan, dan perkakas lain bisa ditambah lewat `apt`.
 

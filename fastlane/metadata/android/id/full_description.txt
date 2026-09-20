@@ -1,53 +1,49 @@
-dracxterm adalah emulator terminal untuk perangkat Android berprosesor arm64-v8a atau
-x86_64. Mesin terminalnya, yaitu parser ANSI/VT, buffer layar, penanganan PTY, dan render UTF-8,
-ditulis dari nol dengan C++ dan dikendalikan antarmuka Kotlin. Tanpa akses root
-perangkat.
+dracxterm adalah terminal untuk Android. Anda bisa memakainya begitu saja untuk
+mengetik perintah, atau memasang Linux di dalamnya dan bekerja seperti di komputer.
+Tidak perlu root.
 
 <b>Terminal</b>
 
 <ul>
-<li>Escape sequence ANSI/VT: warna, bentuk cursor, scrollback, layar alternatif</li>
-<li>UTF-8 penuh termasuk karakter lebar (CJK) dan combining mark</li>
-<li>Seleksi teks, pencarian buffer, salin clipboard, dan bracketed paste</li>
-<li>Mouse tracking untuk aplikasi yang memerlukannya</li>
-<li>Hingga lima workspace independen, masing-masing dengan shell, PTY, direktori kerja,
-dan riwayat sendiri; berpindah dengan usap</li>
-<li>Foreground service menjaga sesi tetap hidup saat aplikasi ditinggalkan</li>
-<li>Bar tombol tambahan: panah, Ctrl, Alt, Esc, Tab, Home, End, PgUp/PgDn, tempel,
-pencarian, zoom</li>
-<li>Pinch untuk zoom, font JetBrains Mono atau font sistem</li>
+<li>Warna, bentuk kursor, scrollback, dan layar alternatif untuk program layar penuh</li>
+<li>Teks UTF-8, termasuk aksara lebar seperti CJK</li>
+<li>Pilih teks, cari isi layar, salin, dan tempel</li>
+<li>Mouse untuk program yang memakainya</li>
+<li>Sampai lima ruang kerja, masing-masing punya shell dan riwayatnya sendiri. Usap
+untuk berpindah</li>
+<li>Sesi tetap hidup saat Anda pindah ke aplikasi lain</li>
+<li>Baris tombol tambahan: panah, Ctrl, Alt, Esc, Tab, Home, End, PgUp, PgDn, tempel,
+cari, dan zoom</li>
+<li>Cubit layar untuk memperbesar huruf</li>
 </ul>
 
 <b>Pengaturan</b>
 
-Ketik <i>xset</i> di terminal untuk membuka dashboard pengaturan yang digambar di dalam
-terminal: tema, font, ukuran dan spasi teks, gaya cursor, kedalaman scrollback, padding,
-akses penyimpanan, informasi perangkat, serta ekspor dan impor konfigurasi. Halaman
-Diagnostics menunjukkan engine yang menjalankan sesi dan hasil self-test-nya.
+Ketik <i>xset</i> di terminal untuk membuka pengaturan. Semuanya digambar di dalam
+terminal, dengan pratinjau langsung: tema, huruf, ukuran dan jarak teks, bentuk kursor,
+panjang scrollback, akses penyimpanan, dan keterangan perangkat. Pengaturan bisa
+diekspor dan diimpor lagi.
 
-<b>Lingkungan Linux</b>
+<b>Linux</b>
 
-Secara bawaan aplikasi menjalankan shell BusyBox, yang sudah merupakan terminal utuh.
-Kalau Anda ingin distribusi lengkap, dracxterm bisa menyiapkan root filesystem Linux
-dan menjalankannya di dalam sandbox aplikasi lewat VHDP, engine rootless yang ikut di
-dalam APK. Kalau VHDP gagal self-test di sebuah perangkat, sesi otomatis pindah ke
-PRoot. Di dalam distro, sudo, su, dan apt bekerja seperti biasa, dan paket .deb bisa
-dipasang dengan dpkg.
+Tanpa dipasangi apa pun, aplikasi ini sudah memberi Anda shell yang bisa dipakai. Kalau
+Anda ingin distribusi penuh, aplikasi bisa memasangnya di dalam ruang penyimpanannya
+sendiri. Di dalam distro, <i>sudo</i>, <i>su</i>, dan <i>apt</i> bekerja seperti biasa,
+dan paket .deb bisa dipasang dengan <i>dpkg</i>.
 
-Sebuah build bisa membawa image di dalamnya atau tidak, dan aplikasi menyesuaikan
-sendiri. Tanpa image, unduhannya kecil: saat pertama dibuka ia menampilkan image yang
-cocok dengan perangkat Anda, mengunduh pilihan Anda, lalu memeriksanya terhadap SHA-256
-terpin sebelum mengekstrak apa pun. Build yang sudah membawa image menyiapkannya saat
-pertama dibuka, tanpa jaringan dan tanpa pertanyaan. Keduanya aplikasi yang sama, paket
-dan versinya sama, jadi memasang salah satu menggantikan yang lain di tempat.
+Saat pertama dibuka, aplikasi menampilkan distro yang cocok dengan perangkat Anda beserta
+ukuran unduhannya. Berkas yang diunduh diperiksa dulu sebelum dipasang, jadi berkas yang
+rusak atau berubah tidak akan terpasang. Ada juga versi aplikasi yang sudah membawa
+distronya, dan itu terpasang tanpa jaringan sama sekali.
 
 <b>Penyimpanan</b>
 
-Akses penyimpanan opsional dan tidak pernah diminta saat aplikasi dibuka. Berikan izin
-dari Pengaturan, lalu penyimpanan internal muncul di ~/sdcard dan volume eksternal yang
-valid di ~/sdcard-1. Tolak izinnya, semua fitur lain tetap berjalan.
+Akses ke penyimpanan ponsel bersifat pilihan dan tidak pernah diminta saat aplikasi
+dibuka. Kalau Anda menyalakannya, penyimpanan internal muncul di ~/sdcard dan kartu SD
+di ~/sdcard-1. Kalau tidak, semua fitur lain tetap jalan.
 
 <b>Privasi</b>
 
-Tanpa analitik, tanpa iklan, tanpa pustaka pelacak, tanpa telemetri, tanpa akun.
-Aplikasi membuka koneksi jaringan hanya ketika Anda memintanya mengunduh sesuatu.
+Tidak ada iklan, tidak ada pelacakan, tidak ada akun, dan tidak ada data yang dikirim ke
+pengembang. Aplikasi menghubungi jaringan hanya ketika Anda menyuruhnya mengunduh
+sesuatu.
