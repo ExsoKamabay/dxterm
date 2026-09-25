@@ -1,5 +1,7 @@
 # dracxterm
 
+[Website](https://exsokamabay.github.io/dxterm/) · [English](README.en.md) · [Download APK](https://github.com/ExsoKamabay/dxterm/releases/latest)
+
 dracxterm adalah terminal untuk Android. Begitu dibuka, Anda sudah bisa
 mengetik perintah. Kalau mau lebih jauh, aplikasi ini bisa memasang Linux di
 dalam ruang penyimpanannya sendiri, lalu Anda bekerja seperti di komputer.
