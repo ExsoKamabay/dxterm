@@ -40,7 +40,8 @@ JNI_DIR="$REPO_ROOT/app/src/main/jniLibs/$ANDROID_ABI"
 # repository. Its *.so outputs (libphdp.so, libvhdp-loader.so) go into jniLibs
 # through the install loop below like every other prebuilt, while the in-guest
 # `vhdp` binary is installed by its own recipe into assets/, outside that loop.
-ORDER="android-shmem talloc busybox proot vhdp-cli"
+# claw is the same kind: a static guest binary its recipe installs into assets/claw/bin.
+ORDER="android-shmem talloc busybox proot vhdp-cli claw"
 
 INSTALL=0
 TARGETS=""

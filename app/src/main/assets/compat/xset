@@ -5,7 +5,8 @@
 # `xset` TUI. The optional sub-command selects the module directly:
 #     xset            # open the overview (Appearance)
 #     xset theme      # jump straight into Theme
-#     xset font | cursor | background | performance | backup | about
+#     xset font | cursor | background | performance | storage | claw | backup | about
+#     xset claw       # atur izin & perilaku AI claw (browsing, humanizer, dll.)
 #
 # Terminator is ST (ESC \). printf's \033 octal escape is portable across bash and busybox ash.
 #

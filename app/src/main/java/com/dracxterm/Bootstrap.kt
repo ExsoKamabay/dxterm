@@ -86,6 +86,21 @@ object Bootstrap {
         // can never delay or block the terminal.
         OllamaLauncher.attach(ctx, if (hasGuest) File(rootfs) else null, usrBin)
 
+        // `claw` guest command, set up natively (cpp/claw/ClawSetup.cpp): /opt/claw plus the
+        // /usr/local/bin/claw launcher with a rootfs, a stub explaining the requirement without.
+        // Never fatal, like the Ollama hook above.
+        com.dracxterm.claw.ClawSetup.attach(ctx, if (hasGuest) File(rootfs) else null, usrBin)
+
+        // Prepare Scrapling so claw's browsing is ready without a manual step. Runs the guest
+        // installer (/opt/claw/data/scripts/scrapling-setup.sh) as fake-root in the background,
+        // idempotent and gated on browsing not being turned off. Never fatal; never blocks.
+        com.dracxterm.claw.ScraplingProvisioner.attach(ctx, if (hasGuest) File(rootfs) else null)
+
+        // Prepare claw's networking (scapy) and AI red-team (PyRIT) tools in a separate guest
+        // virtualenv so the `networking` and `ai-red-team` skills work on demand. Same fake-root,
+        // background, idempotent pattern as Scrapling; gated on skills not being turned off.
+        com.dracxterm.claw.ToolsProvisioner.attach(ctx, if (hasGuest) File(rootfs) else null)
+
         // Proot's own runtime lookups (read on the HOST side, before re-root).
         val prootEnv = arrayOf(
             "LD_LIBRARY_PATH=$nativeLib:$usrLib",
@@ -102,6 +117,12 @@ object Bootstrap {
         // The dracos/root distinction is presentation, driven by $DRAC_SU: the prompt in
         // ~/.bashrc and the whoami/id/logname shims on PATH both read it. DRAC_HOME pins the
         // themed rc so a super-user shell loads it even with HOME=/root.
+        // Device-local time in the guest: a minimal image ships no /etc/localtime and no tzdata, so
+        // the guest clock reads as UTC. A POSIX TZ string carries the device's current UTC offset
+        // without tzdata, so `date`, claw's prompt clock, and everything else show the phone's
+        // wall-clock time. Set both in the exec env AND in /etc/profile.d (writeGuestTz) so a login
+        // shell picks it up whichever path wins.
+        val tz = posixTz()
         val guestEnv = arrayOf(
             "HOME=/home/dracos",
             "PWD=/home/dracos",
@@ -112,6 +133,7 @@ object Bootstrap {
             "TMPDIR=/tmp",
             "TERM=xterm-256color",
             "LANG=C.UTF-8",
+            "TZ=$tz",
             "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         )
         val backend = if (hasGuest) com.dracxterm.guest.GuestBackend.chosenBackend(ctx, File(rootfs)) else null
@@ -258,6 +280,12 @@ object Bootstrap {
         // user without being unpacked again. Never fatal: a failure here still boots the shell.
         runCatching { RootfsConfigurator().ensureUser(rootfsDir) }
             .onFailure { Log.w(ShellLocator.TAG, "[BOOTSTRAP] ensureUser skipped: ${it.message}") }
+        // sudo/dpkg desktop-parity: resolvable hostname (no sudo warning) + policy-rc.d (dpkg
+        // postinst never fails starting services). Every launch, idempotent, never fatal.
+        runCatching { RootfsConfigurator().ensureCompat(rootfsDir) }
+            .onFailure { Log.w(ShellLocator.TAG, "[BOOTSTRAP] ensureCompat skipped: ${it.message}") }
+        runCatching { writeGuestTz(rootfsDir, posixTz()) }
+            .onFailure { Log.w(ShellLocator.TAG, "[BOOTSTRAP] writeGuestTz skipped: ${it.message}") }
         installCompatShims(ctx, rootfsDir)                        // sudo/su/fakeroot + whoami/id/logname (idempotent)
         installXsetCommand(ctx, File(rootfsDir, "usr/local/bin").absolutePath)  // `xset` dashboard command
         installVhdpCommand(ctx, rootfsDir)                        // `vhdp` CLI (doctor/inspect/capabilities/run)
@@ -568,6 +596,10 @@ object Bootstrap {
         // sudo/su/fakeroot: escalation shims (present the SUPER_USER identity).
         // whoami/id/logname: identity shims that keep the presented user in sync with $DRAC_SU, so
         // the normal-user default reports 'dracos'/1000 and super-user reports 'root'/0.
+        // ifconfig/nmap: network shims for tools that assume real root network privilege. ifconfig
+        // reads the app's net snapshot instead of the kernel; nmap is forced into UNPRIVILEGED
+        // (connect) mode so it stops trying the AF_NETLINK/AF_PACKET sockets the Android kernel
+        // denies an app -- otherwise `sudo nmap` dies with "cannot bind AF_NETLINK socket".
         //
         // Written into /usr/local/sbin AND /usr/local/bin, because one of them is not reliably
         // ahead of the distro's own directories. The app spawns the shell with
@@ -581,7 +613,7 @@ object Bootstrap {
         // working for anything that drops the sbin directories.
         val dirs = arrayOf("usr/local/sbin", "usr/local/bin")
             .map { File(rootfsDir, it).apply { runCatching { mkdirs() } } }
-        for (name in arrayOf("sudo", "su", "fakeroot", "whoami", "id", "logname", "ifconfig")) {
+        for (name in arrayOf("sudo", "su", "fakeroot", "whoami", "id", "logname", "ifconfig", "nmap")) {
             val bytes = runCatching { ctx.assets.open("compat/$name").use { it.readBytes() } }
                 .onFailure { Log.w(ShellLocator.TAG, "[COMPAT] shim $name unreadable: ${it.message}") }
                 .getOrNull() ?: continue
@@ -606,6 +638,44 @@ object Bootstrap {
             }
         }
     }
+
+    /**
+     * Write the device timezone into the guest so a login shell (and claw's prompt clock, and
+     * `date`) shows local wall-clock time. A /etc/profile.d snippet is sourced by every login
+     * bash, which is the reliable path (the exec-env TZ alone did not survive to the interactive
+     * shell). Rewritten every launch so it tracks the phone's current offset/DST. Never throws.
+     */
+    private fun writeGuestTz(rootfsDir: File, tz: String) {
+        if (tz.isEmpty() || tz == "UTC0") return
+        val dir = File(rootfsDir, "etc/profile.d")
+        if (!dir.isDirectory && !dir.mkdirs()) return
+        val f = File(dir, "00-dracx-tz.sh")
+        // Single-quote the value so the shell keeps the angle-bracket POSIX name verbatim.
+        val body = "# drac-Xterm: device-local time for the guest (no tzdata needed).\nexport TZ='$tz'\n"
+        runCatching { f.writeText(body); Os.chmod(f.absolutePath, 0x1A4) }  // 0644
+        Log.i(ShellLocator.TAG, "[CONFIG] guest TZ -> $tz")
+    }
+
+    /**
+     * The device's current UTC offset as a POSIX TZ string (e.g. UTC+8 -> "<+08>-8", India ->
+     * "<+0530>-5:30", US-East -> "<-05>+5"). Two rules make this work on a minimal guest with no
+     * tzdata: POSIX inverts the sign (east of UTC is a NEGATIVE offset), and the zone NAME must be
+     * 3+ characters — a 2-letter name like "LT" is rejected and the guest silently falls back to
+     * UTC, which was the bug. The angle-bracket <±HH[MM]> name form is always valid and prints a
+     * clean "+08"-style abbreviation. Recomputed each session start, so it follows the phone's
+     * current DST state. Falls back to UTC on any error.
+     */
+    private fun posixTz(): String = runCatching {
+        val offMin = java.util.TimeZone.getDefault().getOffset(System.currentTimeMillis()) / 60000
+        if (offMin == 0) return "UTC0"
+        val h = Math.abs(offMin) / 60
+        val m = Math.abs(offMin) % 60
+        val nameSign = if (offMin > 0) "+" else "-"        // display sign (east is +)
+        val name = "<$nameSign${"%02d".format(h)}${if (m != 0) "%02d".format(m) else ""}>"
+        val offSign = if (offMin > 0) "-" else "+"         // POSIX offset sign is inverted
+        val off = "$offSign$h${if (m != 0) ":${"%02d".format(m)}" else ""}"
+        name + off
+    }.getOrDefault("UTC0")
 
     /**
      * Write what the app can see of the device's network into the guest, for the `ifconfig` shim.

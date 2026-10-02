@@ -8,10 +8,12 @@ the written offer of corresponding source.
 
 | File | Covers |
 |---|---|
-| `GPL-2.0.txt` | BusyBox, PRoot, PRoot loader |
+| `GPL-2.0.txt` | BusyBox, PRoot, PRoot loader, and Scapy in `app/src/main/assets/claw/data/pytools.tar` |
 | `LGPL-3.0.txt` + `GPL-3.0.txt` | talloc (LGPL-3.0 is written as a set of additional permissions on top of GPL-3.0, so both texts are required) |
 | `BSD-3-Clause.txt` | android-shmem |
-| `Apache-2.0.txt` | VHDP: the prebuilts `libphdp.so` and `libvhdp-loader.so`, the `vhdp` command in `app/src/main/assets/vhdp/bin/<abi>/`, and `libvhdp.so` plus `libvhdpjni.so`, which are built from the source in `app/src/main/cpp/vhdp/` |
+| `Apache-2.0.txt` | VHDP: the prebuilts `libphdp.so` and `libvhdp-loader.so`, the `vhdp` command in `app/src/main/assets/vhdp/bin/<abi>/`, and `libvhdp.so` plus `libvhdpjni.so`, which are built from the source in `app/src/main/cpp/vhdp/`. Also OpenSSL, linked into the `claw` command in `app/src/main/assets/claw/bin/<abi>/` |
+| `MIT-musl.txt` | musl libc, linked into the `claw` command |
+| `MIT-PyRIT.txt` | PyRIT in `app/src/main/assets/claw/data/pytools.tar` |
 | `OFL-1.1-Copse.txt` | Copse, the UI text face in `app/src/main/res/font/copse.ttf` |
 | `OFL-1.1-BlackOpsOne.txt` | Black Ops One, the wordmark face in `app/src/main/res/font/black_ops_one.ttf` |
 

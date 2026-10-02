@@ -1,0 +1,4 @@
+{
+  "_doc": "Sumber model AI gratis tambahan untuk auto-repair. Tiap entri di 'sources' ditambahkan sebagai provider baru ke providers.json saat repair menemukan model yang lolos uji HTTP 200. Isi 'name' (unik), 'chat_url' (endpoint chat completions OpenAI-compatible), dan 'models_url' (daftar model). 'api_key' boleh kosong untuk akses anonim. 'match' opsional: array kondisi objek model. Kosongkan 'sources' kalau tidak ada sumber tambahan; repair tetap memakai providers.json dan mencari leads di GitHub/GitLab/Hugging Face/Codeberg.",
+  "sources": []
+}

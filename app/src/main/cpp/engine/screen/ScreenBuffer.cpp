@@ -365,7 +365,10 @@ void ScreenBuffer::attachCombining(uint32_t cp) {
 void ScreenBuffer::put(uint32_t cp) {
     int w = charWidth(cp);
     if (w == 0) { attachCombining(cp); return; }   // compose onto the preceding base
-    scrollToBottom();
+    // Output no longer snaps the viewport to the live bottom. A program that prints steadily
+    // (a spinner, a streamed chat answer) pinned the view there, so history could not be read
+    // while it ran. pushScrollback() keeps a scrolled-up view on the same lines instead; input
+    // from the user (keys, IME text, paste, tap) is what returns the view to the bottom.
     newLineIfWrap();
     if (w == 2 && cx_ == cols_ - 1) {
         // no room for a wide glyph on this line; wrap first
@@ -543,7 +546,7 @@ void ScreenBuffer::applySGR(const std::vector<int>& p) {
 void ScreenBuffer::scrollView(int deltaLines) {
     // The scrollback belongs to the MAIN screen. While the alternate screen is up, walking the
     // viewport into it rendered rows of old shell output on top of the editor, and the editor's
-    // next glyph (put() -> scrollToBottom()) snapped it back. That was the "scrolling in nano does
+    // next glyph (put() then snapped to the bottom) threw it back. That was the "scrolling in nano does
     // nothing but flicker" report. The gesture is routed to the program by the UI instead.
     if (inAlt_) return;
     int v = viewOffset_ + deltaLines;

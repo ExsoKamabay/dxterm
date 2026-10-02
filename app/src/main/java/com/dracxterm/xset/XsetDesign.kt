@@ -118,6 +118,7 @@ object XsetDesign {
         const val PERFORMANCE = "↯"
         const val BACKUP      = "↧"
         const val ABOUT       = "ⓘ"
+        const val LANGUAGE    = "ℒ"   // settings-language module (letterlike, single-width BMP)
         // affordance / status glyphs
         const val OK     = "✓"
         const val WARN   = "⚠"

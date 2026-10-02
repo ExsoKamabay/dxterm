@@ -60,6 +60,11 @@ signing.properties
 # what belongs in the repository; its results do not.
 /prebuilts/work/
 
+# claw's runtime state: logs, router state and the OpenClaw config it writes when it
+# runs against assets/claw/data on a development machine. The app creates this
+# directory inside the guest on its own, so nothing in it belongs in the repository.
+/app/src/main/assets/claw/data/state/
+
 # --- Notes files that tend to collect secrets. A passphrase in docs/pass.txt is
 # --- how this repository leaked a signing key once; catching it mechanically is
 # --- cheaper than catching it by reading.

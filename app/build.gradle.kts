@@ -170,8 +170,8 @@ android {
         applicationId = "com.dracxterm"
         minSdk = 24            // forkpty/openpty + WindowInsets IME animation path supported; runtime-guarded below
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.0.6"
+        versionCode = 7
+        versionName = "1.1.0"
 
         // The shipped prebuilts (proot, busybox, talloc, shmem, loader) and the VHDP libraries
         // are provided for BOTH arm64-v8a and x86_64 (see src/main/jniLibs/<abi> and the CMake
@@ -293,7 +293,16 @@ android {
 
     // aapt must not re-compress the rootfs archives: openFd().length stops being the real
     // size, and the images are already compressed.
-    androidResources { noCompress += listOf("xz", "gz", "tgz", "txz", "tar", "ttf") }
+    androidResources {
+        // NB: "tar" is intentionally NOT here — the bundled Python modules ship as a plain
+        // assets/claw/data/pytools.tar and we WANT the APK to compress it (it is ~31 MB of
+        // uncompressed source). AAsset_read decompresses it transparently when ClawSetup copies
+        // it into the guest, so the guest still gets a plain tar to extract.
+        noCompress += listOf("xz", "gz", "tgz", "txz", "ttf")
+        // aapt's default pattern minus "<dir>_*": Python packages (assets/claw/scrapling) keep
+        // modules in directories such as _browsers/, and dropping them breaks the import.
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
 
     // The app carries its own language toggle, so both translations have to be present on the
     // device at all times. An App Bundle splits resources by language by default, which would

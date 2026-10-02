@@ -1,0 +1,25 @@
+#!/bin/sh
+# drac-compat nmap shim.
+# Root cause it solves: the guest session runs as PRoot/VHDP fake-root (kernel euid 0), so nmap
+# concludes it is privileged and takes the raw path -- it opens an AF_NETLINK route socket for
+# route discovery and AF_PACKET/SOCK_RAW for ARP. The Android kernel/SELinux denies BOTH to an
+# unprivileged app regardless of the guest's fake euid, so nmap dies with
+# "route_dst_netlink: cannot bind AF_NETLINK socket: Permission denied". Fake-root cannot pierce
+# this, exactly like the reason ifconfig is a shim.
+#
+# Fix: force nmap's UNPRIVILEGED mode. There it uses connect() TCP pings + a connect() scan, which
+# the guest's host network policy allows, and it never touches netlink or raw sockets. This makes
+# `sudo nmap <target>` and `nmap -sn <cidr>` actually work (verified on device: a /24 sweep found
+# live hosts via connect()). We set NMAP_UNPRIVILEGED rather than injecting flags, so the user's
+# arguments are untouched and an explicit `--privileged` on the command line still wins.
+export NMAP_UNPRIVILEGED=1
+# Exec the REAL nmap, never this shim. Absolute paths first so we can't re-exec ourselves; then a
+# PATH lookup with the shim directories removed. Installed in /usr/local/{sbin,bin}, which shadow
+# the distro nmap in /usr/bin.
+for real in /usr/bin/nmap /bin/nmap /usr/sbin/nmap /sbin/nmap; do
+  [ -x "$real" ] && exec "$real" "$@"
+done
+real=$(PATH=/usr/bin:/bin:/usr/sbin:/sbin command -v nmap 2>/dev/null)
+[ -n "$real" ] && exec "$real" "$@"
+echo "nmap: belum terpasang. Pasang dulu: sudo apt-get install -y nmap" >&2
+exit 127

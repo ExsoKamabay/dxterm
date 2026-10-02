@@ -67,6 +67,29 @@ licenses/.
   NOTICE. It is original work and does not copy source code from PRoot, QEMU,
   or any other project.
 
+* claw: the in-guest `claw` command, shipped per ABI under
+  app/src/main/assets/claw/bin/<abi>/ and installed into the Linux rootfs at
+  /opt/claw. Its source ships beside it in app/src/main/assets/claw/, and
+  prebuilts/claw/build.sh rebuilds it. The binary is statically linked with:
+    - OpenSSL 3.5.8, licensed under the Apache License, Version 2.0.
+      See licenses/Apache-2.0.txt.
+    - musl libc (through Zig 0.15.2), licensed under the MIT License.
+      See licenses/MIT-musl.txt.
+    - cpp-httplib, copyright Yuji Hirose, MIT License, and JSON for Modern
+      C++, copyright Niels Lohmann, MIT License. Both notices are kept in
+      app/src/main/assets/claw/third_party/.
+  The Scrapling sources in app/src/main/assets/claw/scrapling/ are copyright
+  Karim Shoair and licensed under the BSD 3-Clause License, with the full text
+  in that directory's LICENSE file.
+  The Python modules in app/src/main/assets/claw/data/pytools.tar, which the
+  app unpacks into the guest at /opt/claw/pytools, ship as complete source:
+    - Scapy, copyright Philippe Biondi and the Scapy community, licensed under
+      the GNU General Public License, version 2 only. See licenses/GPL-2.0.txt.
+      The bundled copy carries a local change so that importing it keeps
+      working when the guest is refused a routing (netlink) socket.
+    - PyRIT, copyright Microsoft Corporation, licensed under the MIT License.
+      See licenses/MIT-PyRIT.txt.
+
 WRITTEN OFFER. For any of the binaries listed in this section, the maintainer
 of dracxterm will provide the complete corresponding machine-readable source
 code, on a medium customarily used for software interchange, for a charge no
@@ -74,8 +97,8 @@ more than the cost of physically performing the distribution. This offer is
 valid to any third party and is honored through the project issue tracker at
 https://github.com/ExsoKamabay/dxterm/issues.
 
-Content Obtained At The User's Request
---------------------------------------
+Content Downloaded Into The Guest
+---------------------------------
 
 * Linux root filesystem images
   A build with no archive in app/src/main/assets/rootfs downloads one only
@@ -87,6 +110,12 @@ Content Obtained At The User's Request
 * Ollama
   Not bundled in the APK. Downloaded only on explicit user request from the
   official Ollama release artifacts, and governed by the Ollama license.
+
+* Python 3 and Scrapling, for claw's web browsing
+  Not bundled in the APK. Once a distribution is installed, the app installs
+  python3 from that distribution's package repository and Scrapling 0.4.15
+  from PyPI into the guest, in the background, unless browsing is turned off
+  in xset > AI (claw). Each is governed by its own license.
 
 The names and trademarks of third-party projects belong to their respective
 owners. Inclusion in this NOTICE does not imply endorsement.

@@ -296,6 +296,18 @@ interface XsetContext {
     /** Which backend runs the Linux guest and why, e.g. "vhdp — self-test passed …". */
     fun guestBackend(): String = "unknown"
 
+    // ---- claw AI policy ----
+    /** Write the current claw.* settings to the guest's /opt/claw/data/policy.json so the in-guest
+     *  `claw` command reads them on its next run. Best-effort; a missing rootfs is a no-op. Returns a
+     *  status line for the dashboard. Default no-op keeps other implementers valid. */
+    fun applyClawPolicy(): String = "claw policy unavailable"
+    /** Whether the Linux rootfs with /opt/claw is present, for the module's status rows. */
+    fun clawInstalled(): Boolean = false
+    /** Whether Scrapling is provisioned so browsing works, for the module's status rows. */
+    fun browsingReady(): Boolean = false
+    /** Model names in the guest's claw pool (/opt/claw/data/models.json), for the model pickers. */
+    fun clawModels(): List<String> = emptyList()
+
     // ---- misc ----
     fun appInfo(): List<Pair<String, String>>
     fun status(msg: String)

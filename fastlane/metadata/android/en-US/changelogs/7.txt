@@ -1,0 +1,9 @@
+The Linux distro inside the app now has claw, an assistant you can chat with and
+put to work in the terminal. Type claw chat. No account needed.
+
+- New xset pages: AI (claw) for permissions, and Language with six choices.
+- sudo nmap works, and sudo stops warning about the host name.
+- The clock inside the distro follows the phone.
+- Hardware keyboards: Ctrl, Alt and F1-F12 work.
+- You can scroll back while a program is still printing.
+- Back closes xset.

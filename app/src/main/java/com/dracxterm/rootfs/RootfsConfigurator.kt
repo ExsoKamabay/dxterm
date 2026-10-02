@@ -68,6 +68,8 @@ class RootfsConfigurator {
         runCatching { provisionUser(rootfs) }
             .onFailure { Log.w(ShellLocator.TAG, "[CONFIG] user provisioning skipped: ${it.message}") }
 
+        ensureCompat(rootfs)
+
         Result.Ok
     } catch (t: Throwable) {
         Result.Failed(t.message ?: "configuration error")
@@ -81,6 +83,56 @@ class RootfsConfigurator {
     fun ensureUser(rootfs: File) {
         runCatching { provisionUser(rootfs) }
             .onFailure { Log.w(ShellLocator.TAG, "[CONFIG] ensureUser skipped: ${it.message}") }
+    }
+
+    /**
+     * Idempotently ensure the two things that make `sudo` and `dpkg` behave like a normal Linux
+     * desktop here. Called every launch by Bootstrap (existing installs gain the fixes too); never
+     * throws, so a problem can never block boot.
+     *  - `sudo` must not warn "unable to resolve host <name>": map the guest hostname to 127.0.0.1
+     *    in /etc/hosts when it is not already resolvable.
+     *  - `dpkg`/`apt` maintainer scripts must not fail trying to start services (there is no init):
+     *    a /usr/sbin/policy-rc.d that exits 101 tells invoke-rc.d to skip service (re)starts.
+     */
+    fun ensureCompat(rootfs: File) {
+        runCatching { ensureHostResolution(rootfs) }
+            .onFailure { Log.w(ShellLocator.TAG, "[CONFIG] host resolution skipped: ${it.message}") }
+        runCatching { ensurePolicyRcd(rootfs) }
+            .onFailure { Log.w(ShellLocator.TAG, "[CONFIG] policy-rc.d skipped: ${it.message}") }
+    }
+
+    /** Map the guest's hostname to 127.0.0.1 in /etc/hosts so `sudo` never warns about resolving
+     *  it. No-op when there is no hostname, it is already localhost, or it already resolves. */
+    private fun ensureHostResolution(rootfs: File) {
+        val etc = File(rootfs, "etc")
+        val hosts = File(etc, "hosts")
+        if (!hosts.exists()) return
+        val hostnameFile = File(etc, "hostname")
+        val name = if (hostnameFile.exists())
+            hostnameFile.readText().lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }.orEmpty()
+        else ""
+        if (name.isEmpty() || name.equals("localhost", ignoreCase = true)) return
+        val text = hosts.readText()
+        val resolvable = text.lineSequence().any { line ->
+            val fields = line.substringBefore('#').trim().split(Regex("\\s+"))
+            fields.size > 1 && fields.drop(1).any { it.equals(name, ignoreCase = true) }
+        }
+        if (!resolvable) {
+            hosts.appendText(if (text.isEmpty() || text.endsWith("\n")) "127.0.0.1 $name\n" else "\n127.0.0.1 $name\n")
+            Log.i(ShellLocator.TAG, "[CONFIG] hosts: mapped hostname '$name' -> 127.0.0.1")
+        }
+    }
+
+    /** Install /usr/sbin/policy-rc.d (exit 101) so dpkg/apt postinst scripts don't try to start
+     *  services under a guest with no init. Written only when absent, never overwriting a real one. */
+    private fun ensurePolicyRcd(rootfs: File) {
+        val f = File(rootfs, "usr/sbin/policy-rc.d")
+        if (f.exists()) return
+        val dir = File(rootfs, "usr/sbin")
+        if (!dir.isDirectory && !dir.mkdirs()) return
+        f.writeText("#!/bin/sh\n# drac-Xterm: no init here; keep dpkg/apt from (re)starting services.\nexit 101\n")
+        runCatching { Os.chmod(f.absolutePath, 0x1ED) }   // 0755
+        Log.i(ShellLocator.TAG, "[CONFIG] policy-rc.d installed (exit 101)")
     }
 
     /**

@@ -263,6 +263,13 @@ class TerminalView @JvmOverloads constructor(
     fun attach(session: TerminalSession) { this.session = session }
     fun setCtrl(active: Boolean) { ctrlActive = active }
     fun setAlt(active: Boolean) { altActive = active }
+    /** Reset any sticky toolbar CTRL/ALT and un-highlight them (via onModifierConsumed). Used by
+     *  actions that consume a tap without going through sendSpecial/sendChar (paste, zoom, find…) so
+     *  a held modifier does not leak onto the next real keystroke. No-op when nothing is stuck. */
+    fun clearStickyModifiers() {
+        if (ctrlActive) { ctrlActive = false; onModifierConsumed?.invoke("CTRL") }
+        if (altActive) { altActive = false; onModifierConsumed?.invoke("ALT") }
+    }
 
     // ---- xset render-knob API (called by the XsetContext bridge; all default-preserving) ----
     fun setFontSizeDp(dp: Int) {
@@ -444,8 +451,11 @@ class TerminalView @JvmOverloads constructor(
                 }
             }
             if (gen != lastGen) { lastGen = gen; refreshSnapshot(); invalidate() }
+            // refreshSnapshot() can run app-control callbacks that swap the bound session and close
+            // this one (closing the humanizer monitor tab). Only the session still shown may report
+            // a shell exit; the one swapped away was closed on purpose, not exited by its shell.
             val run = s.running()
-            if (wasRunning && !run) { wasRunning = false; onExit?.invoke() }
+            if (s === session && wasRunning && !run) { wasRunning = false; onExit?.invoke() }
         }
         Choreographer.getInstance().postFrameCallback(this)
     }
@@ -653,7 +663,8 @@ class TerminalView @JvmOverloads constructor(
             val previewCursorOn = pc >= 0 && (!cursorBlink || cursorBlinkOn)
             drawGrid(canvas, cv.glyphs, cv.fg, cv.bg, cv.attr,
                 cursorCol = pc, drawCursor = previewCursorOn,
-                curColor = d.previewCursorColor(), curStyle = d.previewCursorStyle(), combining = false)
+                curColor = d.previewCursorColor(), curStyle = d.previewCursorStyle(), combining = true,
+                graphemeAt = { r, c -> cv.graphemeAt(r, c) })
             return
         }
         // During the first-open hold we paint the previous workspace's FROZEN frame. Do not draw its
@@ -675,6 +686,7 @@ class TerminalView @JvmOverloads constructor(
     private fun drawGrid(
         canvas: Canvas, g: IntArray, f: IntArray, b: IntArray, at: IntArray,
         cursorCol: Int, drawCursor: Boolean, curColor: Int, curStyle: CursorStyle, combining: Boolean,
+        graphemeAt: ((Int, Int) -> String?)? = null,
     ) {
         for (r in 0 until rows) {
             val y = padY + r * lineH
@@ -701,7 +713,7 @@ class TerminalView @JvmOverloads constructor(
                     textPaint.isStrikeThruText = (a and A_STRIKE) != 0
                     textPaint.textSkewX = if ((a and A_ITALIC) != 0) -0.25f else 0f
                     val text = if (combining && (a and A_COMBINING) != 0)
-                        (session?.cellGrapheme(r, c) ?: String(Character.toChars(cp)))
+                        (graphemeAt?.invoke(r, c) ?: session?.cellGrapheme(r, c) ?: String(Character.toChars(cp)))
                     else String(Character.toChars(cp))
                     canvas.drawText(text, x, y + baseline, textPaint)
                 }
@@ -753,6 +765,9 @@ class TerminalView @JvmOverloads constructor(
         // button events, so without this a long press inside htop/vim would do nothing at all.
         // Termux behaves the same way: onLongPress always enters text-selection mode.
         selecting = true
+        // Keep the parent workspace-swipe from intercepting the (near-horizontal) selection drag and
+        // turning it into a tab switch. Released automatically at the next ACTION_DOWN.
+        parent?.requestDisallowInterceptTouchEvent(true)
         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         s.selectStart(cellRow(downY), cellCol(downX))   // anchor at the exact cell
         uiRefresh()
@@ -863,7 +878,10 @@ class TerminalView @JvmOverloads constructor(
                 }
                 if (!scrolling && !moved) {
                     val now = System.currentTimeMillis()
-                    if (now - lastTapAt < 300L) {          // double-tap -> reset zoom
+                    // Double-tap resets zoom, but ONLY when no program is mouse-tracking: in a mouse
+                    // app every tap is a click, so hijacking the 2nd tap for zoom (and leaking the 1st
+                    // tap's click) would fight the program. There, taps stay plain clicks.
+                    if (mouseMode == 0 && now - lastTapAt < 300L) {   // double-tap -> reset zoom
                         lastTapAt = 0L; resetZoom()
                     } else {
                         lastTapAt = now
@@ -889,17 +907,17 @@ class TerminalView @JvmOverloads constructor(
     }
 
     // ---- input ----
-    fun sendSpecial(name: String) {
+    fun sendSpecial(name: String, hwCtrl: Boolean = false, hwAlt: Boolean = false, hwShift: Boolean = false) {
         val d = dashboard
         if (d != null && d.active) {
             d.onSpecial(name)
-            if (ctrlActive) { ctrlActive = false; onModifierConsumed?.invoke("CTRL") }
-            if (altActive) { altActive = false; onModifierConsumed?.invoke("ALT") }
+            clearStickyModifiers()
             repaintDash(); return
         }
-        val ctrl = ctrlActive; val alt = altActive
-        // xterm modifier param: 1 + shift(1) + alt(2) + ctrl(4). Only ctrl/alt are stickable here.
-        val mod = 1 + (if (alt) 2 else 0) + (if (ctrl) 4 else 0)
+        // Sticky toolbar modifiers OR a physical keyboard's live modifiers.
+        val ctrl = ctrlActive || hwCtrl; val alt = altActive || hwAlt; val shift = hwShift
+        // xterm modifier param: 1 + shift(1) + alt(2) + ctrl(4). Shift only comes from hardware.
+        val mod = 1 + (if (shift) 1 else 0) + (if (alt) 2 else 0) + (if (ctrl) 4 else 0)
         val bytes: ByteArray = if (mod > 1) {
             TermKeys.modified(name, mod) ?: run {
                 // No CSI-modified form for this key (ESC/TAB/…): fall back to plain, alt-prefixed.
@@ -911,25 +929,28 @@ class TerminalView @JvmOverloads constructor(
         }
         session?.scrollToBottom()
         session?.write(bytes)
-        if (ctrl) { ctrlActive = false; onModifierConsumed?.invoke("CTRL") }
-        if (alt)  { altActive = false; onModifierConsumed?.invoke("ALT") }
+        clearStickyModifiers()
     }
 
-    private fun sendChar(c: Char) {
+    private fun sendChar(c: Char, hwCtrl: Boolean = false, hwAlt: Boolean = false) {
         val d = dashboard
         if (d != null && d.active) {
-            d.onChar(c, ctrlActive, altActive)
-            if (ctrlActive) { ctrlActive = false; onModifierConsumed?.invoke("CTRL") }
-            if (altActive) { altActive = false; onModifierConsumed?.invoke("ALT") }
+            d.onChar(c, ctrlActive || hwCtrl, altActive || hwAlt)
+            clearStickyModifiers()
             repaintDash(); return
         }
         val s = session ?: return
         s.scrollToBottom()
-        when {
-            ctrlActive -> { s.write(byteArrayOf(TermKeys.ctrl(c))); ctrlActive = false; onModifierConsumed?.invoke("CTRL") }
-            altActive  -> { s.write(TermKeys.alt(c.toString().toByteArray(Charsets.UTF_8))); altActive = false; onModifierConsumed?.invoke("ALT") }
-            else       -> s.writeText(c.toString())
+        val ctrl = ctrlActive || hwCtrl; val alt = altActive || hwAlt
+        if (ctrl || alt) {
+            // Ctrl and Alt compose: Ctrl -> control byte, Alt -> ESC prefix (Ctrl+Alt-C = ESC 0x03).
+            var out = if (ctrl) byteArrayOf(TermKeys.ctrl(c)) else c.toString().toByteArray(Charsets.UTF_8)
+            if (alt) out = TermKeys.alt(out)
+            s.write(out)
+        } else {
+            s.writeText(c.toString())
         }
+        clearStickyModifiers()
     }
 
     fun sendText(text: CharSequence) {
@@ -939,6 +960,8 @@ class TerminalView @JvmOverloads constructor(
             for (ch in text) d.onChar(ch, false, false)
             repaintDash(); return
         }
+        // Typing returns a scrolled-up view to the live bottom (output alone no longer does).
+        session?.scrollToBottom()
         if (ctrlActive || altActive) { sendChar(text[0]); if (text.length > 1) session?.writeText(text.substring(1)) }
         else session?.writeText(text.toString())
     }
@@ -999,23 +1022,34 @@ class TerminalView @JvmOverloads constructor(
         if (d != null && d.active && keyCode == KeyEvent.KEYCODE_TAB && event.isShiftPressed) {
             d.onSpecial("BACKTAB"); repaintDash(); return true
         }
+        // A physical keyboard's live modifiers (Bluetooth/USB/DeX). Soft-keyboard events carry none;
+        // those still use the sticky toolbar CTRL/ALT inside sendSpecial/sendChar.
+        val hwCtrl = event.isCtrlPressed; val hwAlt = event.isAltPressed; val hwShift = event.isShiftPressed
         val handled = when (keyCode) {
-            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { sendSpecial("ENTER"); true }
-            KeyEvent.KEYCODE_DEL          -> { sendSpecial("BKSP"); true }
-            KeyEvent.KEYCODE_FORWARD_DEL  -> { sendSpecial("DEL"); true }
-            KeyEvent.KEYCODE_TAB          -> { sendSpecial("TAB"); true }
-            KeyEvent.KEYCODE_ESCAPE       -> { sendSpecial("ESC"); true }
-            KeyEvent.KEYCODE_DPAD_UP      -> { sendSpecial("UP"); true }
-            KeyEvent.KEYCODE_DPAD_DOWN    -> { sendSpecial("DOWN"); true }
-            KeyEvent.KEYCODE_DPAD_LEFT    -> { sendSpecial("LEFT"); true }
-            KeyEvent.KEYCODE_DPAD_RIGHT   -> { sendSpecial("RIGHT"); true }
-            KeyEvent.KEYCODE_MOVE_HOME    -> { sendSpecial("HOME"); true }
-            KeyEvent.KEYCODE_MOVE_END     -> { sendSpecial("END"); true }
-            KeyEvent.KEYCODE_PAGE_UP      -> { sendSpecial("PGUP"); true }
-            KeyEvent.KEYCODE_PAGE_DOWN    -> { sendSpecial("PGDN"); true }
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { sendSpecial("ENTER", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_DEL          -> { sendSpecial("BKSP", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_FORWARD_DEL  -> { sendSpecial("DEL", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_TAB          -> { sendSpecial("TAB", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_ESCAPE       -> { sendSpecial("ESC", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_DPAD_UP      -> { sendSpecial("UP", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_DPAD_DOWN    -> { sendSpecial("DOWN", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_DPAD_LEFT    -> { sendSpecial("LEFT", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_DPAD_RIGHT   -> { sendSpecial("RIGHT", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_MOVE_HOME    -> { sendSpecial("HOME", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_MOVE_END     -> { sendSpecial("END", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_PAGE_UP      -> { sendSpecial("PGUP", hwCtrl, hwAlt, hwShift); true }
+            KeyEvent.KEYCODE_PAGE_DOWN    -> { sendSpecial("PGDN", hwCtrl, hwAlt, hwShift); true }
+            in KeyEvent.KEYCODE_F1..KeyEvent.KEYCODE_F12 -> {
+                val seq = TermKeys.fkey(keyCode - KeyEvent.KEYCODE_F1 + 1)
+                if (seq != null) { session?.scrollToBottom(); session?.write(seq); true } else false
+            }
             else -> {
-                val u = event.unicodeChar
-                if (u != 0) { sendChar(u.toChar()); true } else false
+                // getUnicodeChar() ignores CTRL, so with a hardware modifier read the base char with
+                // only shift/caps applied and let sendChar apply ctrl/alt; otherwise use the plain char.
+                val base = if (hwCtrl || hwAlt)
+                    event.getUnicodeChar(event.metaState and (KeyEvent.META_SHIFT_ON or KeyEvent.META_CAPS_LOCK_ON))
+                else event.unicodeChar
+                if (base != 0) { sendChar(base.toChar(), hwCtrl, hwAlt); true } else false
             }
         }
         return if (handled) true else super.onKeyDown(keyCode, event)

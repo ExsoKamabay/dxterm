@@ -82,3 +82,15 @@ target_link_options(vhdpjni PRIVATE "-Wl,-z,max-page-size=16384" "-Wl,-z,defs")
 # these are shipped in jniLibs/arm64-v8a and are consumed at RUNTIME (exec/dlopen from
 # nativeLibraryDir), not link-time. The engine spawns them via the PTY. They are packaged
 # by Gradle jniLibs, so no add_library(IMPORTED) is required here.
+
+# ---- claw setup: libclawsetup.so (cpp/claw) ----
+# Installs the in-guest `claw` command from assets/claw (see ClawSetup.cpp and ClawSetup.kt).
+# The claw binary itself is a static musl guest executable built by prebuilts/claw/build.sh;
+# this library only copies it and its data into the rootfs.
+add_library(clawsetup SHARED claw/ClawSetup.cpp)
+set_target_properties(clawsetup PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON)
+target_compile_options(clawsetup PRIVATE -Wall -Wextra -Wshadow -Werror)
+target_link_libraries(clawsetup PRIVATE ${log-lib} ${android-lib})
+target_link_options(clawsetup PRIVATE "-Wl,-z,max-page-size=16384" "-Wl,-z,defs")

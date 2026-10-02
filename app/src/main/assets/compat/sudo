@@ -31,6 +31,13 @@ if [ "$#" -eq 0 ]; then
   if command -v bash >/dev/null 2>&1; then exec bash --rcfile "$RC" -i
   else ENV="$RC"; export ENV; exec "${SHELL:-/bin/sh}" -i; fi
 fi
+# A wrong argument (a command that does not exist) gets the same clear message real sudo gives,
+# naming exactly what could not be run, instead of the shell's terse "exec: not found". This is
+# the one place the shim should fail: everything else already works because the session is root.
+if ! command -v "$1" >/dev/null 2>&1; then
+  printf 'sudo: %s: command not found\n' "$1" >&2
+  exit 127
+fi
 # `sudo CMD` (with or without -i/-s): run CMD as root. Present the SUPER_USER identity so the
 # whoami/id/logname shims on PATH report root, matching `su -c CMD`. The session is already fake-root
 # (kernel euid 0); this only fixes the PRESENTED identity. Plain `sudo CMD` keeps the caller's HOME

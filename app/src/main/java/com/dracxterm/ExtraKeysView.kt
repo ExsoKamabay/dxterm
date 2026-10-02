@@ -18,7 +18,7 @@ class ExtraKeysView @JvmOverloads constructor(
 ) : HorizontalScrollView(context, attrs) {
 
     interface Listener {
-        fun onKey(name: String)                       // ESC TAB UP DOWN LEFT RIGHT HOME END PGUP PGDN FIND PASTE BKSP
+        fun onKey(name: String)                       // ESC TAB UP DOWN LEFT RIGHT HOME END PGUP PGDN FIND PASTE BKSP SCROLL_BOTTOM ZOOM_OUT ZOOM_IN
         fun onModifier(name: String, active: Boolean) // CTRL ALT
     }
 

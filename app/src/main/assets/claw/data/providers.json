@@ -1,0 +1,93 @@
+{
+  "providers": {
+    "llm7": {
+      "note": "LLM7.io, akses anonim tanpa akun (key 'unused')",
+      "chat_url": "https://api.llm7.io/v1/chat/completions",
+      "models_url": "https://api.llm7.io/v1/models",
+      "api_key": "unused",
+      "match": [{ "model_type": "chat", "usage_based_only": false }],
+      "concurrency": 1
+    },
+    "kilo": {
+      "note": "Kilo Gateway, rute :free bisa dipakai anonim",
+      "chat_url": "https://api.kilo.ai/api/gateway/chat/completions",
+      "models_url": "https://api.kilo.ai/api/gateway/models",
+      "api_key": "",
+      "match": [{ "isFree": true }],
+      "exclude": "content-safety|guard",
+      "concurrency": 3
+    },
+    "pollinations": {
+      "note": "Pollinations.ai, tier anonymous tanpa akun",
+      "chat_url": "https://text.pollinations.ai/openai",
+      "models_url": "https://text.pollinations.ai/models",
+      "api_key": "",
+      "match": [{ "tier": "anonymous" }],
+      "concurrency": 1
+    },
+    "ovh": {
+      "note": "OVHcloud AI Endpoints, akses anonim sekitar 2 request/menit per model",
+      "chat_url": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions",
+      "models_url": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/models",
+      "api_key": "",
+      "exclude": "tts|whisper|bge|embedding|guard|diffusion",
+      "concurrency": 3
+    },
+    "zen": {
+      "note": "OpenCode Zen, model promo berakhiran -free",
+      "chat_url": "https://opencode.ai/zen/v1/chat/completions",
+      "models_url": "https://opencode.ai/zen/v1/models",
+      "api_key": "",
+      "include": "-free$",
+      "concurrency": 2
+    },
+
+    "groq": {
+      "note": "Free tier, butuh key dari console.groq.com (set GROQ_API_KEY)",
+      "chat_url": "https://api.groq.com/openai/v1/chat/completions",
+      "models_url": "https://api.groq.com/openai/v1/models",
+      "api_key_env": "GROQ_API_KEY",
+      "requires_key": true,
+      "exclude": "whisper|tts|guard|orpheus",
+      "concurrency": 2
+    },
+    "openrouter": {
+      "note": "Model :free, butuh key dari openrouter.ai (set OPENROUTER_API_KEY)",
+      "chat_url": "https://openrouter.ai/api/v1/chat/completions",
+      "models_url": "https://openrouter.ai/api/v1/models",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "requires_key": true,
+      "include": ":free$",
+      "concurrency": 2
+    },
+    "gemini": {
+      "note": "Free tier Google AI Studio (set GEMINI_API_KEY)",
+      "chat_url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      "models_url": "https://generativelanguage.googleapis.com/v1beta/openai/models",
+      "api_key_env": "GEMINI_API_KEY",
+      "requires_key": true,
+      "include": "gemini.*flash",
+      "exclude": "image|tts|audio|live|embedding",
+      "concurrency": 1
+    },
+    "cerebras": {
+      "note": "Free tier, butuh key dari cloud.cerebras.ai (set CEREBRAS_API_KEY)",
+      "chat_url": "https://api.cerebras.ai/v1/chat/completions",
+      "models_url": "https://api.cerebras.ai/v1/models",
+      "api_key_env": "CEREBRAS_API_KEY",
+      "requires_key": true,
+      "concurrency": 1
+    },
+    "nvidia": {
+      "note": "NVIDIA NIM gratis, butuh key dari build.nvidia.com (set NVIDIA_API_KEY)",
+      "chat_url": "https://integrate.api.nvidia.com/v1/chat/completions",
+      "models_url": "https://integrate.api.nvidia.com/v1/models",
+      "api_key_env": "NVIDIA_API_KEY",
+      "requires_key": true,
+      "include": "llama|qwen|deepseek|nemotron|mistral|gpt-oss|kimi|glm",
+      "exclude": "embed|rerank|guard|safety|vision|vl|reward|parse|clip",
+      "max_models": 25,
+      "concurrency": 3
+    }
+  }
+}

@@ -5,7 +5,139 @@ Rilis dracxterm, versi terbaru di atas. Format tanggalnya YYYY-MM-DD.
 `versionCode` adalah nomor internal Google Play. Ia hanya boleh naik, dan satu
 angka tidak boleh dipakai ulang untuk unggahan yang berbeda.
 
-## [Belum dirilis]
+## [1.1.0] - 2026-10-03
+
+`versionCode` 7. Rilis fitur. Distro di dalam aplikasi sekarang punya `claw`,
+asisten yang bisa diajak mengobrol dan disuruh bekerja di terminal memakai model
+bahasa gratis dari internet. Pengaturan `xset` bisa tampil dalam enam bahasa,
+`sudo nmap` akhirnya jalan, dan beberapa gangguan saat mengetik dan menggulir
+sudah hilang. Rilis ini dipasang di atas 1.0.6 tanpa menghapus distro dan isi
+home.
+
+### Asisten `claw`
+
+Ketik `claw chat` di distro yang sudah terpasang, lalu tulis permintaan Anda
+dengan kalimat biasa. Jawabannya muncul di terminal yang sama, dan selama model
+masih berpikir, layar menunjukkan apa yang sedang dikerjakan.
+
+Anda tidak perlu membuat akun. Pertanyaan dikirim ke layanan model gratis yang
+bisa dipakai tanpa daftar: LLM7, Kilo Gateway, Pollinations, OVHcloud AI
+Endpoints, dan OpenCode Zen. Kalau satu model sedang penuh atau rusak, claw
+pindah ke model lain sendiri. Daftar model diperbarui otomatis sekali sehari
+selama claw dipakai, dan `claw models` menampilkan isinya. Punya kunci API dari
+Groq, OpenRouter, Google AI Studio, Cerebras, atau NVIDIA? Isi variabelnya,
+misalnya `GROQ_API_KEY`, dan model dari layanan itu ikut dipakai.
+
+Di dalam obrolan, `/models` menampilkan model yang tersedia, `/skills` skill yang
+bisa dipakai, dan `/exit` menutup obrolan. Di luar obrolan ada
+`claw browse https://example.com` untuk mengambil isi halaman web dan
+`claw doctor` kalau ada yang tidak jalan. Di terminal tanpa distro, perintah
+`claw` hanya menjelaskan bahwa ia butuh distro.
+
+### Mode Humanizer
+
+`claw humanizer "tujuan"` menyerahkan satu tujuan besar ke beberapa agen
+sekaligus. Tujuan itu dipecah jadi tugas kecil, tiap agen memilih skill yang
+cocok, lalu tim menentukan sendiri langkah berikutnya dan terus bekerja. Mode ini
+baru berhenti kalau Humanizer dimatikan di `xset` atau Anda menekan Ctrl+C.
+
+Begitu Humanizer dinyalakan, aplikasi membuka tab baru berisi `claw watch`,
+laporan aktivitas yang bergerak langsung. Tab yang sedang Anda pakai tidak ikut
+berpindah. Ctrl+C di tab laporan mematikan Humanizer, menutup tabnya, dan
+menyimpan catatannya sebagai `activity(<tanggal jam>).log` di folder home.
+
+### Anda yang menentukan apa yang boleh dilakukan claw
+
+`xset claw` membuka halaman AI (claw). Di sana Anda memilih apakah claw boleh
+membuka internet, membaca dan mengubah berkas sekaligus menjalankan perintah,
+menjangkau jaringan lokal, dan memakai skill. Bawaannya hati-hati: membuka
+internet harus minta izin dulu, akses berkas dan perintah mati, jaringan lokal
+tertutup, dan obrolan tidak disimpan. Model untuk obrolan dan untuk Humanizer
+bisa dipilih sendiri atau dibiarkan otomatis. Jumlah agen Humanizer bisa diatur
+dari 1 sampai 6, begitu juga jarak pembaruan daftar model.
+
+### Unduhan di latar untuk membuka halaman web
+
+Supaya claw bisa membuka halaman web, distro butuh Python dan Scrapling.
+Keduanya terlalu besar untuk ikut di APK. Setelah distro terpasang, aplikasi
+menyiapkannya sendiri di latar: python3 dari repositori distro dan Scrapling dari
+PyPI, totalnya beberapa ratus megabyte. Terminal tetap bisa dipakai selama itu
+berjalan, dan progresnya terlihat dengan
+`tail -f /opt/claw/scrapling/setup.log`.
+
+Kalau penyiapan gagal, misalnya karena jaringan putus, aplikasi mencoba lagi
+pada peluncuran berikutnya. Setel Browsing ke Mati di `xset claw` kalau Anda
+tidak mau unduhan itu; aplikasi lalu berhenti mencobanya.
+
+Modul untuk skill `networking` dan `ai-red-team` sudah ada di dalam APK dan
+dipasang tanpa jaringan.
+
+### `xset` dalam enam bahasa
+
+Halaman baru Bahasa di `xset` mengganti bahasa semua menu pengaturan:
+Indonesia, English, 中文, Tiếng Việt, Русский, atau हिन्दी. Gantinya langsung
+terlihat tanpa menutup `xset`, dan huruf Tionghoa maupun Hindi tidak lagi
+bertumpuk.
+
+Bawaannya Bahasa Indonesia. Kalau dulu Anda membaca menu `xset` dalam bahasa
+Inggris, pilih English di halaman Bahasa. Pilihan ini hanya berlaku untuk
+`xset`; bahasa layar aplikasi tetap diatur tombol bahasa yang sudah ada.
+
+### Perintah yang sekarang jalan
+
+`sudo nmap 192.168.1.1` dan `nmap -sn 192.168.1.0/24` sekarang memindai, tidak
+lagi berhenti di `cannot bind AF_NETLINK socket`. nmap memakai pemindaian koneksi
+biasa, jadi pilihan yang butuh akses jaringan tingkat rendah seperti `-sS` dan
+`-O` tetap tidak tersedia.
+
+`sudo` tidak lagi mengeluh `unable to resolve host`. Salah ketik nama perintah,
+misalnya `sudo pyhton3`, kini dijawab `sudo: pyhton3: command not found`.
+
+Memasang paket yang membawa layanan, seperti `openssh-server` atau `nginx`, tidak
+lagi berakhir dengan galat saat layanan itu dicoba dijalankan. Pertanyaan saat
+pemasangan paket muncul sebagai teks biasa, dan peringatan bahwa tampilan Dialog
+tidak tersedia sudah hilang.
+
+`date` dan jam di prompt claw sekarang menunjukkan jam ponsel, bukan UTC.
+
+### Mengetik dan menggulir
+
+Papan ketik fisik lewat Bluetooth, USB, atau DeX kini mengirim kombinasi Ctrl,
+Alt, dan Shift dengan benar, termasuk F1 sampai F12.
+
+Ctrl atau Alt yang dikunci dari baris tombol tambahan tidak lagi tertinggal
+setelah Anda menekan tempel, zoom, cari, atau gulir ke dasar.
+
+Anda bisa menggulir ke atas dan membaca riwayat sementara program masih
+mencetak, misalnya saat jawaban claw sedang mengalir. Layar kembali ke bawah
+begitu Anda mengetik.
+
+Tombol Back menutup `xset`. Dulu tombol itu menutup aplikasi.
+
+Menahan layar lalu menyeret untuk memilih teks tidak lagi memindahkan Anda ke
+ruang kerja lain. Di program yang memakai mouse, seperti htop atau mc, ketukan
+ganda tetap dihitung sebagai klik dan tidak lagi mengembalikan zoom.
+
+### Yang perlu diketahui
+
+Pesan yang Anda ketik ke claw dikirim ke layanan model di atas. Jangan menulis
+kata sandi atau data pribadi di obrolan. Layanan gratis itu bisa berubah atau
+berhenti kapan saja; pembaruan harian claw membuang model yang rusak dan mencari
+yang baru, tetapi ada saat ketika semua model sedang penuh. Jawaban model gratis
+juga tidak selalu rapi, jadi periksa dulu perintah yang disarankan sebelum
+menjalankannya.
+
+Layanan yang terpasang lewat `apt` tidak dijalankan otomatis, dan perintah
+`service` tidak menyalakannya. Jalankan programnya langsung, misalnya
+`sudo /usr/sbin/sshd`.
+
+Selama penyiapan Scrapling memasang python3, perintah `apt` Anda bisa menunggu
+sampai penyiapan itu selesai.
+
+APK-nya sekarang sekitar 33 MB, dari 14 MB di 1.0.6, karena membawa claw untuk
+dua jenis prosesor beserta modul Python-nya.
+
+## [1.0.6] build pengganti - 2026-09-20
 
 Hasil pemeriksaan ulang seluruh fitur di dua perangkat: ponsel Android 15 arm64
 dan WayDroid x86_64. Empat hal yang dulu gagal diam-diam sekarang bekerja.

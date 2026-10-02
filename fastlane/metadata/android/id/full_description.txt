@@ -21,8 +21,9 @@ cari, dan zoom</li>
 
 Ketik <i>xset</i> di terminal untuk membuka pengaturan. Semuanya digambar di dalam
 terminal, dengan pratinjau langsung: tema, huruf, ukuran dan jarak teks, bentuk kursor,
-panjang scrollback, akses penyimpanan, dan keterangan perangkat. Pengaturan bisa
-diekspor dan diimpor lagi.
+panjang scrollback, akses penyimpanan, izin claw, dan keterangan perangkat. Menunya
+bisa tampil dalam Bahasa Indonesia, Inggris, Tionghoa, Vietnam, Rusia, atau Hindi.
+Pengaturan bisa diekspor dan diimpor lagi.
 
 <b>Linux</b>
 
@@ -36,14 +37,25 @@ ukuran unduhannya. Berkas yang diunduh diperiksa dulu sebelum dipasang, jadi ber
 rusak atau berubah tidak akan terpasang. Ada juga versi aplikasi yang sudah membawa
 distronya, dan itu terpasang tanpa jaringan sama sekali.
 
+<b>Asisten claw</b>
+
+Setelah distro terpasang, ketik <i>claw chat</i> dan tulis permintaan Anda dengan
+kalimat biasa. claw menjawab di terminal yang sama dan bisa disuruh bekerja: membuat
+berkas, menjalankan perintah, atau membuka halaman web, sejauh yang Anda izinkan di
+<i>xset</i>. Ia memakai layanan model gratis yang bisa dipakai tanpa akun, dan pindah
+ke model lain kalau satu model sedang penuh. Mode Humanizer menjalankan beberapa agen
+untuk satu tujuan besar sampai Anda mematikannya.
+
 <b>Penyimpanan</b>
 
-Akses ke penyimpanan ponsel bersifat pilihan dan tidak pernah diminta saat aplikasi
-dibuka. Kalau Anda menyalakannya, penyimpanan internal muncul di ~/sdcard dan kartu SD
+Aplikasi tidak pernah meminta akses ke penyimpanan ponsel saat dibuka, dan akses itu
+boleh tidak dinyalakan sama sekali. Kalau Anda menyalakannya, penyimpanan internal muncul di ~/sdcard dan kartu SD
 di ~/sdcard-1. Kalau tidak, semua fitur lain tetap jalan.
 
 <b>Privasi</b>
 
 Tidak ada iklan, tidak ada pelacakan, tidak ada akun, dan tidak ada data yang dikirim ke
-pengembang. Aplikasi menghubungi jaringan hanya ketika Anda menyuruhnya mengunduh
-sesuatu.
+pengembang. Aplikasi membuka jaringan untuk mengunduh distro yang Anda pilih dan untuk
+menyiapkan Python serta Scrapling, yang dipakai claw membuka halaman web. Penyiapan itu
+bisa dimatikan di <i>xset</i>. Saat Anda memakai claw, pesan Anda dikirim ke layanan
+model.

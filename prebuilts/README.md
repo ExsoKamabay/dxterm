@@ -37,6 +37,12 @@ APK contains, and that should be deliberate.
 | `libproot.so` | termux/proot | v5.1.107.91 | |
 | `libproot-loader.so` | termux/proot | v5.1.107.91 | Built alongside proot |
 | `libandroid-shmem.so` | termux/libandroid-shmem | v0.7 | **Not** pelya/android-shmem, see below |
+| `libphdp.so`, `libvhdp-loader.so`, `vhdp` | this repo, `app/src/main/assets/vhdp` | 1.0.0 | Recipe `vhdp-cli`. The two `.so` files go to `jniLibs/<abi>/`, the static `vhdp` command to `assets/vhdp/bin/<abi>/` |
+| `claw` | this repo, `app/src/main/assets/claw` | built with Zig 0.15.2, OpenSSL 3.5.8 | Recipe `claw`. A static musl binary that runs inside the Linux guest, installed to `assets/claw/bin/<abi>/`, not to `jniLibs` |
+
+The recipes default to `arm64-v8a`. For the x86_64 build, prefix the command
+with `ANDROID_ABI=x86_64 TRIPLE=x86_64-linux-android`, for example
+`ANDROID_ABI=x86_64 TRIPLE=x86_64-linux-android ./prebuilts/build.sh claw --install`.
 
 Sources are pinned in [`manifest.env`](manifest.env): tarballs by SHA-256, git
 checkouts by full commit SHA. A digest mismatch is a hard failure, never a

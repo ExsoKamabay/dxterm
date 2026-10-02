@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import android.view.HapticFeedbackConstants
 import android.widget.Toast
@@ -106,6 +107,9 @@ class MainActivity : AppCompatActivity() {
                     configureSession(first)
                     workspaces.markActiveStarted()
                     applyXsetOnStart()
+                    // Seed the claw policy once the guest tree (incl. /opt/claw) has been prepared by
+                    // the spawn. Best-effort and idempotent; a change from the xset module rewrites it.
+                    binding.terminal.postDelayed({ runCatching { writeClawPolicy() } }, 2000)
                 } else {
                     Toast.makeText(this, getString(R.string.app_name) + ": start failed",
                         Toast.LENGTH_LONG).show()
@@ -149,16 +153,21 @@ class MainActivity : AppCompatActivity() {
         binding.extraKeys.listener = object : ExtraKeysView.Listener {
             override fun onKey(name: String) {
                 when (name) {
-                    "PASTE" -> pasteFromClipboard()
+                    // These five consume the tap themselves and never reach sendSpecial/sendChar, so a
+                    // held sticky CTRL/ALT must be cleared here or it would leak onto the next keystroke.
+                    "PASTE" -> { binding.terminal.clearStickyModifiers(); pasteFromClipboard() }
                     // FIND means "search what is on screen". While the dashboard owns the screen
                     // that is the dashboard's own list, not the scrollback underneath it: the
                     // buffer dialog opened over the overlay and searched text the user could not
                     // see. '/' is the dashboard's search, so the button keeps its meaning.
-                    "FIND"  -> if (binding.terminal.dashboardActive()) binding.terminal.sendText("/")
-                               else showFindDialog()
-                    "ZOOM_IN"  -> binding.terminal.zoomIn()
-                    "ZOOM_OUT" -> binding.terminal.zoomOut()
-                    "SCROLL_BOTTOM" -> binding.terminal.toBottom()
+                    "FIND"  -> {
+                        binding.terminal.clearStickyModifiers()
+                        if (binding.terminal.dashboardActive()) binding.terminal.sendText("/")
+                        else showFindDialog()
+                    }
+                    "ZOOM_IN"  -> { binding.terminal.clearStickyModifiers(); binding.terminal.zoomIn() }
+                    "ZOOM_OUT" -> { binding.terminal.clearStickyModifiers(); binding.terminal.zoomOut() }
+                    "SCROLL_BOTTOM" -> { binding.terminal.clearStickyModifiers(); binding.terminal.toBottom() }
                     else -> binding.terminal.sendSpecial(name)
                 }
                 binding.terminal.requestFocus()
@@ -172,6 +181,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnKeyboard.setOnClickListener { toggleKeyboard() }
+
+        // Back closes the xset dashboard overlay first (the expected modal affordance on Android);
+        // only when no overlay is up does Back fall through to the default, which finishes the app.
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (binding.terminal.dashboardActive()) {
+                    binding.terminal.closeDashboard()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
+            }
+        })
 
         applyInsets()
         syncImeAnimation()
@@ -277,6 +300,72 @@ class MainActivity : AppCompatActivity() {
         pushTheme()
     }
 
+    /**
+     * Write the claw AI policy (the claw.* xset keys) to <rootfs>/opt/claw/data/policy.json so the
+     * in-guest `claw` command reads it on its next run. Best-effort and never throws: a missing rootfs
+     * is a no-op, and a running claw session picks the change up the next time it starts. The file is
+     * written through a temp sibling then renamed, so a crash can't leave a half-written policy.
+     */
+    private fun writeClawPolicy(): String = runCatching {
+        val dataDir = File(File(filesDir, "rootfs"), "opt/claw/data")
+        if (!File(File(filesDir, "rootfs"), "opt/claw").isDirectory && !dataDir.mkdirs())
+            return "claw not installed (no Linux rootfs yet)"
+        dataDir.mkdirs()
+        val s = xsetStore
+        val o = org.json.JSONObject()
+            .put("browse", s.get("claw.browse"))
+            .put("private_network", s.getBool("claw.private_network"))
+            .put("skills", s.getBool("claw.skills"))
+            .put("auto_update", s.getBool("claw.auto_update"))
+            .put("update_interval_hours", s.getInt("claw.update_hours", 24))
+            .put("proxy_token", s.getBool("claw.proxy_token"))
+            .put("save_conversations", s.getBool("claw.save_conversations"))
+            .put("humanizer", s.getBool("claw.humanizer"))
+            .put("chat_model", s.get("claw.chat_model"))
+            .put("humanizer_model", s.get("claw.humanizer_model"))
+            .put("humanizer_agents", s.getInt("claw.humanizer_agents", 3))
+            .put("activity_log", s.getBool("claw.activity_log"))
+            .put("fs_access", s.get("claw.fs_access"))
+        val tmp = File(dataDir, "policy.json.tmp")
+        tmp.writeText(o.toString(2) + "\n")
+        val dst = File(dataDir, "policy.json")
+        if (!tmp.renameTo(dst)) { tmp.copyTo(dst, overwrite = true); tmp.delete() }
+        // React to a humanizer ON/OFF transition (open/close the live-activity monitor tab).
+        runCatching { onHumanizerChanged(s.getBool("claw.humanizer")) }
+        "claw policy applied → ${dst.absolutePath}"
+    }.getOrElse { "claw policy write failed: ${it.message}" }
+
+    // Last observed humanizer state, to detect ON/OFF edges when the claw policy is written.
+    private var lastClawHumanizer: Boolean? = null
+
+    /**
+     * Humanizer just changed. ON → open the live-activity monitor tab (if a rootfs is present).
+     * OFF → close that tab, and save the live activity to home/activity(<time>).log then clear the
+     * live feed, so the record is kept and the monitor closes cleanly. Best-effort; never throws.
+     */
+    private fun onHumanizerChanged(humanizer: Boolean) {
+        val prev = lastClawHumanizer
+        lastClawHumanizer = humanizer
+        if (prev == null || prev == humanizer) return   // baseline / no change: do nothing
+        if (humanizer) {
+            if (File(File(filesDir, "rootfs"), "opt/claw/bin/claw").exists())
+                runCatching { workspaces.addWatcherTab("claw watch\n") }
+        } else {
+            // Save the guest's live feed (~/.claw/live.log lives in the guest HOME bind = guest-home).
+            runCatching {
+                val gh = File(filesDir, "guest-home")
+                val live = File(gh, ".claw/live.log")
+                if (live.isFile && live.length() > 0) {
+                    val ts = java.text.SimpleDateFormat("yyyy-MM-dd HH-mm-ss", java.util.Locale.US)
+                        .format(java.util.Date())
+                    live.copyTo(File(gh, "activity($ts).log"), overwrite = true)
+                    live.writeText("")   // clear the feed so a later session starts fresh
+                }
+            }
+            runCatching { workspaces.closeWatcherTab() }
+        }
+    }
+
     private fun makeXsetContext(): XsetContext = object : XsetContext {
         override val store: XsetStore get() = xsetStore
         override fun applyFontSizeDp(dp: Int) { binding.terminal.setFontSizeDp(dp) }
@@ -325,6 +414,17 @@ class MainActivity : AppCompatActivity() {
                 ?: return "not decided yet (no Linux rootfs, or first start pending)"
             return "${d.backend.name.lowercase()} — ${d.detail}"
         }
+        override fun clawInstalled(): Boolean =
+            File(File(filesDir, "rootfs"), "opt/claw/bin/claw").exists()
+        override fun browsingReady(): Boolean =
+            com.dracxterm.claw.ScraplingProvisioner.isReady(File(filesDir, "rootfs"))
+        override fun applyClawPolicy(): String = writeClawPolicy()
+        override fun clawModels(): List<String> = runCatching {
+            val f = File(File(filesDir, "rootfs"), "opt/claw/data/models.json")
+            if (!f.isFile) return emptyList()
+            val o = org.json.JSONObject(f.readText())
+            o.keys().asSequence().toList()
+        }.getOrDefault(emptyList())
         override fun contactDeveloper(): String {
             // No mail client is a normal state on a device that runs a terminal, and
             // startActivity throws rather than returning false, so the address goes to the
@@ -411,6 +511,19 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             "close" -> runOnUiThread { binding.terminal.closeDashboard() }
+            // claw (humanizer mode) asks for the live activity monitor in a new tab.
+            "monitor" -> runOnUiThread {
+                if (!workspaces.addWatcherTab("claw watch\n"))
+                    Toast.makeText(this, "Monitor sudah terbuka atau tab penuh", Toast.LENGTH_SHORT).show()
+            }
+            // `claw watch` was closed with Ctrl+C: turn humanizer OFF in xset, which closes this tab
+            // and saves the live activity to home/activity(<time>).log (onHumanizerChanged).
+            "humanizer-off" -> runOnUiThread {
+                if (xsetStore.getBool("claw.humanizer")) {
+                    xsetStore.set("claw.humanizer", "off")
+                    writeClawPolicy()
+                }
+            }
         }
     }
 

@@ -39,7 +39,13 @@ class WorkspaceManager(
     // finishes re-enters the !started branch and calls session.start() a SECOND time on the same
     // session, overwriting its native handle without closing the first -> a leaked PTY + reader
     // thread + proot/bash process tree that nothing can ever destroy.
-    private class Slot(var session: TerminalSession) { var started = false; var starting = false }
+    private class Slot(var session: TerminalSession) {
+        var started = false; var starting = false
+        // A command to type into the session once its shell is up (e.g. the activity monitor), and
+        // whether this slot is that monitor tab (so only one is ever opened).
+        var pendingInput: String? = null
+        var isWatcher = false
+    }
 
     private val slots = ArrayList<Slot>()
     var active = 0; private set
@@ -80,6 +86,43 @@ class WorkspaceManager(
         if (!canAdd()) return
         slots.add(Slot(TerminalSession(ctx)))
         switchTo(slots.size - 1)
+    }
+
+    /**
+     * Open a background tab that runs [cmd] (e.g. `claw watch\n`) for the live activity monitor,
+     * WITHOUT stealing focus from the current workspace, so the user can keep typing where they are
+     * and tap the new chip when they want to watch. At most one monitor tab exists at a time.
+     * Returns false when the tab limit is reached or a monitor is already open.
+     */
+    fun addWatcherTab(cmd: String): Boolean {
+        if (!canAdd()) return false
+        if (slots.any { it.isWatcher }) return false
+        val c = terminal.gridCols(); val r = terminal.gridRows()
+        if (c <= 0 || r <= 0) return false
+        val slot = Slot(TerminalSession(ctx)).apply { pendingInput = cmd; isWatcher = true }
+        slots.add(slot)
+        onChanged()                              // show the new chip; active is unchanged
+        // Start it without bumping switchSeq: active != this slot, so it will not present, but it
+        // does start and then types its command from the success post above.
+        startInBackground(slot, slot.session, c, r, switchSeq)
+        return true
+    }
+
+    /** Close the background activity-monitor tab if one is open (humanizer turned off). Returns
+     *  whether a watcher tab was found and removed. Rebinds the view to a live workspace after. */
+    fun closeWatcherTab(): Boolean {
+        val idx = slots.indexOfFirst { it.isWatcher }
+        if (idx < 0) return false
+        val watcher = slots.removeAt(idx).session
+        if (active > idx) active-- else if (active >= slots.size) active = slots.size - 1
+        if (active < 0) active = 0
+        onChanged()
+        // Rebind the shared view to a live workspace BEFORE closing the monitor's session. Closed
+        // while still bound, the view sees its session stop and fires onExit, which on the main
+        // workspace means finish(): the whole app closed when the user left the monitor with Ctrl+C.
+        switchTo(active)
+        runCatching { watcher.close() }
+        return true
     }
 
     fun switchTo(index: Int) {
@@ -130,6 +173,13 @@ class WorkspaceManager(
                 if (curIdx < 0) { if (ok) runCatching { session.close() } ; return@post }  // slot removed meanwhile
                 slot.started = ok
                 if (ok) configure(session)
+                // Type a queued command (e.g. `claw watch`) once the shell has had a moment to come
+                // up. Runs whether or not this slot is the visible one, so a background monitor tab
+                // starts working immediately.
+                if (ok) slot.pendingInput?.let { cmd ->
+                    slot.pendingInput = null
+                    main.postDelayed({ runCatching { session.writeText(cmd) } }, 900)
+                }
                 // Present only if this is still the active target and no newer switch superseded it.
                 if (ok && seq == switchSeq && active == curIdx) terminal.switchSession(session)
             }

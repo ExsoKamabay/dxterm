@@ -68,6 +68,10 @@ class XsetController(private val ctx: XsetContext) : XsetSurface {
 
     private var cachedFor = -1
     private var cache: List<Setting> = emptyList()
+    // Last language the dashboard was rendered in; a change (from the Language module or elsewhere)
+    // forces a one-shot rebuild of the cached rows so every label re-resolves, all within the same
+    // repaint of the same overlay surface (no new window, no flicker).
+    private var renderedLang: XsetLang? = null
 
     private fun modules() = XsetRegistry.modules()
 
@@ -148,7 +152,7 @@ class XsetController(private val ctx: XsetContext) : XsetSurface {
     /** Character input (search text, quick keys, Ctrl+S). */
     override fun onChar(c: Char, ctrl: Boolean, alt: Boolean): Boolean {
         if (!active) return false
-        if (ctrl && (c == 's' || c == 'S')) { ctx.status("saved"); status = "Configuration saved ✓"; return true }
+        if (ctrl && (c == 's' || c == 'S')) { ctx.status("saved"); status = XsetI18n.t("st.saved"); return true }
         if (searchActive) { searchChar(c); return true }
         // Case-folded, as 'q' already was. Shift or caps lock is not a different intent, and
         // leaving the capitals unbound made the navigation keys silently dead while Q still quit.
@@ -218,8 +222,14 @@ class XsetController(private val ctx: XsetContext) : XsetSurface {
         status = "xset › " + (modules().getOrNull(selModule)?.title ?: "")
     }
 
-    private fun applyAdjust(s: Setting, dir: Int) { s.adjust(dir); status = "${s.label}: ${s.display()}" }
-    private fun applyActivate(s: Setting) { s.activate(); status = "${s.label}: ${s.display()}" }
+    // After the change, re-resolve the row from a fresh build so the status line is correct even when
+    // the change was a UI-language switch (the old captured label was in the previous language).
+    private fun applyAdjust(s: Setting, dir: Int) { s.adjust(dir); invalidate(); statusFor(s) }
+    private fun applyActivate(s: Setting) { s.activate(); invalidate(); statusFor(s) }
+    private fun statusFor(fallback: Setting) {
+        val row = settings().getOrNull(selSetting) ?: fallback
+        status = "${row.label}: ${row.display()}"
+    }
     private fun runAction(s: Setting) { val m = s.run?.invoke(); status = m ?: "${s.label} ✓"; invalidate() }
 
     // ---- search ----
@@ -230,7 +240,7 @@ class XsetController(private val ctx: XsetContext) : XsetSurface {
     private fun searchSpecial(name: String): Boolean {
         when (name) {
             "ENTER" -> commitSearch()
-            "ESC" -> { searchActive = false; searchQuery = ""; status = "search cancelled" }
+            "ESC" -> { searchActive = false; searchQuery = ""; status = XsetI18n.t("st.search_cancelled") }
             "BKSP" -> if (searchQuery.isNotEmpty()) searchQuery = searchQuery.dropLast(1)
             else -> {}
         }
@@ -246,19 +256,23 @@ class XsetController(private val ctx: XsetContext) : XsetSurface {
             val si = list.indexOfFirst { it.label.lowercase().contains(q) || it.key.lowercase().contains(q) }
             if (si >= 0) {
                 selModule = mi; selSetting = si; focus = Focus.RIGHT; rightScroll = 0; invalidate()
-                status = "found: ${list[si].label}"; return
+                status = "${XsetI18n.t("st.found")}: ${list[si].label}"; return
             }
         }
         // module-title match fallback
         val mm = mods.indexOfFirst { it.title.lowercase().contains(q) || it.id.contains(q) }
-        if (mm >= 0) { selModule = mm; enterModule(); status = "found module: ${mods[mm].title}" }
-        else status = "no match: $searchQuery"
+        if (mm >= 0) { selModule = mm; enterModule(); status = "${XsetI18n.t("st.found_module")}: ${mods[mm].title}" }
+        else status = "${XsetI18n.t("st.no_match")}: $searchQuery"
     }
 
     // ---- rendering ----
     override fun render(cols: Int, rows: Int): TuiCanvas {
         val cv = TuiCanvas(cols, rows, Palette.FG, Palette.BG)
         cv.clear(Palette.BG)
+        // Sync the UI language from the store; if it changed since the last paint, rebuild the cached
+        // rows so the right panel re-resolves its labels in the new language.
+        XsetI18n.current = XsetLang.from(ctx.store.get("ui.lang"))
+        if (XsetI18n.current != renderedLang) { renderedLang = XsetI18n.current; invalidate() }
         previewCursorIndex = -1          // cleared each frame; renderPreview re-publishes when shown
         renderCols = cols
         if (cols < 30 || rows < 10) { renderTooSmall(cv); return cv }
@@ -272,7 +286,7 @@ class XsetController(private val ctx: XsetContext) : XsetSurface {
         cv.box(0, 0, rows - 1, cols - 1, Palette.BORDER, Palette.BG)
         val title = " drac-Xterm · xset "
         cv.text(0, (cols - title.length) / 2, title, Palette.TITLE, Palette.BG, A_BOLD)
-        cv.text(1, 2, "Terminal Configuration Framework", Palette.DIM, Palette.BG)
+        cv.text(1, 2, XsetI18n.t("chrome.subtitle"), Palette.DIM, Palette.BG)
         val badge = "● READY"
         cv.textRight(1, cols - 2, badge, Palette.GREEN, Palette.BG, A_BOLD)
 
@@ -301,7 +315,7 @@ class XsetController(private val ctx: XsetContext) : XsetSurface {
     }
 
     private fun renderLeft(cv: TuiCanvas, top: Int, bottom: Int, leftW: Int) {
-        cv.text(top, 2, "CUSTOMIZATION", Palette.DIM, Palette.BG, A_BOLD)
+        cv.text(top, 2, XsetI18n.t("chrome.customization"), Palette.DIM, Palette.BG, A_BOLD)
         val listTop = top + 1
         val viewH = bottom - listTop + 1
         val mods = modules()
@@ -330,8 +344,8 @@ class XsetController(private val ctx: XsetContext) : XsetSurface {
         val mod = modules().getOrNull(selModule)
         val list = settings()
         val header = (mod?.title ?: "").uppercase()
-        cv.text(top, c0, "$header", Palette.CYAN, Palette.BG, A_BOLD)
-        cv.text(top, c0 + header.length + 1, "· ${list.size} options", Palette.DIM, Palette.BG)
+        cv.text(top, c0, header, Palette.CYAN, Palette.BG, A_BOLD)
+        cv.text(top, c0 + XsetWidth.width(header) + 1, "· ${list.size} ${XsetI18n.t("chrome.options")}", Palette.DIM, Palette.BG)
 
         val listTop = top + 2
         // reserve 4 rows at the bottom of the right panel for the live preview when there is room
@@ -377,8 +391,9 @@ class XsetController(private val ctx: XsetContext) : XsetSurface {
     }
 
     private fun renderPreview(cv: TuiCanvas, r0: Int, c0: Int, w: Int) {
-        cv.text(r0, c0, "LIVE PREVIEW", Palette.DIM, Palette.BG, A_BOLD)
-        cv.hline(r0, c0 + 12, c0 + w - 1, '─'.code, Palette.BORDER, Palette.BG)
+        val pv = XsetI18n.t("chrome.preview")
+        cv.text(r0, c0, pv, Palette.DIM, Palette.BG, A_BOLD)
+        cv.hline(r0, c0 + XsetWidth.width(pv) + 1, c0 + w - 1, '─'.code, Palette.BORDER, Palette.BG)
         val fg = ctx.store.getInt("theme.fg", Palette.FG)
         val bg = ctx.store.getInt("theme.bg", Palette.BG)
         val cur = ctx.store.getInt("theme.cursor", Palette.ACCENT)
@@ -407,22 +422,19 @@ class XsetController(private val ctx: XsetContext) : XsetSurface {
     }
 
     private fun renderFooter(cv: TuiCanvas, r: Int, cols: Int) {
-        val keys = "↑↓ Move   ←→ Adjust   ⏎ Apply   Esc Back   / Search   ^S Save   Q Exit"
+        val keys = "↑↓ ${XsetI18n.t("foot.move")}   ←→ ${XsetI18n.t("foot.adjust")}   ⏎ ${XsetI18n.t("foot.apply")}   " +
+            "Esc ${XsetI18n.t("foot.back")}   / ${XsetI18n.t("foot.search")}   ^S ${XsetI18n.t("foot.save")}   Q ${XsetI18n.t("foot.exit")}"
         val start = max(2, (cols - keys.length) / 2)
         cv.text(r, start, fit(keys, cols - 1 - start), Palette.DIM, Palette.BG)
     }
 
     private fun renderTooSmall(cv: TuiCanvas) {
-        val msg = "xset needs a larger view"
+        val msg = XsetI18n.t("st.needs_larger")
         cv.text(cv.rows / 2, max(0, (cv.cols - msg.length) / 2), fit(msg, cv.cols), Palette.AMBER, Palette.BG)
     }
 
-    private fun fit(s: String, w: Int): String {
-        if (w <= 0) return ""
-        if (s.length <= w) return s
-        if (w <= 1) return s.substring(0, w)
-        return s.substring(0, w - 1) + "…"
-    }
+    // Truncate by DISPLAY width (wide/CJK glyphs count as 2), so columns stay aligned in every language.
+    private fun fit(s: String, w: Int): String = XsetWidth.fit(s, w)
 
     // exposed for host tests
     fun debugState(): String = "focus=$focus mod=$selModule($cachedFor) set=$selSetting search=$searchActive/'$searchQuery' status='$status'"

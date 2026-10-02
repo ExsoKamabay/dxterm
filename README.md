@@ -9,6 +9,10 @@ dalam ruang penyimpanannya sendiri, lalu Anda bekerja seperti di komputer.
 Ponsel tidak perlu di-root. Tidak ada akun yang harus dibuat, dan tidak ada
 layanan yang harus dipasang lebih dulu.
 
+Setelah distro terpasang, Anda juga mendapat `claw`, asisten yang bisa diajak
+mengobrol dan disuruh bekerja di terminal. Ia memakai model bahasa gratis dari
+internet, dan Anda yang menentukan apa saja yang boleh ia sentuh.
+
 ## Screenshot
 
 | | |
@@ -21,78 +25,48 @@ layanan yang harus dipasang lebih dulu.
 | 5. `sudo -i` menjadi root, lalu paket `.deb` diunduh, dipasang dengan `dpkg -i`, dijalankan, dan dihapus. `exit` kembali ke user biasa. | 6. `htop` layar penuh di workspace kedua. Tiap workspace punya shell dan PTY sendiri. |
 | ![xset Appearance](Screenshot/07-xset-appearance-dracxterm.jpg) | ![xset Diagnostics](Screenshot/08-xset-diagnostics-vhdp-dracxterm.jpg) |
 | 7. `xset`, pengaturan yang digambar di dalam terminal. Halaman Appearance merangkum tema, font, kursor, dan padding. | 8. Halaman Diagnostics: mesin yang sedang menjalankan sesi Linux, dan tombol untuk menjalankan pemeriksaan. |
+| ![claw chat](Screenshot/09-claw-chat-dracxterm.jpg) | ![xset claw](Screenshot/10-xset-claw-dracxterm.jpg) |
+| 9. `claw chat` di 1.1.0: pertanyaan biasa, jawaban di terminal yang sama. Saat diuji ada 33 model gratis yang bisa dipakai. | 10. Halaman AI (claw) di `xset`, menu berbahasa Indonesia. Tiap baris menentukan apa yang boleh dilakukan claw. |
 
-## Yang baru di 1.0.6
+## Yang baru di 1.1.0
 
-Kali Linux sekarang terbuka sampai prompt dan bisa langsung dipakai.
+Perubahan terbesar dibanding 1.0.6 adalah `claw`. Ketik `claw chat` di distro
+yang sudah terpasang, lalu tulis permintaan dengan kalimat biasa. Jawabannya
+muncul di terminal yang sama, dan selama menunggu, layar menunjukkan apa yang
+sedang dikerjakan, misalnya berkas mana yang sedang ditulis. Tidak perlu akun:
+claw memakai layanan model gratis yang bisa dipakai tanpa daftar, dan pindah ke
+model lain sendiri kalau satu model sedang penuh. Penjelasan lengkapnya ada di
+[Asisten claw](#asisten-claw).
 
-Sebelumnya tidak begitu. Pemasangan Kali selesai tanpa pesan error, lalu layar
-berhenti di banner. Prompt tidak muncul, Ctrl-C tidak terasa, panah atas tidak
-memanggil riwayat, dan editor layar penuh menggambar berantakan. Perintah yang
-diketik tetap jalan, hanya tidak terlihat, jadi terminalnya terasa macet. Debian
-waktu itu baik-baik saja, yang membuat masalahnya terlihat acak.
+`claw humanizer "tujuan"` menjalankan beberapa agen untuk satu tujuan besar dan
+terus bekerja sampai Anda mematikannya. Aktivitasnya bisa diikuti langsung di
+tab yang dibuka aplikasi untuk Anda.
 
-Sekarang Kali berperilaku seperti distro lain di sini. Prompt muncul, riwayat
-perintah jalan, Ctrl-C menghentikan perintah yang sedang berjalan, ukuran layar
-terbaca benar saat huruf diperbesar atau papan ketik muncul, dan editor layar
-penuh tampil rapi. Perbaikannya tidak khusus Kali, jadi distro lain dengan
-pustaka sistem sebaru itu ikut aman.
+Pengaturan `xset` mendapat dua halaman baru. AI (claw) mengatur apa yang boleh
+dilakukan claw, dengan bawaan yang hati-hati: akses berkas dan perintah mati,
+dan membuka internet harus minta izin dulu. Bahasa mengganti bahasa semua menu
+`xset` ke Indonesia, English, 中文, Tiếng Việt, Русский, atau हिन्दी. Bawaannya
+Bahasa Indonesia, jadi kalau dulu Anda membaca menu `xset` dalam bahasa Inggris,
+pilih English di halaman itu.
 
-Ada perbaikan lain yang ikut terbawa. Pemasangan paket di Kali Full yang dulu
-berhenti di tengah jalan kini selesai, membuat paket `.deb` sendiri tidak lagi
-ditolak, dan prompt berhenti mencetak baris "Permission denied" di sebagian
-ponsel.
+Beberapa perintah yang dulu gagal sekarang jalan. `sudo nmap` dan
+`nmap -sn 192.168.1.0/24` memindai, tidak lagi berhenti di galat socket.
+`sudo` berhenti mengeluh soal nama host. Memasang paket yang membawa layanan,
+seperti `openssh-server`, selesai tanpa galat. `date` menunjukkan jam ponsel,
+bukan UTC.
 
-Semuanya diuji di ponsel arm64 untuk Kali Nano, Kali Minimal, Kali Full, dan
-Debian 13, memakai berkas distro dari penyimpanan lokal, lalu diulang di
-lingkungan x86_64. Rincian tiap rilis ada di [`CHANGELOG.md`](CHANGELOG.md).
+Mengetik dan menggulir juga lebih enak. Papan ketik fisik mengirim Ctrl, Alt,
+Shift, dan F1 sampai F12 dengan benar. Anda bisa menggulir ke atas dan membaca
+riwayat saat program masih mencetak. Tombol Back menutup `xset`, tidak lagi
+menutup aplikasi. Ctrl atau Alt dari baris tombol tambahan tidak tertinggal
+setelah menempel atau zoom.
 
-## Yang baru di 1.0.5
-
-Sampai 1.0.3, shell di dalam distro ditopang PRoot. Sekarang yang menjalankannya
-adalah VHDP, engine rootless berbasis `ptrace` yang dipercepat `seccomp`,
-dikirim di dalam APK sebagai `libphdp.so` dan loader ELF `libvhdp-loader.so`.
-Sekali per pemasangan, dan lagi setelah aplikasi diperbarui, aplikasi
-menjalankan self-test VHDP di perangkat itu. Kalau lolos, sesi memakai VHDP;
-kalau gagal, sesi tetap berjalan di PRoot seperti dulu, tanpa ada yang perlu
-diatur. VHDP juga menyediakan ulang hal-hal yang ditolak kebijakan Android di
-dalam sandbox aplikasi: hardlink untuk dpkg, `tar`, dan `cp -al`, berkas `/proc`
-global untuk `uptime`, `ps`, dan `vmstat`, serta socket audit yang dibutuhkan
-`useradd`.
-
-APK kini memuat biner untuk `arm64-v8a` dan `x86_64`, jadi satu APK yang sama
-bisa dipasang di ponsel, emulator Android, WayDroid, dan ChromeOS. Katalog
-menambah Debian 13 amd64 untuk x86_64.
-
-Di dalam distro ada perintah `vhdp doctor`, `vhdp inspect`, dan
-`vhdp capabilities`. Ketik `xset vhdp` untuk membuka halaman Diagnostics, yang
-menampilkan backend yang sedang dipakai dan bisa menjalankan probe aktif.
-
-Beberapa bug terminal ikut ditutup. `tar -cf` tidak lagi gagal dengan ENOSYS.
-SIGQUIT, SIGUSR1, dan SIGPIPE kembali sampai ke program di dalam distro, jadi
-`trap` bekerja dan penulis pipa yang kehilangan pembacanya berhenti dengan
-status 141. `vhdp doctor` tidak lagi merusak `/tmp`. Di ponsel sungguhan, distro
-kembali punya `/dev/null`, `/dev/urandom`, dan `/dev/tty`. `Ctrl+Z` dan proses
-latar yang menyentuh tty berperilaku seperti di Linux biasa.
-
-Uji rilis di perangkat menemukan tiga masalah lagi. Bahasa yang dipilih pengguna
-tidak lagi berganti ke bahasa perangkat setelah layar diputar. Pesan tahap
-pemasangan ("Mengekstrak… N berkas", "Linux siap", dan lainnya) kini tersedia
-dalam bahasa Indonesia dan Inggris. `xset` menampilkan warna preset sebagai
-`#RRGGBB`, bukan angka ARGB mentah.
-
-Kelima image di katalog, empat untuk arm64 dan satu untuk x86_64, diambil dari
-aset rilis [`ExsoKamabay/rootless`](https://github.com/ExsoKamabay/rootless).
-Entri Debian arm64 kembali ke image yang dipin di 1.0.0, unduhan 35 MB, karena
-URL yang dipakai sejak 1.0.1 sudah mati.
-
-Folder `app/src/test` dan `app/src/androidTest` dihapus beserta dependensi
-tesnya. Rilis diuji dengan membangun ulang APK release lalu mencobanya di
-perangkat sambil membaca logcat. Caranya ada di
-[Langkah 6](#langkah-6-uji-di-perangkat).
-
-Nomor versinya 1.0.5 dengan `versionCode` 5. Nomor 1.0.4 dilewati dan tidak
-pernah dipakai untuk build yang beredar.
+Ada harga yang perlu Anda tahu. APK-nya sekarang sekitar 33 MB, dari 14 MB.
+Setelah distro terpasang, aplikasi mengunduh Python dan Scrapling di latar
+supaya claw bisa membuka halaman web, kecuali Browsing dimatikan di `xset claw`.
+Pesan yang Anda tulis ke claw dikirim ke layanan model pihak lain. Rinciannya di
+[Keterbatasan yang diketahui](#keterbatasan-yang-diketahui), dan catatan lengkap
+tiap rilis ada di [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Yang bisa dilakukan
 
@@ -110,20 +84,27 @@ ke dasar, zoom, Ctrl dan Alt yang bisa dikunci, Esc, Tab, Home, End, PgUp,
 PgDn, cari, tempel, dan backspace. Cubit layar untuk memperbesar huruf.
 
 Ketik `xset` untuk membuka pengaturan. Semuanya digambar di dalam terminal,
-berubah langsung saat Anda geser, dan tersimpan sendiri:
+berubah langsung saat Anda geser, dan tersimpan sendiri. Nama menunya mengikuti
+bahasa yang dipilih di halaman Bahasa; di bawah ini nama bawaannya, dengan nama
+Inggris di dalam kurung:
 
 | Menu | Isinya |
 |---|---|
-| Appearance | Pengaturan yang paling sering dipakai, dalam satu layar. |
-| Theme | Preset tema, warna teks, latar, dan kursor. |
+| Bahasa (Language) | Bahasa menu `xset`: Indonesia, English, 中文, Tiếng Việt, Русский, atau हिन्दी. |
+| Tampilan (Appearance) | Pengaturan yang paling sering dipakai, dalam satu layar. |
+| Tema (Theme) | Preset tema, warna teks, latar, dan kursor. |
 | Font | JetBrains Mono atau font sistem, ukuran 7 sampai 28 dp, jarak baris, jarak huruf, dan padding. |
-| Cursor | Bentuk block, bar, underline, atau hollow; kedip; warna. |
-| Background | Warna latar dan kontras teksnya. |
-| Performance | Panjang scrollback, 200 sampai 20000 baris. |
-| Storage Access | Sakelar akses penyimpanan, berlaku langsung di shell yang sedang jalan. |
-| Diagnostics | Keterangan mesin yang menjalankan sesi Linux, dan tombol untuk memeriksanya. |
-| Backup | Ekspor dan impor pengaturan sebagai JSON, serta kembali ke bawaan. |
-| About | Keterangan perangkat dan aplikasi, serta alamat kontak. |
+| Kursor (Cursor) | Bentuk block, bar, underline, atau hollow; kedip; warna. |
+| Latar (Background) | Warna latar dan kontras teksnya. |
+| Kinerja (Performance) | Panjang scrollback, 200 sampai 20000 baris. |
+| Akses Penyimpanan (Storage Access) | Sakelar akses penyimpanan, berlaku langsung di shell yang sedang jalan. |
+| AI (claw) | Apa yang boleh dilakukan claw, model yang dipakai, dan mode Humanizer. |
+| Diagnostik (Diagnostics) | Keterangan mesin yang menjalankan sesi Linux, dan tombol untuk memeriksanya. |
+| Cadangan (Backup) | Ekspor dan impor pengaturan sebagai JSON, serta kembali ke bawaan. |
+| Tentang (About) | Keterangan perangkat dan aplikasi, serta alamat kontak. |
+
+`xset theme`, `xset claw`, `xset vhdp`, dan seterusnya langsung membuka halaman
+yang disebut. Back menutup `xset`.
 
 Di dalam distro Anda masuk sebagai pengguna biasa bernama `dracos`.
 `sudo PERINTAH`, `su -c PERINTAH`, dan `fakeroot PERINTAH` menjalankan satu
@@ -133,8 +114,9 @@ sini hanya berlaku di dalam aplikasi, bukan root ponsel, tetapi cukup untuk
 `apt-get install`, `dpkg -i paket.deb`, menulis ke `/etc` atau `/usr`, dan
 `chown`.
 
-Tampilannya tersedia dalam Bahasa Indonesia dan Inggris, dan tombol gantinya ada
-di dalam aplikasi, jadi kedua bahasa selalu ikut terpasang.
+Layar aplikasi tersedia dalam Bahasa Indonesia dan Inggris, dan tombol gantinya
+ada di dalam aplikasi, jadi kedua bahasa selalu ikut terpasang. Menu `xset`
+punya pilihan bahasanya sendiri, enam bahasa, di halaman Bahasa.
 
 Aplikasi tidak pernah meminta akses penyimpanan ponsel saat dibuka. Anda yang
 menyalakannya, lewat `xset`, dan saat itu juga penyimpanan internal muncul di
@@ -145,8 +127,65 @@ Ollama bisa dipasang dari dalam terminal kalau Anda memintanya. Berkasnya tidak
 ikut di dalam APK: yang diunduh adalah rilis resmi Ollama v0.34.2, sekitar 1,5 GB,
 dan berkasnya diperiksa dulu sebelum dipasang. Hanya untuk ponsel arm64.
 
-Tidak ada analitik, iklan, pelacak, atau telemetri. Aplikasi menghubungi
-jaringan hanya kalau Anda memintanya mengunduh sesuatu.
+Tidak ada analitik, iklan, pelacak, atau telemetri, dan tidak ada data yang
+dikirim ke pengembang. Aplikasi membuka jaringan untuk tiga hal: mengunduh distro
+atau Ollama yang Anda pilih, menyiapkan Python dan Scrapling untuk claw setelah
+distro terpasang (bisa dimatikan), dan mengirim pesan Anda ke layanan model
+ketika Anda memakai claw.
+
+### Asisten claw
+
+`claw` adalah perintah di dalam distro. Ia tidak ada di terminal tanpa distro;
+di sana perintah itu hanya menjelaskan bahwa ia butuh distro.
+
+```bash
+claw chat                          # mengobrol dan memberi perintah; /exit untuk keluar
+claw browse https://example.com    # ambil isi halaman web
+claw humanizer "tujuan"            # beberapa agen bekerja terus untuk satu tujuan
+claw watch                         # laporan aktivitas yang bergerak langsung
+claw models                        # daftar model yang sedang dipakai
+claw skills                        # skill yang bisa dipakai model
+claw doctor                        # periksa lingkungan kalau ada yang tidak jalan
+```
+
+Pertanyaan Anda dikirim ke layanan model gratis yang bisa dipakai tanpa akun:
+LLM7, Kilo Gateway, Pollinations, OVHcloud AI Endpoints, dan OpenCode Zen. Kalau
+satu model sedang penuh atau rusak, claw pindah ke model lain. Selama claw
+dipakai, daftar modelnya diperbarui sekali sehari: model yang rusak dibuang dan
+model gratis baru dicoba. Kalau Anda punya kunci API dari Groq, OpenRouter,
+Google AI Studio, Cerebras, atau NVIDIA, isi variabelnya (`GROQ_API_KEY`,
+`OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `CEREBRAS_API_KEY`, atau
+`NVIDIA_API_KEY`) dan model dari layanan itu ikut dipakai.
+
+Halaman AI (claw) di `xset` menentukan apa yang boleh dilakukan claw. Perubahan
+di sana berlaku saat claw dijalankan berikutnya.
+
+| Pengaturan | Bawaan | Artinya |
+|---|---|---|
+| Browsing web | Tanya dulu | claw minta izin sebelum membuka halaman web. |
+| Kelola berkas & terminal | Mati | Membaca dan mengubah berkas serta menjalankan perintah. |
+| Izinkan jaringan lokal | OFF | Menjangkau alamat di jaringan rumah atau kantor Anda. |
+| Pakai skill | ON | Memakai skill bawaan, misalnya untuk riset web atau jaringan. |
+| Simpan isi percakapan | OFF | Mencatat isi percakapan, termasuk alamat lengkap halaman yang dibuka, ke log claw di dalam distro. |
+| Humanizer (agen otonom) | OFF | Menyalakan mode banyak agen dan membuka tab laporan. |
+| Agen humanizer maks | 3 | Agen per tujuan Humanizer, 1 sampai 6. |
+| Auto-update daftar model | ON, tiap 24 jam | Jarak pembaruan daftar model, 1 sampai 168 jam. |
+
+Model untuk obrolan dan untuk Humanizer bisa dipilih sendiri dari daftar, atau
+dibiarkan Otomatis supaya claw memilih yang cocok dengan tugasnya.
+
+Saat Humanizer dinyalakan, aplikasi membuka tab baru yang menjalankan
+`claw watch` tanpa memindahkan Anda dari tab yang sedang dipakai. Ctrl+C di tab
+itu mematikan Humanizer, menutup tabnya, dan menyimpan catatannya sebagai
+`activity(<tanggal jam>).log` di folder home.
+
+Untuk membuka halaman web, claw butuh Python dan Scrapling di dalam distro.
+Aplikasi menyiapkannya sendiri di latar setelah distro terpasang: python3 dari
+repositori distro dan Scrapling dari PyPI, totalnya beberapa ratus megabyte.
+Ikuti progresnya dengan `tail -f /opt/claw/scrapling/setup.log`. Kalau gagal,
+aplikasi mencoba lagi pada peluncuran berikutnya, kecuali Browsing disetel ke
+Mati. Modul untuk skill `networking` dan `ai-red-team` sudah ada di dalam APK dan
+dipasang tanpa jaringan.
 
 ## Alur aplikasi
 
@@ -294,14 +333,16 @@ Versi tiap pustaka ada di [`app/build.gradle.kts`](app/build.gradle.kts).
 
 Tujuh biner prebuilt ikut dikirim per ABI: BusyBox, PRoot dan loader-nya,
 talloc, libandroid-shmem, CLI VHDP (`libphdp.so`), dan userland loader VHDP
-(`libvhdp-loader.so`). Rinciannya di
-[Biner yang ikut dikirim](#biner-yang-ikut-dikirim). Di samping itu ada tiga
-pustaka yang dibangun dari sumber di repo ini saat build: `libxterm.so` (mesin
-terminal), `libvhdp.so`, dan `libvhdpjni.so` (jembatan JNI ke libvhdp).
+(`libvhdp-loader.so`). Perintah `claw` juga ikut sebagai biner prebuilt per ABI,
+tetapi di dalam aset, karena ia berjalan di dalam distro, bukan di Android.
+Rinciannya di [Biner yang ikut dikirim](#biner-yang-ikut-dikirim). Di samping itu
+ada empat pustaka yang dibangun dari sumber di repo ini saat build: `libxterm.so`
+(mesin terminal), `libvhdp.so`, `libvhdpjni.so` (jembatan JNI ke libvhdp), dan
+`libclawsetup.so` (pemasang claw ke dalam distro).
 
 ## Versi dan paket
 
-Rilis saat ini 1.0.6, `versionCode` 6, dengan `applicationId` `com.dracxterm`.
+Rilis saat ini 1.1.0, `versionCode` 7, dengan `applicationId` `com.dracxterm`.
 Nomor 1.0.4 dilewati. APK-nya ditandatangani dengan kunci yang sama seperti
 rilis-rilis sebelumnya, jadi bisa dipasang di atas pemasangan lama sebagai
 pembaruan, tanpa menghapus rootfs dan isi home.
@@ -315,13 +356,13 @@ Tiap berkas punya berkas `.sha256` di sebelahnya. Cocokkan dulu sebelum
 memasang, supaya Anda tahu berkasnya utuh:
 
 ```bash
-sha256sum -c dracxterm-1.0.6-vc6-release.apk.sha256
+sha256sum -c dracxterm-1.1.0-vc7-release.apk.sha256
 ```
 
 Lalu pasang lewat `adb`:
 
 ```bash
-adb install -r dracxterm-1.0.6-vc6-release.apk
+adb install -r dracxterm-1.1.0-vc7-release.apk
 ```
 
 Atau salin APK ke ponsel dan buka lewat pengelola berkas. Android akan meminta
@@ -381,7 +422,7 @@ dipasang di perangkat.
 
 | Izin | Dipakai untuk |
 |---|---|
-| `INTERNET` | Mengunduh image rootfs yang Anda pilih, dan Ollama kalau Anda memintanya. |
+| `INTERNET` | Mengunduh image rootfs yang Anda pilih dan Ollama kalau Anda memintanya, menyiapkan Python dan Scrapling untuk claw, serta mengirim pesan claw ke layanan model. |
 | `ACCESS_NETWORK_STATE` | Memeriksa ada tidaknya jaringan sebelum unduhan dimulai. |
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Menjaga proses aplikasi, dan karenanya shell serta PTY-nya, tetap hidup saat Anda pindah ke aplikasi lain. |
 | `POST_NOTIFICATIONS` | Hanya menentukan apakah notifikasi service terlihat. Tidak pernah diminta saat aplikasi dibuka; service dan shell-nya tidak bergantung pada izin ini. |
@@ -504,8 +545,8 @@ Untuk rilis baru, ubah dua angka di
 [`app/build.gradle.kts`](app/build.gradle.kts):
 
 ```kotlin
-versionCode = 5
-versionName = "1.0.5"
+versionCode = 7
+versionName = "1.1.0"
 ```
 
 Itu nilai yang ada di berkas sekarang; naikkan keduanya untuk rilis berikutnya.
@@ -530,7 +571,7 @@ biner prebuilt di `jniLibs` ber-align 16 KB. Log build mencetak
 menyebut jenis installer yang sedang dibangun.
 
 Di mesin pengembang, build release dari keadaan bersih selesai sekitar dua
-menit. Hasilnya `app/build/outputs/apk/release/app-release.apk`, sekitar 14 MB,
+menit. Hasilnya `app/build/outputs/apk/release/app-release.apk`, sekitar 33 MB,
 sudah ditandatangani dan sudah lewat `lintVitalRelease`. Periksa sebelum
 dipakai:
 
@@ -543,16 +584,16 @@ BT="$ANDROID_HOME/build-tools/35.0.0"
 ```
 
 `apksigner` harus melaporkan skema v2 dan v3 sebagai `true`, dan `zipalign`
-harus keluar tanpa pesan. `aapt2` harus menunjukkan `versionCode='5'`,
-`versionName='1.0.5'`, dan `native-code: 'arm64-v8a' 'x86_64'`.
+harus keluar tanpa pesan. `aapt2` harus menunjukkan `versionCode='7'`,
+`versionName='1.1.0'`, dan `native-code: 'arm64-v8a' 'x86_64'`.
 
 Untuk dilampirkan ke GitHub Release, beri nama berversi dan buat berkas
 checksum-nya:
 
 ```bash
 mkdir -p apps
-cp "$APK" apps/dracxterm-1.0.5-vc5-release.apk
-(cd apps && sha256sum dracxterm-1.0.5-vc5-release.apk > dracxterm-1.0.5-vc5-release.apk.sha256)
+cp "$APK" apps/dracxterm-1.1.0-vc7-release.apk
+(cd apps && sha256sum dracxterm-1.1.0-vc7-release.apk > dracxterm-1.1.0-vc7-release.apk.sha256)
 ```
 
 `apps/` ada di `.gitignore` dan tidak pernah ikut ter-commit.
@@ -583,7 +624,7 @@ Di terminal kedua, baca log aplikasi secara realtime:
 
 ```bash
 adb logcat -c
-adb logcat -v time -s dracXterm Bootstrap Provisioning xset vhdp-jni xterm-native AndroidRuntime DEBUG
+adb logcat -v time -s dracXterm Bootstrap Provisioning xset vhdp-jni xterm-native claw-setup claw-scrapling claw-tools AndroidRuntime DEBUG
 ```
 
 Buka aplikasinya dari launcher, atau lewat `adb`. `MainActivity` tidak
@@ -617,17 +658,26 @@ tar -cf /tmp/uji.tar /etc/passwd && echo tar-ok
 bash -c 'trap "echo sinyal-ok" USR1; kill -USR1 $$; sleep 0.2'
 vhdp doctor --no-active
 xset vhdp
+date                              # jam ponsel, bukan UTC
+sudo apt-get install -y nmap && sudo nmap -sn 192.168.1.0/24
+claw doctor
+claw chat                         # tanya sesuatu, lalu /exit
 ```
 
 `dpkg -i` untuk `cowsay` boleh melaporkan dependensi yang belum terpenuhi;
 `apt-get install -f` yang membereskannya. `xset vhdp` membuka halaman
-Diagnostics, dan baris "Guest backend" di situ harus menyebut `vhdp`.
+Diagnostik, dan baris "Backend guest" di situ harus menyebut `vhdp`. Ganti
+`192.168.1.0/24` dengan jaringan tempat ponsel tersambung. `claw chat` butuh
+koneksi internet dan harus mengembalikan jawaban, bukan galat semua model gagal.
 
 Coba juga lewat layar: `sudo -i` lalu `exit`, tambah workspace dengan tombol
-`+`, sakelar Storage Access di `xset`, Ctrl+C dari bar tombol tambahan, putar
+`+`, sakelar Akses Penyimpanan di `xset`, Ctrl+C dari bar tombol tambahan, putar
 layar di tengah unduhan distro (bahasa antarmuka tidak boleh berubah), dan
 tinggalkan aplikasi beberapa saat lalu kembali (proses latar harus masih
-berjalan).
+berjalan). Untuk claw: ganti bahasa di halaman Bahasa `xset` dan pastikan menu
+berganti tanpa menutup `xset`, tekan Back untuk menutup `xset`, nyalakan
+Humanizer di `xset claw` lalu pastikan tab `claw watch` terbuka, dan tekan
+Ctrl+C di tab itu untuk memastikan tabnya tertutup dan Humanizer kembali mati.
 
 WayDroid dan emulator praktis untuk mencoba x86_64, tetapi SELinux di sana
 permisif. Perubahan yang menyentuh eksekusi program, sinyal, atau proyeksi
@@ -745,6 +795,21 @@ pun. Untuk menyegarkan kedua ABI:
 ANDROID_ABI=x86_64 TRIPLE=x86_64-linux-android ./prebuilts/build.sh --install
 ```
 
+Perintah `claw` ikut sebagai satu biner static per ABI di
+`app/src/main/assets/claw/bin/<abi>/claw`, karena ia berjalan di dalam distro,
+bukan di Android. Biner itu dibangun dari sumber di `app/src/main/assets/claw/`
+dengan Zig dan musl, lalu OpenSSL 3.5.8 di-link ke dalamnya. Gradle tidak
+membangunnya, jadi setelah sumber claw berubah, bangun ulang biner itu untuk
+kedua ABI:
+
+```bash
+ANDROID_ABI=arm64-v8a ./prebuilts/build.sh claw --install
+ANDROID_ABI=x86_64 TRIPLE=x86_64-linux-android ./prebuilts/build.sh claw --install
+```
+
+Di sebelahnya ada sumber Scrapling dan arsip `pytools.tar` berisi Scapy dan PyRIT
+untuk skill `networking` dan `ai-red-team`.
+
 Versi upstream, lisensi, dan written offer untuk source code-nya ada di
 [`NOTICE`](NOTICE). Resep build tiap biner ada di
 [`prebuilts/`](prebuilts/README.md).
@@ -789,18 +854,39 @@ perangkat dan perkakas di `/system/bin`. Perintah sehari-hari seperti `ls`, `cat
 ada `sudo`, dan perkakas Linux lain baru ada setelah Anda memasang distro.
 
 Perkakas yang membaca tabel jaringan kernel tidak bisa bekerja penuh. Android
-menutup jalur itu untuk aplikasi, jadi `nmap` dengan pilihan bawaannya berhenti
-di `cannot bind AF_NETLINK socket`, `tcpdump -D` tidak melihat antarmuka apa pun,
-dan `ss` maupun `ip` mengembalikan daftar kosong. Pemindaian tetap bisa dijalankan
-kalau penemuan host dan pencarian nama dimatikan, misalnya
-`nmap -Pn -n -p 80 example.com`. Koneksi biasa, DNS, `apt`, dan `ping` jalan
-seperti biasa, dan `ifconfig` bawaan aplikasi tetap menampilkan jaringan yang
-dilihat perangkat.
+menutup jalur itu untuk aplikasi, jadi `tcpdump -D` tidak melihat antarmuka apa
+pun, dan `ss` maupun `ip` mengembalikan daftar kosong. `nmap` jalan, termasuk
+lewat `sudo`, karena aplikasi menyuruhnya memakai pemindaian koneksi biasa.
+Akibatnya pilihan yang butuh akses jaringan tingkat rendah, seperti `-sS` dan
+`-O`, tidak tersedia. Koneksi biasa, DNS, `apt`, dan `ping` jalan seperti biasa,
+dan `ifconfig` bawaan aplikasi tetap menampilkan jaringan yang dilihat perangkat.
+
+Layanan yang terpasang lewat `apt`, seperti `openssh-server` atau `nginx`, tidak
+dijalankan otomatis, dan `service` maupun `systemctl` tidak menyalakannya,
+karena distro di sini tidak punya sistem init. Pemasangannya selesai tanpa galat;
+jalankan programnya langsung, misalnya `sudo /usr/sbin/sshd`.
+
+Pesan yang Anda tulis ke claw dikirim ke layanan model pihak lain yang disebut di
+[Asisten claw](#asisten-claw). Jangan menulis kata sandi, kunci, atau data
+pribadi di obrolan. Layanan gratis itu bisa berubah atau berhenti tanpa
+pemberitahuan. Pembaruan harian claw membuang model yang rusak dan mencari yang
+baru, tetapi ada saat ketika semua model sedang penuh dan claw tidak bisa
+menjawab. Jawaban model gratis juga tidak selalu rapi; dalam satu pengujian,
+jawaban yang benar diikuti teks yang tidak berhubungan. Periksa dulu perintah
+yang disarankan claw sebelum menjalankannya.
+
+Penyiapan Scrapling untuk claw berjalan di latar dan memakai `apt` untuk
+memasang python3. Selama itu berlangsung, `apt` yang Anda jalankan bisa menunggu
+sampai penyiapan selesai. Penyiapan tidak dimulai kalau `apt` lain sedang jalan.
+
+Menu `xset` tampil dalam Bahasa Indonesia secara bawaan sejak 1.1.0, termasuk
+untuk pengguna yang dulu membacanya dalam bahasa Inggris. Pilih English di
+halaman Bahasa kalau ingin seperti dulu.
 
 Kalau mesin utama tidak bisa jalan di sebuah perangkat, sesi otomatis memakai
 mesin cadangan. Di jalur cadangan itu, distro dengan pustaka sistem terbaru
 masih membuka shell tanpa prompt seperti sebelum 1.0.6. Mesin yang sedang
-dipakai terlihat di halaman Diagnostics pada pengaturan terminal (ketik `xset`).
+dipakai terlihat di halaman Diagnostik pada pengaturan terminal (ketik `xset`).
 
 Kali Full berat. Unduhannya 1,7 GB dan sekitar 9,5 GB setelah dipasang, dengan
 pemasangan yang bisa lebih dari satu jam di ponsel. Kali Nano atau Minimal jauh
@@ -824,10 +910,12 @@ GPL-3.0-or-later, lihat [`LICENSE`](LICENSE).
 Biner pihak ketiga punya lisensinya sendiri: GPL-2.0 untuk BusyBox dan PRoot,
 LGPL-3.0 untuk talloc, BSD-3-Clause untuk libandroid-shmem, dan Apache-2.0 untuk
 VHDP, yaitu `libvhdp.so`, `libphdp.so`, dan `libvhdp-loader.so`
-([`app/src/main/cpp/vhdp`](app/src/main/cpp/vhdp)). Font JetBrains Mono, Copse,
-dan Black Ops One memakai SIL Open Font License 1.1. Teks lengkapnya ada di
-[`licenses/`](licenses/) dan rinciannya di [`NOTICE`](NOTICE), termasuk written
-offer untuk source code biner GPL.
+([`app/src/main/cpp/vhdp`](app/src/main/cpp/vhdp)). Biner `claw` memuat OpenSSL
+(Apache-2.0), musl (MIT), cpp-httplib (MIT), dan JSON for Modern C++ (MIT).
+Scrapling memakai BSD-3-Clause, Scapy GPL-2.0, dan PyRIT MIT. Font JetBrains
+Mono, Copse, dan Black Ops One memakai SIL Open Font License 1.1. Teks
+lengkapnya ada di [`licenses/`](licenses/) dan rinciannya di
+[`NOTICE`](NOTICE), termasuk written offer untuk source code biner GPL.
 
 Image Linux yang diunduh tunduk pada lisensi distribusinya masing-masing, bukan
 pada lisensi dracxterm.

@@ -33,7 +33,10 @@ object DpkgRecoveryEngine {
     // hit the pre-link2symlink backup-link error is stuck "repaired" with an interrupted dpkg.
     // Bumping the marker + making the script exit truthfully (below) heals it once, now that
     // link2symlink lets the backup link() succeed.
-    private const val MARKER = ".dpkg-recovery.v2"
+    // v4: re-run once on existing installs to apply the maintainer-script environment
+    // (policy-rc.d + start-stop-daemon diversion) and default debconf to Readline, so dpkg/apt
+    // installs don't error on service starts or complain the Dialog frontend is unavailable.
+    private const val MARKER = ".dpkg-recovery.v4"
 
     /** The one-off recovery has already run successfully on this install. */
     fun alreadyRecovered(ctx: Context): Boolean = File(ctx.filesDir, MARKER).exists()
@@ -111,6 +114,29 @@ object DpkgRecoveryEngine {
             done
         fi
         [ -s "${'$'}S" ] && cp -a "${'$'}S" "${'$'}DB/status.vhdp-bak" 2>/dev/null || true   # rollback point
+
+        # 3b) Keep dpkg/apt maintainer scripts from failing under a guest with no init:
+        #     policy-rc.d (exit 101) stops invoke-rc.d/service (re)starts, and a Docker-style
+        #     diversion turns start-stop-daemon into a no-op. Both idempotent and reversible.
+        if [ ! -e /usr/sbin/policy-rc.d ]; then
+            mkdir -p /usr/sbin 2>/dev/null || true
+            printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d 2>/dev/null && \
+                chmod 0755 /usr/sbin/policy-rc.d 2>/dev/null && log "policy-rc.d installed" || true
+        fi
+        if command -v dpkg-divert >/dev/null 2>&1 && [ -x /sbin/start-stop-daemon ]; then
+            if ! dpkg-divert --list /sbin/start-stop-daemon 2>/dev/null | grep -q start-stop-daemon; then
+                dpkg-divert --local --rename --add /sbin/start-stop-daemon >/dev/null 2>&1 || true
+                printf '#!/bin/sh\nexit 0\n' > /sbin/start-stop-daemon 2>/dev/null && \
+                    chmod 0755 /sbin/start-stop-daemon 2>/dev/null && log "start-stop-daemon diverted" || true
+            fi
+        fi
+
+        # 3c) Default debconf to the Readline frontend so apt/dpkg never complain that the Dialog
+        #     frontend cannot be used (no whiptail/dialog on a minimal image); Readline works in a tty.
+        if command -v debconf-set-selections >/dev/null 2>&1; then
+            echo 'debconf debconf/frontend select Readline' | debconf-set-selections 2>/dev/null && \
+                log "debconf frontend -> Readline" || true
+        fi
 
         # 4) Finish the interrupted transaction; roll the status DB back if it fails.
         #    rc propagates the REAL outcome so the caller only writes its success marker when

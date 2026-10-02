@@ -1,0 +1,16 @@
+{"intent":"sapaan","text":"Halo, ada yang bisa saya bantu?"}
+{"intent":"sapaan","text":"Siap, mari kita kerjakan."}
+{"intent":"konfirmasi","text":"Oke, saya lanjutkan ya."}
+{"intent":"konfirmasi","text":"Baik, saya paham maksudnya."}
+{"intent":"minta_izin","text":"Boleh saya buka halaman ini dulu?"}
+{"intent":"minta_izin","text":"Saya perlu izin sebentar sebelum lanjut."}
+{"intent":"menolak","text":"Maaf, itu di luar izin yang saya punya sekarang."}
+{"intent":"menolak","text":"Bagian ini saya lewati dulu karena belum diizinkan."}
+{"intent":"menjelaskan","text":"Singkatnya begini:"}
+{"intent":"menjelaskan","text":"Biar jelas, saya urutkan langkahnya."}
+{"intent":"error","text":"Ada yang gagal, ini pesannya:"}
+{"intent":"error","text":"Belum berhasil. Saya coba cara lain."}
+{"intent":"selesai","text":"Selesai. Ada lagi yang mau dikerjakan?"}
+{"intent":"selesai","text":"Beres. Silakan cek hasilnya."}
+{"intent":"berpikir","text":"Sebentar, saya pikirkan dulu."}
+{"intent":"menawarkan","text":"Kalau mau, saya bisa lanjut ke langkah berikutnya."}

@@ -99,6 +99,14 @@ object TermKeys {
         return "$prefix$fin".toByteArray(Charsets.UTF_8)
     }
 
+    /** Function keys F1..F12 in xterm form: F1-F4 as SS3 (ESC O P..S), F5-F12 as CSI n ~. */
+    fun fkey(n: Int): ByteArray? = when (n) {
+        1 -> "${ESC}OP"; 2 -> "${ESC}OQ"; 3 -> "${ESC}OR"; 4 -> "${ESC}OS"
+        5 -> "$ESC[15~"; 6 -> "$ESC[17~"; 7 -> "$ESC[18~"; 8 -> "$ESC[19~"
+        9 -> "$ESC[20~"; 10 -> "$ESC[21~"; 11 -> "$ESC[23~"; 12 -> "$ESC[24~"
+        else -> null
+    }?.toByteArray(Charsets.UTF_8)
+
     fun special(name: String): ByteArray? = when (name) {
         "ESC"   -> ESC
         "TAB"   -> "\t"

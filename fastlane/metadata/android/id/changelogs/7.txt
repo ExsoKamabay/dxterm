@@ -1,0 +1,9 @@
+Distro di dalam aplikasi kini punya claw, asisten yang bisa diajak mengobrol dan
+disuruh bekerja di terminal. Ketik claw chat. Tanpa akun.
+
+- Halaman xset baru: AI (claw) untuk izin, dan Bahasa dengan enam pilihan.
+- sudo nmap jalan, sudo tidak lagi mengeluh soal nama host.
+- Jam di distro mengikuti jam ponsel.
+- Papan ketik fisik: Ctrl, Alt, F1-F12 jalan.
+- Bisa menggulir ke atas saat program masih mencetak.
+- Back menutup xset.

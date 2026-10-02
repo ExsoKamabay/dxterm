@@ -1,0 +1,694 @@
+=== CORE RESEARCH ===
+
+1. Research
+2. Reasoning
+3. Critical Thinking
+4. Analytical Thinking
+5. Logical Reasoning
+6. Scientific Reasoning
+7. Systems Thinking
+8. Computational Thinking
+9. Abstract Thinking
+10. Strategic Thinking
+11. Exploratory Thinking
+12. Causal Reasoning
+13. Deductive Reasoning
+14. Inductive Reasoning
+15. Abductive Reasoning
+16. Quantitative Reasoning
+17. Qualitative Reasoning
+18. Probabilistic Reasoning
+19. Evidence-Based Reasoning
+20. First-Principles Thinking
+
+=== RESEARCH PLANNING ===
+
+21. Problem Identification
+22. Problem Formulation
+23. Problem Decomposition
+24. Research Planning
+25. Research Design
+26. Research Question Formulation
+27. Objective Definition
+28. Scope Definition
+29. Constraint Identification
+30. Assumption Identification
+31. Hypothesis Generation
+32. Hypothesis Formulation
+33. Hypothesis Testing
+34. Variable Identification
+35. Variable Control
+36. Experimental Planning
+37. Test Planning
+38. Methodology Design
+39. Feasibility Analysis
+40. Risk Assessment
+
+=== INFORMATION RESEARCH ===
+
+41. Information Gathering
+42. Information Retrieval
+43. Literature Search
+44. Literature Review
+45. Systematic Review
+46. Source Discovery
+47. Source Evaluation
+48. Source Verification
+49. Source Triangulation
+50. Fact Checking
+51. Cross-Referencing
+52. Evidence Collection
+53. Evidence Evaluation
+54. Evidence Synthesis
+55. Citation Tracking
+56. Reference Analysis
+57. Documentation Research
+58. Technical Documentation Analysis
+59. Standards Research
+60. Patent Research
+61. Academic Paper Analysis
+62. Dataset Discovery
+63. Dataset Evaluation
+64. Historical Research
+65. Comparative Research
+66. Competitive Research
+67. Technology Research
+68. Trend Analysis
+69. State-of-the-Art Analysis
+70. Gap Analysis
+
+=== INTERNET & OSINT RESEARCH ===
+
+71. Internet Research
+72. Web Research
+73. OSINT
+74. Search Engine Research
+75. Advanced Search
+76. Query Engineering
+77. Web Data Collection
+78. Web Scraping
+79. Web Crawling
+80. Metadata Analysis
+81. Domain Research
+82. DNS Research
+83. Certificate Research
+84. Public Repository Research
+85. Archive Research
+86. Public Dataset Research
+87. Technical Forum Research
+88. Social Media Research
+89. Digital Footprint Analysis
+90. Infrastructure Mapping
+
+=== DATA COLLECTION ===
+
+91. Data Collection
+92. Data Acquisition
+93. Data Sampling
+94. Experimental Sampling
+95. Observational Data Collection
+96. Sensor Data Collection
+97. Telemetry Collection
+98. Log Collection
+99. Network Data Collection
+100. Packet Capture
+101. Traffic Capture
+102. API Data Collection
+103. Database Extraction
+104. Measurement
+105. Instrumentation
+106. Benchmark Collection
+107. Event Collection
+108. Trace Collection
+109. Time-Series Collection
+110. Dataset Construction
+
+=== DATA PREPARATION ===
+
+111. Data Cleaning
+112. Data Validation
+113. Data Verification
+114. Data Normalization
+115. Data Transformation
+116. Data Filtering
+117. Data Deduplication
+118. Data Labeling
+119. Data Annotation
+120. Data Classification
+121. Data Structuring
+122. Data Integration
+123. Data Aggregation
+124. Data Reduction
+125. Feature Extraction
+126. Feature Engineering
+127. Outlier Detection
+128. Missing Data Analysis
+129. Data Quality Assessment
+130. Dataset Versioning
+
+=== DATA ANALYSIS ===
+
+131. Data Analysis
+132. Exploratory Data Analysis
+133. Descriptive Analysis
+134. Diagnostic Analysis
+135. Predictive Analysis
+136. Prescriptive Analysis
+137. Statistical Analysis
+138. Quantitative Analysis
+139. Qualitative Analysis
+140. Comparative Analysis
+141. Correlation Analysis
+142. Regression Analysis
+143. Variance Analysis
+144. Distribution Analysis
+145. Cluster Analysis
+146. Classification Analysis
+147. Time-Series Analysis
+148. Pattern Analysis
+149. Trend Analysis
+150. Anomaly Detection
+151. Signal Analysis
+152. Noise Analysis
+153. Sensitivity Analysis
+154. Uncertainty Analysis
+155. Error Analysis
+156. Causal Analysis
+157. Bayesian Analysis
+158. Multivariate Analysis
+159. Survival Analysis
+160. Meta-Analysis
+
+=== EXPERIMENTATION ===
+
+161. Experiment Design
+162. Controlled Experimentation
+163. A/B Testing
+164. Prototype Testing
+165. Proof-of-Concept Testing
+166. Simulation
+167. Emulation
+168. Modeling
+169. Mathematical Modeling
+170. Computational Modeling
+171. Scenario Testing
+172. Stress Testing
+173. Load Testing
+174. Performance Testing
+175. Reliability Testing
+176. Scalability Testing
+177. Compatibility Testing
+178. Regression Testing
+179. Boundary Testing
+180. Fault Injection
+181. Chaos Testing
+182. Reproducibility Testing
+183. Replication
+184. Control Group Design
+185. Parameter Tuning
+186. Experimental Automation
+187. Experiment Tracking
+188. Experiment Comparison
+189. Result Validation
+190. Result Reproduction
+
+=== SOFTWARE ENGINEERING RESEARCH ===
+
+191. Source Code Analysis
+192. Code Review
+193. Static Analysis
+194. Dynamic Analysis
+195. Runtime Analysis
+196. Binary Analysis
+197. Dependency Analysis
+198. Architecture Analysis
+199. System Design Analysis
+200. Algorithm Analysis
+201. Complexity Analysis
+202. Performance Profiling
+203. Memory Profiling
+204. CPU Profiling
+205. I/O Profiling
+206. Concurrency Analysis
+207. Thread Analysis
+208. Race Condition Analysis
+209. Deadlock Analysis
+210. Memory Leak Analysis
+211. Debugging
+212. Troubleshooting
+213. Root Cause Analysis
+214. Refactoring Analysis
+215. Optimization Research
+216. Benchmarking
+217. API Analysis
+218. Protocol Implementation Analysis
+219. Compatibility Analysis
+220. Software Archaeology
+
+=== NETWORK ENGINEERING RESEARCH ===
+
+221. Network Analysis
+222. Network Measurement
+223. Network Monitoring
+224. Network Mapping
+225. Network Modeling
+226. Network Simulation
+227. Network Emulation
+228. Network Benchmarking
+229. Network Profiling
+230. Network Troubleshooting
+231. Packet Analysis
+232. Traffic Analysis
+233. Flow Analysis
+234. Protocol Analysis
+235. Routing Analysis
+236. Switching Analysis
+237. Topology Analysis
+238. Latency Analysis
+239. Jitter Analysis
+240. Packet Loss Analysis
+241. Throughput Analysis
+242. Bandwidth Analysis
+243. Congestion Analysis
+244. QoS Analysis
+245. DNS Analysis
+246. TCP Analysis
+247. UDP Analysis
+248. QUIC Analysis
+249. HTTP Analysis
+250. TLS Analysis
+251. Socket Analysis
+252. Connection Analysis
+253. Wireless Network Analysis
+254. Network Performance Testing
+255. Network Fault Analysis
+256. Network Resilience Testing
+257. Network Capacity Planning
+258. Traffic Generation
+259. Protocol Testing
+260. Network Automation
+
+=== CYBERSECURITY RESEARCH ===
+
+261. Security Research
+262. Security Analysis
+263. Security Testing
+264. Security Assessment
+265. Security Auditing
+266. Threat Modeling
+267. Threat Analysis
+268. Attack Surface Analysis
+269. Attack Surface Mapping
+270. Asset Discovery
+271. Asset Inventory Analysis
+272. Reconnaissance
+273. Enumeration
+274. Fingerprinting
+275. Service Analysis
+276. Configuration Analysis
+277. Misconfiguration Analysis
+278. Vulnerability Analysis
+279. Vulnerability Research
+280. Vulnerability Validation
+281. CVE Research
+282. CWE Analysis
+283. CVSS Analysis
+284. Patch Analysis
+285. Security Regression Testing
+286. Authentication Analysis
+287. Authorization Analysis
+288. Access Control Analysis
+289. Session Security Analysis
+290. Identity Security Analysis
+291. Cryptographic Analysis
+292. TLS Security Analysis
+293. Certificate Analysis
+294. Web Security Testing
+295. API Security Testing
+296. Mobile Security Analysis
+297. Cloud Security Analysis
+298. Container Security Analysis
+299. Infrastructure Security Analysis
+300. Dependency Security Analysis
+
+=== ADVANCED SECURITY RESEARCH ===
+
+301. Vulnerability Discovery
+302. Fuzz Testing
+303. Protocol Fuzzing
+304. Input Validation Testing
+305. Memory Safety Analysis
+306. Crash Analysis
+307. Exploitability Analysis
+308. Exploit Validation
+309. Impact Analysis
+310. Attack Simulation
+311. Adversarial Testing
+312. Penetration Testing
+313. Security Benchmarking
+314. Malware Analysis
+315. Static Malware Analysis
+316. Dynamic Malware Analysis
+317. Sandbox Analysis
+318. Reverse Engineering
+319. Binary Reverse Engineering
+320. Firmware Analysis
+321. IoT Security Research
+322. Supply Chain Security Analysis
+323. Secure Code Review
+324. Secrets Detection
+325. Security Log Analysis
+326. Incident Analysis
+327. Forensic Analysis
+328. Network Forensics
+329. Digital Forensics
+330. Threat Hunting
+331. Indicator Analysis
+332. Detection Engineering
+333. Security Hardening
+334. Remediation Analysis
+335. Security Retesting
+336. Responsible Disclosure
+
+=== REVERSE ENGINEERING RESEARCH ===
+
+337. Disassembly
+338. Decompilation
+339. Binary Inspection
+340. Symbol Analysis
+341. Control Flow Analysis
+342. Data Flow Analysis
+343. Call Graph Analysis
+344. ABI Analysis
+345. File Format Analysis
+346. Executable Format Analysis
+347. Library Analysis
+348. Firmware Reverse Engineering
+349. Protocol Reverse Engineering
+350. Behavioral Analysis
+351. Runtime Instrumentation
+352. Dynamic Instrumentation
+353. Memory Analysis
+354. Heap Analysis
+355. Stack Analysis
+356. Crash Dump Analysis
+357. Differential Analysis
+358. Patch Diffing
+359. Version Diffing
+360. Compatibility Reverse Engineering
+
+=== AI & MACHINE LEARNING RESEARCH ===
+
+361. AI Research
+362. Machine Learning Research
+363. Model Analysis
+364. Model Evaluation
+365. Model Benchmarking
+366. Dataset Analysis
+367. Training Analysis
+368. Inference Analysis
+369. Feature Analysis
+370. Hyperparameter Optimization
+371. Ablation Study
+372. Error Analysis
+373. Bias Analysis
+374. Robustness Testing
+375. Adversarial Testing
+376. Generalization Analysis
+377. Model Comparison
+378. Architecture Research
+379. Representation Analysis
+380. Interpretability Analysis
+381. Explainability Research
+382. Prompt Research
+383. Prompt Evaluation
+384. Agent Evaluation
+385. Tool-Use Evaluation
+386. Retrieval Evaluation
+387. RAG Evaluation
+388. Hallucination Analysis
+389. AI Safety Evaluation
+390. AI Performance Profiling
+
+=== HARDWARE & IoT RESEARCH ===
+
+391. Hardware Analysis
+392. Embedded Systems Research
+393. IoT Research
+394. Firmware Research
+395. Microcontroller Analysis
+396. Sensor Analysis
+397. Hardware Benchmarking
+398. Power Consumption Analysis
+399. Thermal Analysis
+400. Signal Analysis
+401. Serial Communication Analysis
+402. UART Analysis
+403. SPI Analysis
+404. I2C Analysis
+405. USB Analysis
+406. Bluetooth Analysis
+407. Wi-Fi Analysis
+408. RF Analysis
+409. Hardware Debugging
+410. Hardware-Software Integration Testing
+
+=== PERFORMANCE RESEARCH ===
+
+411. Performance Analysis
+412. Performance Profiling
+413. Benchmark Design
+414. Benchmark Execution
+415. Microbenchmarking
+416. Macrobenchmarking
+417. Latency Measurement
+418. Throughput Measurement
+419. Resource Usage Analysis
+420. CPU Utilization Analysis
+421. Memory Utilization Analysis
+422. Storage Performance Analysis
+423. I/O Performance Analysis
+424. Network Performance Analysis
+425. Energy Efficiency Analysis
+426. Bottleneck Identification
+427. Bottleneck Analysis
+428. Optimization Analysis
+429. Scalability Analysis
+430. Capacity Analysis
+
+=== RELIABILITY RESEARCH ===
+
+431. Reliability Analysis
+432. Availability Analysis
+433. Resilience Analysis
+434. Fault Analysis
+435. Failure Analysis
+436. Failure Mode Analysis
+437. Fault Tree Analysis
+438. Recovery Analysis
+439. Disaster Recovery Testing
+440. Redundancy Analysis
+441. High Availability Testing
+442. Durability Testing
+443. Stability Testing
+444. Long-Running Testing
+445. Soak Testing
+446. Stress Analysis
+447. Boundary Analysis
+448. Failure Injection
+449. Recovery Testing
+450. Resilience Engineering
+
+=== SCIENTIFIC VALIDATION ===
+
+451. Verification
+452. Validation
+453. Cross-Validation
+454. Independent Verification
+455. Independent Replication
+456. Reproducibility
+457. Repeatability
+458. Result Comparison
+459. Baseline Comparison
+460. Statistical Significance Testing
+461. Confidence Interval Analysis
+462. Effect Size Analysis
+463. Error Estimation
+464. Uncertainty Quantification
+465. Bias Detection
+466. Confounder Analysis
+467. Control Validation
+468. Measurement Validation
+469. Instrument Validation
+470. Method Validation
+
+=== RESEARCH QUALITY ===
+
+471. Evidence Grading
+472. Source Reliability Analysis
+473. Source Credibility Analysis
+474. Methodological Critique
+475. Peer Review
+476. Reproducibility Review
+477. Data Integrity Checking
+478. Consistency Checking
+479. Contradiction Detection
+480. Assumption Testing
+481. Limitation Analysis
+482. Uncertainty Reporting
+483. Research Ethics
+484. Responsible Research
+485. Privacy Analysis
+486. Research Risk Management
+487. Quality Assurance
+488. Quality Control
+489. Audit Trail Maintenance
+490. Research Governance
+
+=== AUTOMATION & TOOLING ===
+
+491. Research Automation
+492. Workflow Automation
+493. Data Collection Automation
+494. Testing Automation
+495. Analysis Automation
+496. Report Automation
+497. Monitoring Automation
+498. Experiment Automation
+499. Browser Automation
+500. API Automation
+501. Shell Automation
+502. Script Development
+503. Tool Development
+504. Research Tooling
+505. Pipeline Development
+506. CI/CD Research Integration
+507. Automated Verification
+508. Automated Benchmarking
+509. Automated Regression Testing
+510. Automated Evidence Collection
+
+=== OBSERVABILITY ===
+
+511. Monitoring
+512. Logging
+513. Tracing
+514. Telemetry Analysis
+515. Metrics Analysis
+516. Event Analysis
+517. Distributed Tracing
+518. Runtime Observation
+519. Behavior Monitoring
+520. Performance Monitoring
+521. Security Monitoring
+522. Network Monitoring
+523. Application Monitoring
+524. Infrastructure Monitoring
+525. Alert Analysis
+526. Incident Correlation
+527. Timeline Reconstruction
+528. State Analysis
+529. Change Detection
+530. Regression Detection
+
+=== RESEARCH COMMUNICATION ===
+
+531. Technical Writing
+532. Scientific Writing
+533. Research Documentation
+534. Experiment Documentation
+535. Methodology Documentation
+536. Evidence Documentation
+537. Technical Reporting
+538. Research Reporting
+539. Security Reporting
+540. Vulnerability Reporting
+541. Data Visualization
+542. Result Visualization
+543. Diagramming
+544. Architecture Diagramming
+545. Network Diagramming
+546. Presentation
+547. Research Summarization
+548. Executive Summarization
+549. Citation Management
+550. Knowledge Transfer
+
+=== ADVANCED PROBLEM SOLVING ===
+
+551. Problem Solving
+552. Problem Decomposition
+553. Constraint Solving
+554. Optimization
+555. Decision Analysis
+556. Trade-Off Analysis
+557. Cost-Benefit Analysis
+558. Alternative Analysis
+559. Comparative Evaluation
+560. Scenario Analysis
+561. What-If Analysis
+562. Failure Prediction
+563. Dependency Analysis
+564. Impact Assessment
+565. Risk Analysis
+566. Root Cause Investigation
+567. Pattern Recognition
+568. Relationship Discovery
+569. Knowledge Synthesis
+570. Solution Validation
+
+=== AI/AGENT RESEARCH CAPABILITIES ===
+
+571. Autonomous Research
+572. Agentic Research
+573. Research Planning
+574. Autonomous Planning
+575. Task Decomposition
+576. Subtask Generation
+577. Tool Selection
+578. Tool Calling
+579. Browser Research
+580. Code Execution
+581. Experiment Execution
+582. Environment Inspection
+583. Evidence Collection
+584. Evidence Tracking
+585. Source Attribution
+586. Context Management
+587. Research Memory
+588. Long-Term Memory
+589. Working Memory
+590. Knowledge Retrieval
+591. Self-Reflection
+592. Self-Critique
+593. Self-Correction
+594. Error Recovery
+595. Adaptive Planning
+596. Replanning
+597. Iterative Refinement
+598. Verification Loop
+599. Validation Loop
+600. Autonomous Execution
+
+=== META-RESEARCH ===
+
+601. Meta-Research
+602. Research Methodology Analysis
+603. Research Process Evaluation
+604. Research Quality Evaluation
+605. Research Gap Discovery
+606. Novelty Assessment
+607. Contribution Analysis
+608. Prior-Art Analysis
+609. Replication Research
+610. Benchmark Evaluation
+611. Method Comparison
+612. Evidence Mapping
+613. Knowledge Mapping
+614. Concept Mapping
+615. Taxonomy Development
+616. Ontology Development
+617. Research Trend Mapping
+618. Technology Landscape Analysis
+619. Scientific Consensus Analysis
+620. Research Synthesis

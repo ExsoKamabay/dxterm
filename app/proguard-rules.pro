@@ -4,3 +4,6 @@
 -keep class com.dracxterm.vhdp.VhdpNative { *; }
 -keep class com.dracxterm.vhdp.VhdpResult { *; }
 -keepclasseswithmembernames class * { native <methods>; }
+
+# The claw setup library registers ClawSetup.nativeInstall by class name in JNI_OnLoad.
+-keep class com.dracxterm.claw.ClawSetup { *; }

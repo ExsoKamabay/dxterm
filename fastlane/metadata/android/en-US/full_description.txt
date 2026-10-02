@@ -19,7 +19,9 @@ and zoom</li>
 
 Type <i>xset</i> in the terminal to open the settings. They are drawn inside the terminal
 with a live preview: theme, font, text size and spacing, cursor shape, scrollback length,
-storage access and device details. Settings can be exported and imported again.
+storage access, claw permissions and device details. The menus can be shown in
+Indonesian, English, Chinese, Vietnamese, Russian or Hindi. Settings can be exported and
+imported again.
 
 <b>Linux</b>
 
@@ -33,6 +35,14 @@ each. Downloaded files are checked before anything is installed, so a corrupted 
 altered file never gets unpacked. There is also a build that already carries its distro,
 and that one installs with no network at all.
 
+<b>The claw assistant</b>
+
+Once a distro is installed, type <i>claw chat</i> and write what you want in plain words.
+claw answers in the same terminal and can do the work too: create files, run commands or
+open web pages, as far as you allow it in <i>xset</i>. It uses free model services that
+work without an account, and switches to another model when one is busy. Humanizer mode
+runs several agents on one larger goal until you turn it off.
+
 <b>Storage</b>
 
 Access to phone storage is optional and is never requested at startup. Turn it on and
@@ -42,4 +52,6 @@ everything else still works.
 <b>Privacy</b>
 
 No ads, no tracking, no account, and nothing sent to the developer. The app goes online
-only when you ask it to download something.
+to download the distro you pick and to set up Python and Scrapling, which claw uses to
+open web pages. You can turn that setup off in <i>xset</i>. When you use claw, your
+messages go to a model service.
