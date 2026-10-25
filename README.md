@@ -47,7 +47,7 @@ Coba lagi sekarang benar-benar mengulang unduhannya dan menyebutkan masalahnya,
 bukan lompat kembali ke tampilan awal. Catatan lengkap tiap rilis ada di
 [`CHANGELOG.md`](CHANGELOG.md).
 
-## Yang baru di 1.1.0
+## Versi sebelumnya: 1.1.0
 
 Perubahan terbesar dibanding 1.0.6 adalah `claw`. Ketik `claw chat` di distro
 yang sudah terpasang, lalu tulis permintaan dengan kalimat biasa. Jawabannya

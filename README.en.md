@@ -32,7 +32,7 @@ There are no ads, analytics, trackers, or telemetry, and nothing is sent to the 
 
 Full notes are in the [changelog](CHANGELOG.md) (Indonesian).
 
-## New in 1.1.0
+## Previous version: 1.1.0
 
 - Type `claw chat` in an installed distro and ask in plain words. claw moves to another free model when one is busy; on the test phone it had 33 to choose from. `claw a-work` (named `humanizer` before) hands a larger goal to several agents and keeps going until you turn it off.
 - The new AI (claw) page in `xset` sets what claw may do: open web pages, manage files and run commands, reach the local network, use skills. Files and commands start switched off.
