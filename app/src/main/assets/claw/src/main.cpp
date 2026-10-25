@@ -19,6 +19,7 @@
 #include "browse.hpp"
 #include "catalog.hpp"
 #include "fstools.hpp"
+#include "graph.hpp"
 #include "language.hpp"
 #include "launcher.hpp"
 #include "lineedit.hpp"
@@ -34,6 +35,7 @@
 #ifndef _WIN32
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <termios.h>
 #include <unistd.h>
 #endif
 #include <chrono>
@@ -58,10 +60,10 @@ Perintah:
   ask "<pesan>"               Satu giliran agent OpenClaw (openclaw agent exec)
   chat                        Ngobrol dan memberi perintah ke model langsung di terminal.
                               Model hanya memakai akses yang diizinkan di xset > claw
-  humanizer ["<tujuan>"]      Mode riset otonom multi-agen: tujuan dipecah jadi beberapa tugas,
-                              tiap tugas dikerjakan agen dengan skill yang dipilih sendiri, lalu
-                              tim lanjut ke frontier penelitian berikutnya tanpa henti sampai
-                              Humanizer dimatikan di xset atau Ctrl+C (aktifkan di xset > claw)
+  a-work ["<tujuan>"]         Agents working on your project: manajer ber-reasoning tinggi memecah
+                              tujuan jadi tugas yang presisi dan terstruktur, tiap tugas dikerjakan
+                              agen dengan skill sendiri, dan manajer mengganti model agen yang gagal
+                              atau kadaluwarsa. Berlanjut ke frontier berikutnya sampai Ctrl+C
   serve                       Jalankan proxy OpenAI-compatible saja (foreground)
   update [--no-tools]         Perbarui daftar model: cari model gratis baru, uji,
                               buang yang rusak permanen (juga jalan otomatis)
@@ -363,12 +365,58 @@ std::mutex g_io;
 // otonom. Stop kedua — humanizer dimatikan di xset — dideteksi dengan membaca ulang policy.json.
 std::atomic<bool> g_humanizer_stop{false};
 
+// Mode graph in-tab a-work: saat true, misi berjalan di thread latar dan output teksnya ke
+// std::cout ditekan (say/laporan/spinner) supaya tidak merusak graph alt-screen yang digambar
+// di thread utama. Umpan aktivitas tetap jalan lewat live.log → panel graph.
+std::atomic<bool> g_graph_mode{false};
+
 // Jawaban "a" (izinkan untuk sesi ini). Dibagi oleh semua salinan ChatTools dalam satu sesi,
 // jadi agen humanizer tidak menanyakan hal yang sama berulang kali. Dibaca/ditulis di bawah g_io.
 struct Grants {
   bool browse = false;
   bool fs = false;
 };
+
+// Cache web_fetch tingkat sesi, dipakai bersama semua salinan ChatTools. Agen a-work yang jalan
+// bersamaan dan siklus riset yang berulang sering mengambil URL yang sama; menyajikan ulang hasil
+// fetch yang berhasil tanpa membuka halaman lagi membuat isi yang dilihat model sama persis sambil
+// membuang kerja ganda di jaringan. Riset banyak-agen jadi lebih skalabel dan lebih sopan ke situs
+// target. Kunci = url + selector + max_chars, jadi hanya permintaan yang benar-benar identik yang
+// kena cache. TTL pendek menjaga "informasi terkini" tetap segar; batas entri menjaga sesi
+// tak-berujung tidak menggelembung memori. Aman dari banyak thread lewat satu mutex.
+struct FetchCache {
+  struct Entry {
+    std::string value;
+    std::chrono::steady_clock::time_point at;
+  };
+  std::mutex mu;
+  std::map<std::string, Entry> entries;
+  static constexpr size_t kMaxEntries = 64;
+  static constexpr int kTtlSeconds = 300;
+
+  std::string get(const std::string& key) {
+    std::lock_guard<std::mutex> lk(mu);
+    auto it = entries.find(key);
+    if (it == entries.end()) return {};
+    if (std::chrono::steady_clock::now() - it->second.at > std::chrono::seconds(kTtlSeconds)) {
+      entries.erase(it);
+      return {};
+    }
+    return it->second.value;
+  }
+
+  void put(const std::string& key, std::string value) {
+    std::lock_guard<std::mutex> lk(mu);
+    entries[key] = Entry{std::move(value), std::chrono::steady_clock::now()};
+    if (entries.size() > kMaxEntries) {
+      auto oldest = entries.begin();
+      for (auto it = entries.begin(); it != entries.end(); ++it)
+        if (it->second.at < oldest->second.at) oldest = it;
+      entries.erase(oldest);
+    }
+  }
+};
+FetchCache g_fetch_cache;
 
 struct ChatTools {
   fs::path project_root;
@@ -532,6 +580,28 @@ json tool_specs(const ChatTools& t, bool enabled) {
                          {"properties", {{"name", {{"type", "string"}, {"enum", names}}}}},
                          {"required", json::array({"name"})}}}}}});
   }
+  // create_skill: agen yang boleh mengubah (bukan agen depan yang melimpahkan) boleh mengarang
+  // skill baru saat kemampuan kurang, lalu memuatnya lewat use_skill di ronde berikutnya.
+  if (t.skills_on && !t.can_delegate) {
+    tools.push_back(
+        {{"type", "function"},
+         {"function",
+          {{"name", "create_skill"},
+           {"description",
+            "Author a NEW reusable skill when no listed skill covers the task and you keep lacking the "
+            "procedure or domain knowledge to do it well. Capture the method, steps, conventions and "
+            "pitfalls as instructions a future run can follow. After creating it, load it with use_skill "
+            "and follow it. Use a short kebab-case name; only for reusable know-how, not one-off answers."},
+           {"parameters",
+            {{"type", "object"},
+             {"properties",
+              {{"name", {{"type", "string"}, {"description", "Short kebab-case id, e.g. 'pdf-forms'"}}},
+               {"description", {{"type", "string"}, {"description", "One line: when to use this skill"}}},
+               {"instructions",
+                {{"type", "string"},
+                 {"description", "The full SKILL.md body: the method, steps, conventions and pitfalls"}}}}},
+             {"required", json::array({"name", "description", "instructions"})}}}}}});
+  }
   return tools;
 }
 
@@ -640,6 +710,11 @@ std::string system_prompt(const ChatTools& t, PromptMode mode = PromptMode::Chat
     p += "\n\nSkills you can load with use_skill (load one only when it fits the request):";
     for (const auto& sk : t.skills) p += "\n- " + sk.name + ": " + sk.description;
   }
+  if (t.skills_on && !t.can_delegate)
+    p += "\n\nIf no skill above covers the task and you keep lacking the procedure or domain knowledge to "
+         "do it well, author one with create_skill (short kebab-case name, one-line description, "
+         "step-by-step instructions), then load it with use_skill and follow it. Create a skill only for "
+         "reusable know-how, not a one-off answer.";
   if (mode == PromptMode::Agent && t.fs_access != "off")
     p += "\n\nWhen your task is to build something: scaffold a real project on disk, write the code, run "
          "builds/tests in the terminal, read the errors and iterate until it works. Then actively DEBUG it "
@@ -731,6 +806,15 @@ std::string run_tool(ChatTools& t, Activity& act, const std::string& name, const
     if (args.contains("max_chars") && args["max_chars"].is_number_integer())
       max_chars = std::clamp(args["max_chars"].get<int>(), 200, 20000);
     std::string sel = args.value("selector", "");
+    // Sajikan ulang dari cache sesi bila URL+selector+max_chars yang sama sudah diambil (lihat
+    // FetchCache): permission sudah diperiksa di atas, jadi ini hanya menghindari fetch berulang.
+    std::string cache_key = url + "\x1f" + sel + "\x1f" + std::to_string(max_chars);
+    if (std::string cached = g_fetch_cache.get(cache_key); !cached.empty()) {
+      announce("memakai halaman " + url_host(url) + " dari cache sesi");
+      act.tool("web_fetch", (g_policy.save_conversations ? url : url_host(url)) + (sel.empty() ? "" : "  sel=" + sel),
+               "disajikan dari cache sesi");
+      return cached;
+    }
     announce("sedang membuka halaman " + url_host(url));
     BrowseResult br = web_fetch(t.project_root, url, sel, max_chars, g_policy.private_network);
     int st = br.data.value("status", 0);
@@ -747,7 +831,10 @@ std::string run_tool(ChatTools& t, Activity& act, const std::string& name, const
       for (size_t i = 0; i < 12; ++i) l.push_back(d["links"][i]);
       d["links"] = l;
     }
-    return d.dump();
+    std::string out = d.dump();
+    // Simpan hanya fetch yang berhasil; error bisa sementara dan tidak layak disajikan ulang.
+    if (br.ok) g_fetch_cache.put(cache_key, out);
+    return out;
   }
 
   if (name == "web_request") {
@@ -831,6 +918,56 @@ std::string run_tool(ChatTools& t, Activity& act, const std::string& name, const
     } catch (const std::exception& e) {
       return json({{"ok", false}, {"error", e.what()}}).dump();
     }
+  }
+
+  if (name == "create_skill") {
+    if (!t.skills_on) return R"({"ok":false,"error":"skill dimatikan oleh pengguna"})";
+    // Slug: huruf kecil, hanya [a-z0-9-], tanpa tanda hubung ganda/ujung, maksimal 48 karakter.
+    auto slug = [](std::string s) {
+      std::string o;
+      for (char c : to_lower(std::move(s))) {
+        if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) o += c;
+        else if (!o.empty() && o.back() != '-') o += '-';
+      }
+      while (!o.empty() && o.back() == '-') o.pop_back();
+      if (o.size() > 48) o.resize(48);
+      return o;
+    };
+    std::string nm = slug(args.value("name", ""));
+    std::string desc = trim(args.value("description", ""));
+    std::string body = args.value("instructions", "");
+    if (nm.empty()) return R"({"ok":false,"error":"nama skill kosong atau tidak valid, pakai kebab-case"})";
+    if (trim(body).empty()) return R"({"ok":false,"error":"isi instructions kosong"})";
+    const char* home = std::getenv("HOME");
+    fs::path root = (home && *home) ? fs::path(home) / ".claw" / "skills" : t.project_root / "skills-user";
+    fs::path dir = root / nm;
+    fs::path md = dir / "SKILL.md";
+    announce("sedang membuat skill '" + nm + "'");
+    try {
+      std::error_code ec;
+      fs::create_directories(dir, ec);
+      std::string front = "---\nname: " + nm + "\ndescription: " + desc + "\n---\n\n";
+      write_file_atomic(md, front + body + "\n");
+    } catch (const std::exception& e) {
+      act.tool("create_skill", nm, "gagal: " + std::string(e.what()));
+      return json({{"ok", false}, {"error", e.what()}}).dump();
+    }
+    // Daftarkan ke pool skill sesi ini supaya use_skill langsung melihatnya di ronde berikutnya.
+    SkillInfo si;
+    si.name = nm;
+    si.description = desc;
+    si.file = md;
+    bool replaced = false;
+    for (auto& sk : t.skills)
+      if (sk.name == nm) { sk = si; replaced = true; break; }
+    if (!replaced) t.skills.push_back(si);
+    Log::note("chat: create_skill " + nm + (replaced ? " (perbarui)" : " (baru)"));
+    act.tool("create_skill", nm, replaced ? "diperbarui" : "dibuat");
+    return json({{"ok", true},
+                 {"skill", nm},
+                 {"saved", md.string()},
+                 {"hint", "now call use_skill with name '" + nm + "' to load and follow it"}})
+        .dump();
   }
   // ---- pengelolaan berkas & terminal (izin fs_access) ----
   static const std::set<std::string> kFsTools = {"list_dir", "find_files", "read_file",
@@ -948,6 +1085,7 @@ struct Spinner {
   std::mutex io;
   std::thread th;
   void start() {
+    if (g_graph_mode.load()) return;  // mode graph in-tab: tanpa spinner di alt-screen
     stop = false;
     shown = false;
     th = std::thread([this] {
@@ -1003,6 +1141,14 @@ std::string route_for(const Router& router, TaskKind kind) {
   for (const auto& s : router.status())
     if (s.cooldown_left <= 0) usable.push_back(s.name);
   return pick_model(usable, kind);
+}
+
+// Model untuk manajer a-work: reasoning paling kuat di antara yang tidak sedang cooldown.
+std::string route_lead(const Router& router) {
+  std::vector<std::string> usable;
+  for (const auto& s : router.status())
+    if (s.cooldown_left <= 0) usable.push_back(s.name);
+  return pick_lead(usable);
 }
 
 ChatTools make_tools(const Catalog& catalog, const fs::path& home) {
@@ -1437,6 +1583,7 @@ void compact_history(Router& router, json& history, const std::string& model) {
 }
 
 void say(const std::string& s) {
+  if (g_graph_mode.load()) return;  // mode graph in-tab: jangan coret alt-screen dengan teks misi
   std::lock_guard<std::mutex> lk(g_io);
   std::cout << s << std::flush;
 }
@@ -1501,14 +1648,18 @@ AgentOutcome run_agent(Router& router, const ChatTools& base, Activity& act, con
 
 std::string planner_prompt(const ChatTools& t, int max_agents) {
   std::string p =
-      "You are the lead of a team of autonomous AI agents in a Linux terminal. Plan at an exceptional, "
-      "professional level (IQ-200 caliber): think from first principles, decompose the goal cleanly, "
-      "and design a plan a top expert would be proud of. Split the user's goal into at most " +
+      "You are the manager of a team of autonomous AI agents working on the user's real project in a "
+      "Linux terminal. You have strong reasoning. Plan with professional precision and structure, the "
+      "way a senior staff engineer would: think from first principles, decompose the goal into clean, "
+      "non-overlapping tasks with explicit boundaries and deliverables, and for a complex goal order "
+      "the work so each agent gets exactly what it needs from the others. Split the user's goal into "
+      "at most " +
       std::to_string(max_agents) + " tasks, one per agent. Use fewer agents for small "
-      "goals (one is fine). Give each agent a clear role, a self-contained task, the kind of work "
-      "(coding, reasoning, design or general) and the skills it should load from the list below. Use "
-      "depends_on only when an agent needs another agent's result; agents without dependencies run at "
-      "the same time.\n\nAgents can: ";
+      "goals (one is fine). Give each agent a precise role, a self-contained task with a concrete "
+      "deliverable, the kind of work (coding, reasoning, design or general) and the skills it should "
+      "load from the list below. Match the kind to the work so the right model is routed to each task. "
+      "Use depends_on only when an agent needs another agent's result; agents without dependencies run "
+      "at the same time.\n\nAgents can: ";
   p += t.browse_on ? "browse the web; " : "NOT browse the web; ";
   p += t.fs_access != "off" ? "read/write files and run the terminal." : "NOT touch files or the terminal.";
   if (t.skills_on && !t.skills.empty()) {
@@ -1563,8 +1714,9 @@ std::string lead_doctrine_header(const HumanizerDoctrine& d) {
 
 // Distilasi ringkas doktrin untuk tiap agen pekerja humanizer (dipakai tiap ronde → wajib padat).
 const char* humanizer_worker_doctrine() {
-  return "Research operating mode — you are part of the claw humanizer research team. Work "
-         "evidence-first: separate FACT / EVIDENCE / ASSUMPTION / HYPOTHESIS / INFERENCE / UNKNOWN, and "
+  return "Operating mode: you are an agent on the claw a-work team, working on the user's real "
+         "project. Work with professional precision and structure, and evidence-first: separate "
+         "FACT / EVIDENCE / ASSUMPTION / HYPOTHESIS / INFERENCE / UNKNOWN, and "
          "never promote an assumption to a fact. Source of truth in order: source code > runtime "
          "behaviour > test results > build/compiler output > logs > docs > assumptions. Debug by OBSERVE "
          "→ REPRODUCE → ISOLATE → HYPOTHESIS → TEST → ROOT CAUSE → MINIMAL FIX → RETEST; optimise only "
@@ -1586,8 +1738,18 @@ struct HumanizerCtx {
 std::string run_mission(Router& router, ChatTools& tools, Activity& act, const fs::path& home,
                         const std::string& goal, const std::string& fixed, const HumanizerCtx& hz) {
   act.live("misi baru: " + (goal.size() > 80 ? goal.substr(0, 80) + "…" : goal));
-  std::string lead = fixed.empty() ? route_for(router, TaskKind::Reasoning) : fixed;
+  std::string lead = fixed.empty() ? route_lead(router) : fixed;
   if (lead.empty()) lead = "auto";
+
+  // Graf awal: tampilkan manajer dalam fase PERENCANAAN seketika, sebelum panggilan perencana
+  // yang makan waktu. Dengan graph.json sudah berisi node, monitor (`claw watch`) langsung
+  // menggambar graph live sejak frame pertama alih-alih umpan aktivitas teks lama.
+  {
+    GraphState seed;
+    seed.goal = goal;
+    seed.nodes.push_back(GraphNode{"mgr", "manager", lead, NodeState::Planning, -1, true});
+    write_graph(home, seed);
+  }
 
   std::string prev;
   {
@@ -1617,7 +1779,7 @@ std::string run_mission(Router& router, ChatTools& tools, Activity& act, const f
   else
     perr = sr.error.value("message", std::string("error"));
   if (plan.tasks.empty()) {
-    Log::note("humanizer: rencana cadangan dipakai (" + perr + ")");
+    Log::note("a-work: rencana cadangan dipakai (" + perr + ")");
     plan = fallback_plan(goal, tools.skills_on ? tools.skills : std::vector<SkillInfo>{});
   }
   // Agen yang belum diberi skill: pilihkan dari bidang tugasnya.
@@ -1647,14 +1809,49 @@ std::string run_mission(Router& router, ChatTools& tools, Activity& act, const f
   std::vector<AgentOutcome> results(plan.tasks.size());
   std::map<std::string, size_t> index;
   for (size_t i = 0; i < plan.tasks.size(); ++i) index[plan.tasks[i].id] = i;
+
+  // State graph 3D untuk monitor (cmd_watch): manager + agen + ketergantungan, diperbarui
+  // tiap kali status agen berubah. Ditulis ke ~/.claw/graph.json; aman gagal.
+  std::mutex graph_mu;
+  GraphState gstate;
+  gstate.goal = goal;
+  gstate.domain = plan.domain;
+  gstate.nodes.push_back(GraphNode{"mgr", "manager", lead, NodeState::Running, -1, true});
+  {
+    std::map<std::string, int> wave_of;
+    int wnum = 0;
+    for (const auto& wv : plan_waves(plan)) {
+      for (size_t i : wv) wave_of[plan.tasks[i].id] = wnum;
+      ++wnum;
+    }
+    for (const auto& tk : plan.tasks) {
+      GraphNode nd;
+      nd.id = tk.id;
+      nd.label = tk.role;
+      nd.wave = wave_of.count(tk.id) ? wave_of[tk.id] : 0;
+      nd.state = NodeState::Idle;
+      gstate.nodes.push_back(nd);
+      gstate.edges.emplace_back("mgr", tk.id);                       // manager mendelegasi
+      for (const auto& d : tk.depends_on) gstate.edges.emplace_back(d, tk.id);  // ketergantungan
+    }
+  }
+  write_graph(home, gstate);
+
   for (const auto& wave : plan_waves(plan)) {
     // Berhenti responsif bila humanizer dimatikan (xset) atau Ctrl+C di tengah misi: jangan
     // luncurkan gelombang berikutnya. Gelombang yang sedang jalan tetap diselesaikan agar aman.
     if (hz.should_stop()) {
-      say("\n(dihentikan: humanizer dimatikan atau Ctrl+C — melewati sisa gelombang)\n");
+      say("\n(dihentikan: a-work dimatikan atau Ctrl+C, melewati sisa gelombang)\n");
       break;
     }
     std::vector<std::thread> workers;
+    // Pastikan tiap thread di-join walau peluncuran wave melempar di tengah (mis. std::thread
+    // gagal dibuat karena EAGAIN, atau bad_alloc): vector thread joinable yang dihancurkan saat
+    // stack-unwind = std::terminate. Guard ini men-join di akhir scope wave, normal maupun error.
+    struct JoinAll {
+      std::vector<std::thread>& ws;
+      ~JoinAll() { for (auto& w : ws) if (w.joinable()) w.join(); }
+    } join_all{workers};
     for (size_t i : wave) {
       const AgentTask& task = plan.tasks[i];
       std::string deps;
@@ -1665,18 +1862,71 @@ std::string run_mission(Router& router, ChatTools& tools, Activity& act, const f
       say("[" + task.id + "] mulai: " + task.role + "\n");
       act.live("agen " + task.id + " (" + task.role + ") mulai");
       workers.emplace_back([&, i, deps] {
+        // Thread worker tidak boleh melempar keluar: lambda std::thread yang melempar =
+        // std::terminate. Bungkus seluruh badan; kegagalan tak terduga menandai node Failed.
         try {
-          results[i] = run_agent(router, tools, act, goal, plan.tasks[i], deps, fixed);
-        } catch (const std::exception& e) {
-          results[i].report = std::string("gagal: ") + e.what();
+          {
+            std::lock_guard<std::mutex> lk(graph_mu);
+            gstate.set_state(plan.tasks[i].id, NodeState::Running);
+            write_graph(home, gstate);
+          }
+          try {
+            results[i] = run_agent(router, tools, act, goal, plan.tasks[i], deps, fixed);
+          } catch (const std::exception& e) {
+            results[i].report = std::string("gagal: ") + e.what();
+          }
+          // Manajer mengganti agen yang gagal/kadaluwarsa/respon tidak sesuai: coba sekali lagi
+          // dengan model BERBEDA yang cocok untuk jenis tugasnya. Percobaan ulang me-rute lewat
+          // task.kind (mengabaikan model tersemat `fixed`), dan router sudah menaruh model yang
+          // baru gagal pada cooldown — jadi penggantinya pasti model lain yang tetap punya skill
+          // di bidang tugas itu. Node ditandai "replaced" selama penggantian.
+          if (!results[i].ok && !hz.should_stop()) {
+            {
+              std::lock_guard<std::mutex> lk(graph_mu);
+              if (GraphNode* nd = gstate.find(plan.tasks[i].id)) nd->model = results[i].model;
+              gstate.set_state(plan.tasks[i].id, NodeState::Replaced);
+              write_graph(home, gstate);
+            }
+            act.live("agen " + plan.tasks[i].id + " diganti (model lain)");
+            try {
+              // fixed = "" → run_agent me-rute ulang lewat task.kind dan memilih model pengganti
+              // yang tepat untuk tugas itu, bukan mengulang model `fixed` yang baru saja gagal.
+              AgentOutcome retry = run_agent(router, tools, act, goal, plan.tasks[i], deps, std::string());
+              if (retry.ok || results[i].report.empty()) results[i] = retry;
+            } catch (const std::exception&) {
+            }
+            {
+              std::lock_guard<std::mutex> lk(graph_mu);
+              gstate.set_state(plan.tasks[i].id, NodeState::Running);
+              write_graph(home, gstate);
+            }
+          }
+          const auto& r = results[i];
+          {
+            std::lock_guard<std::mutex> lk(graph_mu);
+            if (GraphNode* nd = gstate.find(plan.tasks[i].id)) nd->model = r.model;
+            gstate.set_state(plan.tasks[i].id, r.ok ? NodeState::Done : NodeState::Failed);
+            write_graph(home, gstate);
+          }
+          say("[" + plan.tasks[i].id + "] " + (r.ok ? "selesai" : "gagal") + " · " + std::to_string(r.tools_used) +
+              " langkah" + (r.model.empty() ? "" : " · " + r.model) + "\n");
+          act.live("agen " + plan.tasks[i].id + (r.ok ? " selesai" : " gagal"));
+        } catch (...) {
+          try {
+            std::lock_guard<std::mutex> lk(graph_mu);
+            gstate.set_state(plan.tasks[i].id, NodeState::Failed);
+            write_graph(home, gstate);
+          } catch (...) {
+          }
         }
-        const auto& r = results[i];
-        say("[" + plan.tasks[i].id + "] " + (r.ok ? "selesai" : "gagal") + " · " + std::to_string(r.tools_used) +
-            " langkah" + (r.model.empty() ? "" : " · " + r.model) + "\n");
-        act.live("agen " + plan.tasks[i].id + (r.ok ? " selesai" : " gagal"));
       });
     }
-    for (auto& w : workers) w.join();
+    // Worker di-join oleh guard JoinAll saat scope wave berakhir (aman walau ada exception).
+  }
+  {
+    std::lock_guard<std::mutex> lk(graph_mu);
+    gstate.set_state("mgr", NodeState::Done);
+    write_graph(home, gstate);
   }
 
   // 3. Ringkasan untuk pengguna.
@@ -1684,11 +1934,13 @@ std::string run_mission(Router& router, ChatTools& tools, Activity& act, const f
   MarkdownStreamer md(true);
   if (plan.tasks.size() == 1) {
     report = results[0].report;
-    say("\n");
-    std::lock_guard<std::mutex> lk(g_io);
-    md.feed(report);
-    md.finish();
-    std::cout << "\n";
+    if (!g_graph_mode.load()) {
+      say("\n");
+      std::lock_guard<std::mutex> lk(g_io);
+      md.feed(report);
+      md.finish();
+      std::cout << "\n";
+    }
   } else {
     std::string reports;
     for (size_t i = 0; i < plan.tasks.size(); ++i)
@@ -1706,22 +1958,27 @@ std::string run_mission(Router& router, ChatTools& tools, Activity& act, const f
                                                 (tools.lang_block.empty() ? "" : "\n\n" + tools.lang_block)}},
                                {{"role", "user"}, {"content", "Goal: " + goal + "\n\nReports:\n" + reports}}})}};
     Spinner spin;
-    spin.start();
-    Router::StreamResult fr =
-        router.stream(sreq, lead, [&](const std::string& p) { md.feed(p); },
-                      [&] {
-                        spin.hide();
-                        std::cout << "\n";
-                      });
+    spin.start();  // guard di dalam: no-op saat mode graph
+    Router::StreamResult fr = router.stream(
+        sreq, lead,
+        [&](const std::string& p) { if (!g_graph_mode.load()) md.feed(p); },
+        [&] {
+          if (!g_graph_mode.load()) {
+            spin.hide();
+            std::cout << "\n";
+          }
+        });
     spin.hide();
     spin.join();
     if (fr.status == 200) {
-      md.finish();
-      std::cout << "\n";
       report = fr.content;
+      if (!g_graph_mode.load()) {
+        md.finish();
+        std::cout << "\n";
+      }
     } else {
       report = reports;  // ringkasan gagal: tampilkan laporan mentah agen
-      std::cout << "\n" << reports;
+      if (!g_graph_mode.load()) std::cout << "\n" << reports;
     }
   }
   act.live("misi selesai");
@@ -1740,7 +1997,8 @@ std::string run_mission(Router& router, ChatTools& tools, Activity& act, const f
 std::string next_frontier(Router& router, const ChatTools& tools, const std::string& prev_goal,
                           const std::string& prev_report, const HumanizerCtx& hz, const std::string& fixed) {
   std::string sys =
-      "You are the strategy lead of a never-ending autonomous research team (the claw humanizer). A "
+      "You are the strategy lead (manager) of a never-ending autonomous team working on the user's "
+      "project (claw a-work). A "
       "research objective was just completed. Following the CONTINUOUS RESEARCH STATE and RESOURCE "
       "DISCIPLINE principles, choose the single most valuable NEXT objective: what is still unknown, "
       "what can be verified or reproduced, what can be made faster/safer/more efficient, or a new "
@@ -1751,7 +2009,7 @@ std::string next_frontier(Router& router, const ChatTools& tools, const std::str
   if (!hz.doc.siklus.empty()) sys += "\n\nResearch vision to follow:\n" + clip(hz.doc.siklus, 6000);
   if (!tools.lang_block.empty()) sys += "\n\n" + tools.lang_block;
   std::string user = "Completed objective:\n" + prev_goal + "\n\nResult summary:\n" + clip(prev_report, 4000);
-  std::string lead = fixed.empty() ? route_for(router, TaskKind::Reasoning) : fixed;
+  std::string lead = fixed.empty() ? route_lead(router) : fixed;
   if (lead.empty()) lead = "auto";
   json req = {{"model", lead},
               {"messages", json::array({{{"role", "system"}, {"content", sys}},
@@ -1768,11 +2026,101 @@ std::string next_frontier(Router& router, const ChatTools& tools, const std::str
   return next;
 }
 
+// Gambar graph live di tab SAAT INI (layar alternatif) selama misi a-work berjalan di thread
+// latar. Keluar saat stop() true (misi tuntas) ATAU pengguna menekan q/Q/Ctrl+C; lalu pulihkan
+// tampilan terminal persis seperti sebelum graph muncul (layar alternatif keluar). Mengembalikan
+// true bila keluar karena tombol pengguna. Membaca graph.json + live.log (bukan memori bersama),
+// jadi tidak ada data race dengan thread misi.
+bool run_graph_view(const fs::path& home, const std::function<bool()>& stop) {
+  fs::path lp = Activity::live_path(home);
+  bool raw = false;
+#ifndef _WIN32
+  struct termios saved{};
+  if (tcgetattr(STDIN_FILENO, &saved) == 0) {
+    struct termios r = saved;
+    // Non-kanonik, tanpa echo, dan ISIG mati: Ctrl+C datang sebagai byte 0x03 (dibaca di loop),
+    // bukan sinyal — supaya keluar graph terkendali. VMIN/VTIME 0 = read() tak memblok.
+    r.c_lflag &= ~(static_cast<tcflag_t>(ICANON | ECHO | ISIG));
+    r.c_cc[VMIN] = 0;
+    r.c_cc[VTIME] = 0;
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &r) == 0) raw = true;
+  }
+#endif
+  std::cout << "\033[?1049h\033[?25l" << std::flush;  // masuk layar alternatif + sembunyikan kursor
+  auto t0 = std::chrono::steady_clock::now();
+  std::map<std::string, double> last_active;
+  size_t prev_lines = 0;
+  bool by_key = false;
+  while (!stop()) {
+    int cols = 80, rows = 24;
+#ifndef _WIN32
+    struct winsize ws{};
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0) {
+      cols = ws.ws_col;
+      rows = ws.ws_row;
+    }
+#endif
+    std::vector<std::string> lines;
+    {
+      std::ifstream in(lp);
+      std::string l;
+      while (std::getline(in, l))
+        if (!trim(l).empty()) lines.push_back(l);
+    }
+    double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    GraphState gg;
+    if (read_graph(home, gg) && !gg.nodes.empty()) {
+      if (lines.size() < prev_lines) {
+        prev_lines = 0;
+        last_active.clear();
+      }
+      for (size_t li = prev_lines; li < lines.size(); ++li) {
+        const std::string& ln = lines[li];
+        std::string id = "mgr";
+        size_t ap = ln.find("agen ");
+        if (ap != std::string::npos) {
+          size_t s = ap + 5, e = s;
+          while (e < ln.size()) {
+            char c = ln[e];
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) ++e;
+            else break;
+          }
+          if (e > s) id = ln.substr(s, e - s);
+        }
+        last_active[id] = t;
+      }
+      prev_lines = lines.size();
+      std::map<std::string, double> actm;
+      for (const auto& kv : last_active) actm[kv.first] = t - kv.second;
+      std::cout << render_graph(gg, cols, rows, t, lines, actm) << std::flush;
+    } else {
+      std::cout << "\033[2J\033[H  \033[2mmenyiapkan graph... (tekan q untuk keluar)\033[0m" << std::flush;
+    }
+#ifndef _WIN32
+    if (raw) {
+      char buf[32];
+      ssize_t n = read(STDIN_FILENO, buf, sizeof(buf));
+      for (ssize_t i = 0; i < n; ++i) {
+        char c = buf[i];
+        if (c == 'q' || c == 'Q' || c == 3 /* Ctrl+C */) { by_key = true; break; }
+      }
+      if (by_key) break;
+    }
+#endif
+    std::this_thread::sleep_for(std::chrono::milliseconds(90));  // ~11 fps
+  }
+  std::cout << "\033[?25h\033[?1049l" << std::flush;  // keluar layar alternatif + tampilkan kursor
+#ifndef _WIN32
+  if (raw) tcsetattr(STDIN_FILENO, TCSANOW, &saved);
+#endif
+  return by_key;
+}
+
 // `claw humanizer`: mode otonom. Tujuan dikerjakan tim agen dengan model dan router
 // milik humanizer sendiri, terpisah dari `claw chat`.
 int cmd_humanizer(Catalog& catalog, const Args& a) {
   if (!g_policy.humanizer) {
-    std::cerr << "humanizer dimatikan. Aktifkan di xset > AI (claw) > Humanizer.\n";
+    std::cerr << "a-work dimatikan. Aktifkan lewat xset > AI (claw).\n";
     return 1;
   }
   auto models = ensure_models(catalog);
@@ -1784,7 +2132,7 @@ int cmd_humanizer(Catalog& catalog, const Args& a) {
   fs::path home = home_path();
   ChatTools tools = make_tools(catalog, home);
   std::string fixed = preferred_model(router, g_policy.humanizer_model, "humanizer");
-  Activity act(false, true, home, "humanizer");
+  Activity act(false, true, home, "a-work");
 
   // Doktrin riset humanizer (dibundel di data/humanizer/): lead (planner/summary/frontier) memakai
   // penuh; tiap agen pekerja memakai distilasi ringkas lewat research_mode.
@@ -1803,16 +2151,14 @@ int cmd_humanizer(Catalog& catalog, const Args& a) {
   std::signal(SIGINT, [](int) { g_humanizer_stop = true; });
   std::signal(SIGTERM, [](int) { g_humanizer_stop = true; });
 
-  std::cout << "claw humanizer · mode otonom · " << router.size() << " model · model humanizer: "
-            << (fixed.empty() ? "auto" : fixed) << " · maks " << g_policy.humanizer_agents << " agen\n"
+  std::cout << "claw a-work · agen mengerjakan project-mu · " << router.size() << " model · model manajer: "
+            << (fixed.empty() ? "auto (reasoning terkuat)" : fixed) << " · maks " << g_policy.humanizer_agents
+            << " agen\n"
             << "izin: web " << (tools.browse_on ? g_policy.browse : "off") << ", berkas & terminal "
             << tools.fs_access << ", skill " << (tools.skills_on ? "aktif" : "mati")
             << ", doktrin " << (hz.doc.any() ? "termuat" : "bawaan") << "\n"
-            << "riset berlanjut tiap siklus (frontier berikutnya otomatis). berhenti: matikan Humanizer "
-               "di xset atau Ctrl+C.\n";
-  // Buka tab monitor aktivitas real-time (aplikasi menafsirkan OSC ini).
-  std::cout << "\033]5391;DRACX;monitor\033\\" << std::flush;
-
+            << "graph live tampil di tab ini; di graph tekan q (atau Ctrl+C) untuk keluar dan "
+               "memulihkan terminal.\n";
   // Loop riset never-ending dari satu seed: kerjakan misi, turunkan frontier berikutnya, ulangi.
   // Berhenti hanya saat should_stop() (xset off / Ctrl+C) atau strategi menyatakan tuntas (DONE).
   auto run_forever = [&](const std::string& seed) {
@@ -1837,14 +2183,42 @@ int cmd_humanizer(Catalog& catalog, const Args& a) {
     }
   };
 
+  // Satu tujuan dikerjakan: graph live digambar di tab SAAT INI (layar alternatif) sementara misi
+  // berjalan di thread latar (outputnya ke live.log → panel graph, teks ke stdout ditekan via
+  // g_graph_mode). Keluar dari graph (tekan q atau Ctrl+C) menghentikan a-work dan memulihkan
+  // tampilan terminal seperti sebelum graph muncul.
+  auto run_with_graph = [&](const std::string& seed) {
+    {
+      GraphState s0;
+      s0.goal = trim(seed);
+      s0.nodes.push_back(
+          GraphNode{"mgr", "manager", fixed.empty() ? "auto" : fixed, NodeState::Planning, -1, true});
+      write_graph(home, s0);
+    }
+    g_humanizer_stop = false;
+    std::atomic<bool> mission_done{false};
+    g_graph_mode = true;
+    std::thread mission([&] {
+      try {
+        run_forever(trim(seed));
+      } catch (...) {
+      }
+      mission_done = true;
+    });
+    run_graph_view(home, [&] { return g_humanizer_stop.load() || mission_done.load(); });
+    g_humanizer_stop = true;  // keluar graph = minta a-work berhenti
+    if (mission.joinable()) mission.join();
+    g_graph_mode = false;
+  };
+
   std::string goal;
   for (const auto& r : a.rest) goal += (goal.empty() ? "" : " ") + r;
   if (!trim(goal).empty()) {
-    run_forever(trim(goal));
-    std::cout << (humanizer_off() ? "\nhumanizer dimatikan di xset — berhenti.\n" : "\nselesai.\n");
+    run_with_graph(trim(goal));  // graph live di tab saat ini; keluar memulihkan terminal
+    std::cout << (humanizer_off() ? "a-work dimatikan di xset.\n" : "a-work ditutup, terminal dipulihkan.\n");
     return 0;
   }
-  std::cout << "tulis tujuan, tim agen meneliti terus sampai kamu berhenti. perintah: /models /skills "
+  std::cout << "tulis tujuan project, tim agen mengerjakannya terus sampai kamu berhenti. perintah: /models /skills "
                "/reset /exit\n";
   std::vector<std::string> input_history;
   std::string line;
@@ -1870,9 +2244,9 @@ int cmd_humanizer(Catalog& catalog, const Args& a) {
       for (const auto& sk : tools.skills) std::cout << "  " << sk.name << ": " << sk.description << "\n";
       continue;
     }
-    run_forever(line);
+    run_with_graph(line);  // tujuan dikonfirmasi: graph live di tab ini; keluar memulihkan terminal
     if (humanizer_off()) {
-      std::cout << "\nhumanizer dimatikan di xset — keluar.\n";
+      std::cout << "a-work dimatikan di xset, keluar.\n";
       break;
     }
     // Ctrl+C atau riset tuntas: kembali ke prompt untuk tujuan baru (sesi humanizer tetap hidup).
@@ -2074,7 +2448,7 @@ int cmd_policy(Catalog& catalog) {
             << "token proxy        : " << (g_policy.proxy_token ? "wajib" : "tidak wajib") << "\n"
             << "simpan percakapan  : " << (g_policy.save_conversations ? "boleh" : "tidak") << "\n"
             << "model chat         : " << g_policy.chat_model << "\n"
-            << "humanizer          : " << (g_policy.humanizer ? "aktif" : "mati (default)") << ", model "
+            << "a-work             : " << (g_policy.humanizer ? "aktif" : "mati (default)") << ", model "
             << g_policy.humanizer_model << ", maks " << g_policy.humanizer_agents << " agen\n"
             << "berkas & terminal  : " << g_policy.fs_access << "\n"
             << "catatan aktivitas  : " << (g_policy.activity_log ? "aktif" : "mati") << "\n";
@@ -2127,6 +2501,9 @@ int cmd_watch(Catalog& catalog) {
   const char* kSpin = "|/-\\";
   int tick = 0;
   size_t last_count = SIZE_MAX;
+  auto t0 = std::chrono::steady_clock::now();  // basis waktu animasi/parallax graph
+  std::map<std::string, double> last_active;   // id node -> waktu aktivitas terakhirnya (detik sejak t0)
+  size_t prev_lines = 0;                        // jumlah baris live.log yang sudah terbaca
 
   auto fit = [](std::string s, int w) {
     if (w <= 1) return std::string();
@@ -2150,6 +2527,40 @@ int cmd_watch(Catalog& catalog) {
       while (std::getline(in, l))
         if (!trim(l).empty()) lines.push_back(l);
     }
+    // Bila ada misi humanizer aktif (graph.json berisi node), gambar peta agen 3D cyberpunk
+    // yang beranimasi; jika tidak, jatuh ke umpan teks real-time di bawah.
+    {
+      GraphState gg;
+      if (read_graph(home, gg) && !gg.nodes.empty()) {
+        double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+        // Setiap baris live.log baru = satu aktivitas: catat waktunya pada node yang disebut
+        // ("agen <id> ...") atau pada manager untuk langkah perencanaan/ringkasan. Reaksi ini
+        // membuat graph tampak hidup mengikuti kerja agen.
+        if (lines.size() < prev_lines) { prev_lines = 0; last_active.clear(); }  // live.log diganti
+        for (size_t li = prev_lines; li < lines.size(); ++li) {
+          const std::string& ln = lines[li];
+          std::string id = "mgr";
+          size_t ap = ln.find("agen ");
+          if (ap != std::string::npos) {
+            size_t s = ap + 5, e = s;
+            while (e < ln.size()) {
+              char c = ln[e];
+              if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) ++e;
+              else break;
+            }
+            if (e > s) id = ln.substr(s, e - s);
+          }
+          last_active[id] = t;
+        }
+        prev_lines = lines.size();
+        std::map<std::string, double> act;
+        for (const auto& kv : last_active) act[kv.first] = t - kv.second;
+        std::cout << render_graph(gg, cols, rows, t, lines, act) << std::flush;
+        std::this_thread::sleep_for(std::chrono::milliseconds(90));  // ~11 fps, animasi mulus
+        ++tick;
+        continue;
+      }
+    }
     std::string out = "\033[2J\033[H";
     // Header bar (ungu), judul + indikator LIVE + spinner + jumlah.
     std::string spin(1, kSpin[tick % 4]);
@@ -2163,7 +2574,7 @@ int cmd_watch(Catalog& catalog) {
     int body = rows - 4;
     if (body < 1) body = 1;
     if (lines.empty()) {
-      out += "  \033[2mmenunggu aktivitas... jalankan `claw humanizer` di tab lain.\033[0m\n";
+      out += "  \033[2mmenunggu aktivitas... jalankan `claw a-work` di tab lain.\033[0m\n";
     } else {
       size_t start = lines.size() > static_cast<size_t>(body) ? lines.size() - body : 0;
       for (size_t i = start; i < lines.size(); ++i) {
@@ -2203,7 +2614,7 @@ int cmd_watch(Catalog& catalog) {
   // Minta aplikasi mematikan humanizer di xset; itu akan menutup tab ini dan menyimpan
   // catatan aktivitas (MainActivity.onHumanizerChanged). Aman diabaikan di terminal lain.
   std::cout << "\033]5391;DRACX;humanizer-off\033\\" << std::flush;
-  std::cout << "monitor aktivitas ditutup, humanizer dimatikan.\n";
+  std::cout << "monitor ditutup, a-work dimatikan.\n";
   return 0;
 }
 
@@ -2328,7 +2739,9 @@ int main(int argc, char** argv) {
     if (a.command == "models") return cmd_models(catalog);
     if (a.command == "serve") return finish(cmd_serve(catalog, a));
     if (a.command == "chat") return finish(cmd_chat(catalog));
-    if (a.command == "humanizer") return finish(cmd_humanizer(catalog, a));
+    // `a-work` = agents working on your project. `humanizer` tetap diterima sebagai alias lama
+    // (jembatan OSC/policy aplikasi masih memakai nama itu secara internal).
+    if (a.command == "a-work" || a.command == "humanizer") return finish(cmd_humanizer(catalog, a));
     if (a.command == "run") return finish(cmd_run(catalog, a, false));
     if (a.command == "ask") return finish(cmd_run(catalog, a, true));
     if (a.command == "doctor") return cmd_doctor(catalog);

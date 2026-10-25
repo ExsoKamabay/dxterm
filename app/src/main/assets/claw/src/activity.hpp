@@ -3,6 +3,7 @@
 // Satu berkas per sesi claw. Dimatikan lewat policy (activity_log = false).
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -43,6 +44,10 @@ class Activity {
  private:
   void ensure_header();
   void write(const std::string& block);
+  // Pangkas live.log ke ~baris terakhir saat melewati plafon ukuran (a-work never-ending).
+  void rotate_live(const fs::path& lp);
+  // Kosongkan live.log saat sesi live baru dimulai (buang aktivitas sesi lama).
+  void clear_live();
 
   bool detailed_;
   bool live_;
@@ -50,7 +55,9 @@ class Activity {
   std::string command_;
   fs::path path_;
   bool header_done_ = false;
-  int n_ = 0;
+  // Nomor langkah dibangun di step() tanpa memegang lock write(); atomic agar kenaikan dari
+  // beberapa agen a-work yang jalan bersamaan tidak jadi data race (UB).
+  std::atomic<int> n_{0};
   std::shared_ptr<std::mutex> mu_ = std::make_shared<std::mutex>();
 };
 

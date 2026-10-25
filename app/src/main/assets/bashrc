@@ -19,9 +19,9 @@ if [ -n "$DRAC_SU" ]; then
   # In a non-login root shell `logout` is not a builtin; make it a synonym for exit so the
   # documented "exit OR logout returns to the normal user" holds in every super-user shell.
   logout() { exit; }
-  PS1='\[\e[1;36m\]┌─[\[\e[1;35m\]dracOS@Xterm\[\e[1;36m\]]─[\[\e[1;32m\]\w\[\e[1;36m\]]\n\[\e[1;36m\]└──➤ # \[\e[0m\]'
+  PS1='\[\e[1;36m\]┌─[\[\e[1;35m\]DRAC⚔TERM\[\e[1;36m\] > \[\e[38;2;0;139;139m\](${DRAC_DEVICE:-dracxterm})\[\e[1;36m\]]─[\[\e[1;32m\]\w\[\e[1;36m\]]\n\[\e[1;36m\]└──➤ # \[\e[0m\]'
 else
   # Normal user: dracos identity + '$'.
   export USER="${USER:-dracos}" LOGNAME="${LOGNAME:-dracos}"
-  PS1='\[\e[1;36m\]┌─[\[\e[1;35m\]dracOS@Xterm\[\e[1;36m\]]─[\[\e[1;32m\]\w\[\e[1;36m\]]\n\[\e[1;36m\]└──➤ $ \[\e[0m\]'
+  PS1='\[\e[1;36m\]┌─[\[\e[1;35m\]DRAC⚔TERM\[\e[1;36m\] > \[\e[38;2;0;139;139m\](${DRAC_DEVICE:-dracxterm})\[\e[1;36m\]]─[\[\e[1;32m\]\w\[\e[1;36m\]]\n\[\e[1;36m\]└──➤ $ \[\e[0m\]'
 fi

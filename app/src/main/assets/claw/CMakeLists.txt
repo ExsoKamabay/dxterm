@@ -26,6 +26,7 @@ add_library(claw_core STATIC
   src/launcher.cpp
   src/policy.cpp
   src/skills.cpp
+  src/graph.cpp
   src/browse.cpp
   src/fstools.cpp
   src/route.cpp

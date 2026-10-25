@@ -55,6 +55,31 @@ class TerminalView @JvmOverloads constructor(
         runCatching { Typeface.createFromAsset(context.assets, "fonts/JetBrainsMono-Regular.ttf") }
             .getOrDefault(Typeface.MONOSPACE)
 
+    // Font terminal pilihan (semua monospace, dibundel di assets/fonts/). "jetbrains" memakai
+    // [termTypeface] bawaan; "system" memakai monospace perangkat; sisanya dimuat sekali lalu
+    // di-cache. Font tak dikenal/aset gagal jatuh ke [termTypeface].
+    private val fontFiles = mapOf(
+        "firamono" to "fonts/FiraMono-Regular.ttf",
+        "hack" to "fonts/Hack-Regular.ttf",
+        "ibmplex" to "fonts/IBMPlexMono-Regular.ttf",
+        "inconsolata" to "fonts/Inconsolata-Regular.ttf",
+        "noto" to "fonts/NotoSansMono-Regular.ttf",
+        "sourcecode" to "fonts/SourceCodePro-Regular.ttf",
+        "spacemono" to "fonts/SpaceMono-Regular.ttf",
+        "ubuntumono" to "fonts/UbuntuMono-Regular.ttf",
+        "anonymous" to "fonts/AnonymousPro-Regular.ttf",
+    )
+    private val typefaceCache = HashMap<String, Typeface>()
+    private fun typefaceFor(id: String): Typeface {
+        if (id == "system") return Typeface.MONOSPACE
+        if (id == "jetbrains") return termTypeface
+        typefaceCache[id]?.let { return it }
+        val file = fontFiles[id] ?: return termTypeface
+        val tf = runCatching { Typeface.createFromAsset(context.assets, file) }.getOrDefault(termTypeface)
+        typefaceCache[id] = tf
+        return tf
+    }
+
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = termTypeface
     }
@@ -561,7 +586,7 @@ class TerminalView @JvmOverloads constructor(
 
     // ---- font metrics & zoom (rendering only; PTY is resized, its contents are untouched) ----
     private fun applyFontMetrics() {
-        textPaint.typeface = if (fontFamilyId == "system") Typeface.MONOSPACE else termTypeface
+        textPaint.typeface = typefaceFor(fontFamilyId)
         textPaint.textSize = fontSizeDp * resources.displayMetrics.density
         val fm = textPaint.fontMetrics
         // Letter spacing widens the cell (glyph stays left-aligned in the cell); at 0 this is a no-op.

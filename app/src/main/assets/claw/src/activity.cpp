@@ -1,6 +1,8 @@
 #include "activity.hpp"
 
+#include <cstdint>
 #include <ctime>
+#include <deque>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
@@ -50,7 +52,23 @@ std::string indent(const std::string& s) {
 Activity::Activity(bool detailed, bool live, const fs::path& home, const std::string& command)
     : detailed_(detailed), live_(live), home_(home), command_(command) {
   if (detailed_) path_ = home_ / ("activity(" + stamp_for_name() + ").txt");
-  if (live_) this->live("== sesi claw " + command_ + " dimulai ==");
+  if (live_) {
+    // Mulai umpan live bersih: buang aktivitas sesi lama agar panel graph hanya menampilkan
+    // tugas saat ini. Tulis-atomik (rename), jadi monitor yang sedang membaca tak melihat
+    // berkas setengah jadi; cmd_watch juga tahan file menyusut (reset prev_lines).
+    clear_live();
+    this->live("== sesi claw " + command_ + " dimulai ==");
+  }
+}
+
+void Activity::clear_live() {
+  try {
+    fs::path lp = live_path(home_);
+    std::error_code ec;
+    fs::create_directories(lp.parent_path(), ec);
+    write_file_atomic(lp, std::string());
+  } catch (...) {
+  }
 }
 
 fs::path Activity::live_path(const fs::path& home) { return home / ".claw" / "live.log"; }
@@ -67,10 +85,40 @@ void Activity::live(const std::string& desc) {
     fs::path lp = live_path(home_);
     std::error_code ec;
     fs::create_directories(lp.parent_path(), ec);
-    std::ofstream f(lp, std::ios::app);
-    if (f) f << "> " << desc << " (" << timestamp() << ")\n";
+    {
+      std::ofstream f(lp, std::ios::app);
+      if (f) f << "> " << desc << " (" << timestamp() << ")\n";
+    }
+    rotate_live(lp);
   } catch (...) {
   }
+}
+
+void Activity::rotate_live(const fs::path& lp) {
+  // a-work never-ending terus meng-append live.log; tanpa plafon, berkas membengkak (MB→GB)
+  // dan `claw watch` membacanya ulang ~11x/detik. Saat melewati ~512 KiB, pangkas jadi ~1500
+  // baris terakhir lewat tulis-atomik (rename). cmd_watch sudah tahan file menyusut: ia me-reset
+  // prev_lines saat jumlah baris berkurang.
+  constexpr std::uintmax_t kMaxBytes = 512 * 1024;
+  constexpr std::size_t kKeepLines = 1500;
+  std::error_code ec;
+  std::uintmax_t sz = fs::file_size(lp, ec);
+  if (ec || sz <= kMaxBytes) return;
+  std::ifstream in(lp);
+  if (!in) return;
+  std::deque<std::string> tail;
+  std::string line;
+  while (std::getline(in, line)) {
+    tail.push_back(line);
+    if (tail.size() > kKeepLines) tail.pop_front();
+  }
+  in.close();
+  std::string out;
+  for (const auto& l : tail) {
+    out += l;
+    out += '\n';
+  }
+  write_file_atomic(lp, out);
 }
 
 void Activity::ensure_header() {

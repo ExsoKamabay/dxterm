@@ -26,6 +26,17 @@ enum class CursorStyle { BLOCK, BAR, UNDERLINE, HOLLOW;
 /** The kinds of setting rows the controller knows how to render and adjust. */
 enum class SettingKind { ENUM, TOGGLE, INT, ACTION, INFO }
 
+/** Outcome of an app-update check, surfaced by the Update module and owned by the host. */
+enum class UpdateState { UNKNOWN, CHECKING, CURRENT, AVAILABLE, ERROR }
+
+/** What the Update module renders between checks. The host fills it in after each check. */
+data class UpdateSnapshot(
+    val state: UpdateState = UpdateState.UNKNOWN,
+    val latest: String = "",   // the latest tag, when a check has returned one
+    val detail: String = "",   // an error message, when [state] is ERROR
+    val hasNotes: Boolean = false,
+)
+
 /** One selectable option for an ENUM setting (display label + canonical value). */
 data class Opt(val label: String, val value: String)
 
@@ -265,7 +276,7 @@ interface XsetContext {
 
     // ---- live render knobs (app-side, no restart) ----
     fun applyFontSizeDp(dp: Int)
-    fun applyFontFamily(id: String)        // "jetbrains" | "system"
+    fun applyFontFamily(id: String)        // id font: jetbrains/firamono/hack/.../anonymous | system
     fun applyLineSpacing(pct: Int)         // 90..160 (% of natural line height)
     fun applyLetterSpacing(milli: Int)     // 0..120 (em/1000)
     fun applyCursorStyle(style: CursorStyle)
@@ -307,6 +318,23 @@ interface XsetContext {
     fun browsingReady(): Boolean = false
     /** Model names in the guest's claw pool (/opt/claw/data/models.json), for the model pickers. */
     fun clawModels(): List<String> = emptyList()
+
+    // ---- app update (Settings ▸ Update) ----
+    /** Installed version name, e.g. "1.1.0". */
+    fun appVersion(): String = "?"
+    /** Installed versionCode, e.g. 7, or -1 when it cannot be read. */
+    fun appVersionCode(): Int = -1
+    /** The "owner/name" repository the update check reads its releases from. */
+    fun updateRepo(): String = ""
+    /** The last update check's result, for the module's status rows. */
+    fun updateSnapshot(): UpdateSnapshot = UpdateSnapshot()
+    /** Start a check (the host runs the network off the UI thread) and return an immediate status
+     *  line. The rows refresh when the result lands. Default no-op keeps other implementers valid. */
+    fun checkForUpdate(): String = "update check unavailable"
+    /** Show the latest release notes (a host dialog) and return a status line. */
+    fun showReleaseNotes(): String = "no release notes yet"
+    /** Open the latest release page so the user can read it or download the APK; returns a status line. */
+    fun openReleasePage(): String = "no release page yet"
 
     // ---- misc ----
     fun appInfo(): List<Pair<String, String>>

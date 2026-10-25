@@ -63,10 +63,22 @@ object DpkgRecoveryEngine {
                 env.forEach { kv -> val i = kv.indexOf('='); if (i > 0) put(kv.substring(0, i), kv.substring(i + 1)) }
             }
             val proc = pb.start()
-            proc.inputStream.use { input -> log.outputStream().use { input.copyTo(it) } }
-            val code = proc.waitFor()
+            // Kuras log di thread terpisah agar copyTo (yang baca sampai EOF) tidak memblok waitFor;
+            // lalu batasi waktu total. Script boot yang menggantung (mis. dpkg menunggu input tak
+            // terduga atau grandchild menahan stdout) dibunuh paksa agar provisioning tidak macet.
+            val drain = Thread {
+                runCatching { proc.inputStream.use { input -> log.outputStream().use { input.copyTo(it) } } }
+            }.apply { isDaemon = true; start() }
+            val finished = proc.waitFor(15, java.util.concurrent.TimeUnit.MINUTES)
+            if (!finished) {
+                Log.w(ShellLocator.TAG, "[RECOVERY] timeout (15m) — menghentikan paksa")
+                runCatching { proc.destroyForcibly() }
+                proc.waitFor()
+            }
+            drain.join(2000)
+            val code = proc.exitValue()
             Log.i(ShellLocator.TAG, "[RECOVERY] finished, exit=$code (see ${log.absolutePath})")
-            code == 0
+            finished && code == 0
         } catch (t: Throwable) {
             Log.w(ShellLocator.TAG, "[RECOVERY] skipped: ${t.message}")
             false

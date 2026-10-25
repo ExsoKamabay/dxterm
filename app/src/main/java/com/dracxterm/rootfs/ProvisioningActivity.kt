@@ -85,6 +85,12 @@ class ProvisioningActivity : AppCompatActivity() {
     /** The image a paused download belongs to, so Resume continues the same one. */
     private var pausedEntry: RootfsCatalog.Entry? = null
 
+    /** Set while the ERROR screen is showing a *download* failure (never a provisioning failure),
+     *  so Retry re-attempts the same transfer instead of running the boot pipeline. Running the boot
+     *  pipeline after a failed download found no image and dropped the user into the BusyBox
+     *  terminal, which read as the screen jumping back to the main view. */
+    private var downloadErrorEntry: RootfsCatalog.Entry? = null
+
     /** Guards against a second download thread: the button is disabled while one runs, but a
      *  fast double tap, a resume racing a finishing pause, or a rotation can still get through. */
     private val downloadRunning = AtomicBoolean(false)
@@ -139,7 +145,12 @@ class ProvisioningActivity : AppCompatActivity() {
                 else -> Unit
             }
         }
-        binding.retry.setOnClickListener { if (claimClick()) startProvisioning() }
+        binding.retry.setOnClickListener {
+            if (!claimClick()) return@setOnClickListener
+            // A download failure retries the transfer; any other failure retries the boot pipeline.
+            val entry = downloadErrorEntry
+            if (entry != null) retryDownload(entry) else startProvisioning()
+        }
 
         // The Indonesian default is applied in App.onCreate, before any activity exists.
         // Setting it here recreated this activity in the middle of its own provisioning
@@ -498,6 +509,9 @@ class ProvisioningActivity : AppCompatActivity() {
     private var catalogEntries: List<RootfsCatalog.Entry> = emptyList()
 
     private fun showConsent() {
+        // Back at the picker, so the previous download-error context no longer applies: a Retry
+        // reached from here would be for a fresh choice, not the failed transfer.
+        downloadErrorEntry = null
         val entries = RootfsCatalog.entriesFor(this)
         catalogEntries = entries
 
@@ -756,6 +770,9 @@ class ProvisioningActivity : AppCompatActivity() {
     private fun onDownloadFinished(result: RootfsDownloader.Result) {
         // No direct fiddling with the button here: each branch below moves the phase, and
         // renderPhase puts the controls into the shape that phase calls for.
+        // Cleared first; only a download failure (below) arms it, so Retry after any other
+        // outcome runs the boot pipeline rather than re-downloading.
+        downloadErrorEntry = null
         when (result) {
             is RootfsDownloader.Result.Cancelled -> {
                 // A pause, not an abandonment. The downloader keeps the .part file, so the
@@ -765,13 +782,30 @@ class ProvisioningActivity : AppCompatActivity() {
             }
             is RootfsDownloader.Result.Failed -> {
                 busy = false
-                // Retry restarts the pipeline, which lands back on the consent panel with
-                // the "resume" wording when a partial file survived the failure. A failed
-                // download must never trap the user: BusyBox is still there, so offer it.
+                // Retry re-attempts the SAME transfer (retryDownload), resuming from the .part
+                // file the downloader kept, and reports the reason it failed. A failed download
+                // must never trap the user: BusyBox is still there, so offer it as well.
+                downloadErrorEntry = pausedEntry
                 showError(getString(R.string.consent_download_failed, result.reason), allowBusybox = true)
             }
             is RootfsDownloader.Result.Ok -> extractDownloaded(result.file)
         }
+    }
+
+    /**
+     * Retry after a download failure: try the same transfer again, resuming from whatever the
+     * downloader kept on disk. When there is no network, the common reason a download fails, say so
+     * plainly and stay on the error screen so Retry works again once the connection is back. The old
+     * behaviour ran the boot pipeline here, which found no image and launched the BusyBox terminal,
+     * so the screen appeared to jump back to the main view instead of retrying.
+     */
+    private fun retryDownload(entry: RootfsCatalog.Entry) {
+        if (!hasNetwork()) {
+            showError(getString(R.string.consent_no_network), allowBusybox = true)
+            return
+        }
+        downloadErrorEntry = null
+        startDownload(entry)
     }
 
     private fun extractDownloaded(file: File) {

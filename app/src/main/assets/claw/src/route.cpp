@@ -111,4 +111,23 @@ std::string pick_model(const std::vector<std::string>& usable, TaskKind kind) {
   return best;
 }
 
+std::string pick_lead(const std::vector<std::string>& usable) {
+  if (usable.empty()) return "";
+  // 1) Model reasoning khusus yang benar-benar cocok (qwq/r1/o1/deepseek-r, atau yang terbesar).
+  std::string r = pick_model(usable, TaskKind::Reasoning);
+  if (!r.empty()) return r;
+  // 2) Tak ada yang lolos ambang reasoning: ambil model dengan parameter terbanyak — nalar paling
+  //    kuat yang tersedia. Urutan pool jadi pemecah seri (model pertama menang bila ukuran sama).
+  std::string best;
+  double best_b = -1;
+  for (const auto& name : usable) {
+    double b = param_billions(name);
+    if (b > best_b) {
+      best_b = b;
+      best = name;
+    }
+  }
+  return best_b > 0 ? best : "";
+}
+
 }  // namespace claw

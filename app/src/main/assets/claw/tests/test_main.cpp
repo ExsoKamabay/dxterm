@@ -13,6 +13,7 @@
 #include "catalog.hpp"
 #include "httplib.h"
 #include "activity.hpp"
+#include "graph.hpp"
 #include "agents.hpp"
 #include "browse.hpp"
 #include "fstools.hpp"
@@ -860,12 +861,48 @@ TEST(test_routing) {
   // Pool tanpa model coder khusus: coding jatuh ke instruct terbesar (>=threshold? tidak),
   // jadi kosong -> auto.
   CHECK(pick_model({"pollinations/openai-fast"}, K::Coding).empty());
+
+  // pick_lead (manajer a-work): utamakan reasoning terkuat; selain itu model terbesar.
+  std::string lead = pick_lead(pool);
+  CHECK(lead == "kilo/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free" ||
+        lead == "kilo/nvidia/nemotron-3-ultra-550b-a55b:free");
+  // Tanpa model reasoning khusus (skor di bawah ambang): ambil parameter terbanyak.
+  CHECK(pick_lead({"ovh/Mistral-7B-Instruct-v0.3", "ovh/Qwen2.5-72B-Instruct"}) ==
+        "ovh/Qwen2.5-72B-Instruct");
+  // Pool kosong -> "" (pemanggil memakai "auto").
+  CHECK(pick_lead({}).empty());
   CHECK(param_billions_helper());
 }
 
 // pembungkus kecil agar param parsing teruji lewat score_model perbandingan ukuran.
 static bool param_billions_helper() {
   return score_model("x-550b", TaskKind::Reasoning) > score_model("x-9b", TaskKind::Reasoning);
+}
+
+TEST(test_graph_progress) {
+  using claw::GraphNode;
+  using claw::GraphState;
+  using claw::NodeState;
+  // 2 agen: 1 selesai (1.0) + 1 jalan (0.5) = 1.5 / 2 = 75%. Manager tidak dihitung.
+  GraphState g;
+  g.goal = "uji progres";
+  g.domain = "software";
+  g.nodes.push_back(GraphNode{"mgr", "manager", "m", NodeState::Running, -1, true});
+  g.nodes.push_back(GraphNode{"a1", "dev", "", NodeState::Done, 0, false});
+  g.nodes.push_back(GraphNode{"a2", "test", "", NodeState::Running, 0, false});
+  CHECK(claw::render_graph(g, 80, 24, 0.0, {}).find("75%") != std::string::npos);
+  // Semua agen tuntas → 100%.
+  g.nodes[2].state = NodeState::Done;
+  CHECK(claw::render_graph(g, 80, 24, 0.0, {}).find("100%") != std::string::npos);
+  // Fase perencanaan (hanya manager, belum ada agen) → 0%.
+  GraphState p;
+  p.nodes.push_back(GraphNode{"mgr", "manager", "m", NodeState::Planning, -1, true});
+  CHECK(claw::render_graph(p, 80, 24, 0.0, {}).find("0%") != std::string::npos);
+  // Satu agen gagal juga dihitung tuntas → 100% (diproses, apa pun hasilnya).
+  GraphState f;
+  f.nodes.push_back(GraphNode{"mgr", "manager", "m", NodeState::Done, -1, true});
+  f.nodes.push_back(GraphNode{"a1", "dev", "", NodeState::Failed, 0, false});
+  CHECK(claw::render_graph(f, 80, 24, 0.0, {}).find("100%") != std::string::npos);
 }
 
 TEST(test_fstools) {
@@ -965,14 +1002,14 @@ TEST(test_activity_and_language) {
 TEST(test_policy) {
   fs::path d = fs::temp_directory_path() / ("claw-policy-" + random_hex(4));
   fs::create_directories(d);
-  Policy p = load_policy(d);  // tanpa file: bawaan yang aman
-  CHECK(p.browse == "ask" && !p.private_network && p.proxy_token && !p.save_conversations);
+  Policy p = load_policy(d);  // tanpa file: bawaan kemampuan penuh dracxterm (proxy_token tetap wajib)
+  CHECK(p.browse == "allow" && p.private_network && p.proxy_token && !p.save_conversations);
   write_file_atomic(d / "policy.json",
                     R"({"browse":"ALLOW","private_network":true,"skills":false,"update_interval_hours":0,)"
                     R"("proxy_token":"yes"})");
   p = load_policy(d);
   CHECK(p.browse == "allow" && p.private_network && !p.skills);
-  CHECK(!p.humanizer && p.activity_log);  // tidak disebut: bawaan aman
+  CHECK(p.humanizer && p.activity_log);  // tidak disebut: pakai bawaan penuh
   CHECK(p.update_interval_hours == 1);    // dijepit ke minimal 1 jam
   CHECK(p.proxy_token);                   // tipe salah: bawaan dipakai
   write_file_atomic(d / "policy.json", R"({"humanizer":true,"activity_log":false,"fs_access":"ALLOW"})");
@@ -983,15 +1020,15 @@ TEST(test_policy) {
                     R"({"chat_model":" ovh/a ","humanizer_model":"AUTO","humanizer_agents":40})");
   p = load_policy(d);
   CHECK(p.chat_model == "ovh/a" && p.humanizer_model == "auto" && p.humanizer_agents == 6);
-  CHECK(load_policy(fs::temp_directory_path() / "nope-xyz").fs_access == "off");  // default
+  CHECK(load_policy(fs::temp_directory_path() / "nope-xyz").fs_access == "allow");  // default penuh
   write_file_atomic(d / "policy.json", R"({"fs_access":"weird"})");
-  CHECK(load_policy(d).fs_access == "off");
+  CHECK(load_policy(d).fs_access == "allow");  // nilai tak dikenal -> bawaan penuh
   write_file_atomic(d / "policy.json", R"({"browse":"everything"})");
-  CHECK(load_policy(d).browse == "ask");
+  CHECK(load_policy(d).browse == "allow");
   write_file_atomic(d / "policy.json", "{rusak");
   std::string warn;
   p = load_policy(d, &warn);
-  CHECK(!warn.empty() && p.browse == "ask");
+  CHECK(!warn.empty() && p.browse == "allow");
   fs::remove_all(d);
 }
 
@@ -1227,6 +1264,7 @@ int main() {
   RUN(test_mdstream_spacing);
   RUN(test_mdstream_code_bar);
   RUN(test_routing);
+  RUN(test_graph_progress);
   RUN(test_fstools);
   RUN(test_activity_and_language);
   RUN(test_policy);

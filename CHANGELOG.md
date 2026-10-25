@@ -5,6 +5,50 @@ Rilis dracxterm, versi terbaru di atas. Format tanggalnya YYYY-MM-DD.
 `versionCode` adalah nomor internal Google Play. Ia hanya boleh naik, dan satu
 angka tidak boleh dipakai ulang untuk unggahan yang berbeda.
 
+## [1.1.2] - 2026-10-26
+
+`versionCode` 8. Rilis fitur, dipasang di atas 1.1.0 tanpa menghapus distro dan
+isi home.
+
+Mode otonom claw sekarang bernama `a-work`. Ketik `claw a-work`, tulis tujuan
+project Anda, lalu satu tim agen mengerjakannya terus sampai Anda berhenti.
+Begitu tujuan dikonfirmasi, grafnya langsung terbuka di tab yang sama: ada node
+untuk tiap agen, aktivitas yang sedang berjalan, dan satu bilah persen yang
+bergerak mengikuti kemajuan. Keluar dari graf mengembalikan terminal Anda seperti
+semula. Manajernya berpikir lebih dalam dan berganti model sendiri kalau satu
+model gagal atau habis masa pakainya.
+
+`xset` punya halaman Pembaruan. Satu ketukan memeriksa rilis terbaru di repositori
+project, memberi tahu apakah versi Anda sudah yang terbaru, lalu menampilkan
+catatan rilisnya tanpa Anda keluar dari aplikasi. Pemeriksaan ini juga jalan
+sendiri saat aplikasi dibuka, dan bisa dimatikan di halaman yang sama.
+
+Pilihan tampilan bertambah. Ada sepuluh font monospace di pengaturan, dari
+JetBrains Mono sampai Fira, Hack, dan IBM Plex. Tiga tema lama digambar ulang
+supaya warnanya lebih enak dibaca.
+
+Lebih banyak program Linux berjalan di dalam distro. Beberapa alat yang ditulis
+dengan Go, Rust, atau musl dulu berhenti dengan galat begitu dibuka; sekarang
+jalan. Riset web claw terasa lebih cepat karena halaman yang sama tidak diambil
+dua kali dalam satu sesi.
+
+Buat yang menguji keamanan, claw mendapat skill pentest white-hat. Alurnya dari
+pengintaian sampai laporan, dengan pagar yang jelas: targetnya hanya sistem milik
+sendiri atau yang sudah berizin.
+
+Saat unduhan distro gagal, tombol Coba lagi sekarang benar-benar mengulang
+unduhannya dan menyebutkan apa yang salah, misalnya tidak ada koneksi. Dulu
+layarnya malah lompat kembali ke tampilan awal.
+
+Prompt di baris perintah berganti rupa jadi `[DRAC⚔TERM > (nama perangkat)]`,
+supaya Anda tahu di perangkat mana sesi ini berjalan.
+
+Beberapa gangguan yang jarang terlihat tapi bisa membuat sesi panjang goyah juga
+ditutup, hasil penyisiran kode sebelum rilis ini.
+
+Yang perlu Anda tahu: pesan yang Anda kirim ke claw tetap dikirim ke layanan
+model pihak lain, sama seperti di 1.1.0.
+
 ## [1.1.0] - 2026-10-03
 
 `versionCode` 7. Rilis fitur. Distro di dalam aplikasi sekarang punya `claw`,

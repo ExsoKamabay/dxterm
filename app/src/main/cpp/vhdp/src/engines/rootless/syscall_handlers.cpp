@@ -178,10 +178,6 @@ const char* denial_reason(const abi::SyscallInfo& info) {
     if (n.rfind("io_uring", 0) == 0) {
         return "io_uring would execute path operations without syscall translation";
     }
-    if (n == "clone3") {
-        return "clone3 is refused so the C library falls back to clone(2), whose flags can be "
-               "checked";
-    }
     if (n == "openat2") {
         return "openat2 resolution flags are not translated yet; callers fall back to openat";
     }
@@ -1891,6 +1887,27 @@ SyscallAction Supervisor::dispatch(Tracee& t, arch::RegsAccess& regs,
                 regs.set_arg(0, a[0] & ~kCloneUntraced);
             }
             return {};
+        case Handler::clone3: {
+            // clone3(struct clone_args *cl_args, size_t size): unlike clone(2) the flags are not in
+            // a register but in the first 8 bytes of the struct in the tracee's memory. Read them;
+            // if CLONE_UNTRACED is set, clear it in place so the child stays under the supervisor
+            // (same rule as clone(2) above). Otherwise let it run unchanged: the child is followed
+            // through PTRACE_O_TRACECLONE/FORK just like clone(2), clone3 itself performs no path
+            // operation, and the namespace flags still fail in the kernel (fake-root holds no real
+            // capabilities), so path translation is not bypassed. Supporting clone3 lets statically
+            // linked Go/Rust/musl programs that issue clone3 directly (no clone(2) fallback) run.
+            const std::uint64_t cl_args = a[0];
+            const std::uint64_t cl_size = a[1];
+            if (cl_args != 0 && cl_size >= sizeof(std::uint64_t)) {
+                std::uint64_t flags = 0;
+                if (read_mem(t.tid, cl_args, &flags, sizeof(flags)) == 0 &&
+                    (flags & kCloneUntraced) != 0) {
+                    flags &= ~static_cast<std::uint64_t>(kCloneUntraced);
+                    (void)write_mem(t.tid, cl_args, &flags, sizeof(flags));
+                }
+            }
+            return {};
+        }
         case Handler::kill:
         case Handler::tkill:
         case Handler::tgkill:
@@ -1918,7 +1935,7 @@ SyscallAction Supervisor::dispatch(Tracee& t, arch::RegsAccess& regs,
                       : info.handler == Handler::deny_eopnotsupp ? EOPNOTSUPP
                                                                  : EACCES;
             std::string_view n = info.name;
-            Severity sev = (n == "clone3" || n == "openat2") ? Severity::debug : Severity::warning;
+            Severity sev = (n == "openat2") ? Severity::debug : Severity::warning;
             return deny(t, &info, info.nr, err,
                         info.cls == abi::SyscallClass::unsupported ? "syscall.unsupported"
                                                                    : "syscall.denied",

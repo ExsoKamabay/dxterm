@@ -108,6 +108,12 @@ std::vector<fs::path> project_skill_dirs(const fs::path& project_root, const fs:
     fs::path d = project_root / rel;
     if (fs::is_directory(d, ec)) dirs.push_back(fs::absolute(d));
   }
+  // Skill buatan model (tool create_skill) disimpan di HOME guest, selalu ikut dipindai.
+  if (const char* home = std::getenv("HOME")) {
+    std::error_code ec;
+    fs::path d = fs::path(home) / ".claw" / "skills";
+    if (fs::is_directory(d, ec)) dirs.push_back(fs::absolute(d));
+  }
   return dirs;
 }
 

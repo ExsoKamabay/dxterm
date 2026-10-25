@@ -11,19 +11,30 @@
 
 Open dracxterm and a shell is ready. If you need a complete Linux userspace, the app can install Debian 13 or Kali Linux inside its private storage. The Android device does not need to be rooted, and no account or companion service is required.
 
-Version 1.1.0 adds claw, an assistant you can chat with and put to work in the same terminal. It uses free model services that need no account, and you decide what it may touch.
+Once the distro is in place, you also get claw, an assistant you can chat with and put to work in the same terminal. It uses free model services that need no account, and you decide what it may touch.
 
 There are no ads, analytics, trackers, or telemetry, and nothing is sent to the developer. The app goes online to download the distro you pick, to set up Python and Scrapling so claw can open web pages (you can switch that off), and to send your messages to a model service when you use claw.
 
 ## See it running
 
-| claw chat (new in 1.1.0) | Debian 13 | Multiple workspaces |
+| claw a-work (new in 1.1.2) | Debian 13 | Multiple workspaces |
 |---|---|---|
-| ![claw chat answering a question in dracxterm](Screenshot/09-claw-chat-dracxterm.jpg) | ![Debian 13 running in dracxterm](Screenshot/03-terminal-debian-dracxterm.jpg) | ![htop in a second workspace](Screenshot/06-htop-multi-workspace-dracxterm.jpg) |
+| ![claw a-work running a team of agents in dracxterm](Screenshot/06-claw-awork-graph-dracxterm.jpg) | ![Debian 13 running in dracxterm](Screenshot/02-sistem-info-dracxterm.jpg) | ![several terminal workspaces in dracxterm](Screenshot/04-multi-workspace-dracxterm.jpg) |
+
+## New in 1.1.2
+
+- claw's autonomous mode is now called `a-work`. Type `claw a-work`, write your project goal, and a team of agents keeps working on it until you stop them. The graph opens right in the same tab once you confirm the goal, with a bar that fills as the work moves along, and leaving the graph brings your terminal back.
+- `xset` has an Update page. One tap checks the project's latest release, tells you whether you are on the newest version, and shows the release notes without leaving the app. It also checks on its own when the app opens, and you can switch that off.
+- Ten monospace fonts to pick from in settings, and three themes redrawn so the colours are easier to read.
+- More Linux programs run inside the distro, including Go, Rust, and musl tools that used to stop with an error the moment they started. claw also gained a white-hat pentest skill for testing systems you own or are allowed to test.
+- When a distro download fails, Try again now really retries the download and says what went wrong, such as no connection, instead of jumping back to the first screen.
+- The command prompt now reads `[DRAC⚔TERM > (device name)]`, so you can tell which device the session runs on.
+
+Full notes are in the [changelog](CHANGELOG.md) (Indonesian).
 
 ## New in 1.1.0
 
-- Type `claw chat` in an installed distro and ask in plain words. claw moves to another free model when one is busy; on the test phone it had 33 to choose from. `claw humanizer "goal"` hands a larger goal to several agents and keeps going until you turn it off.
+- Type `claw chat` in an installed distro and ask in plain words. claw moves to another free model when one is busy; on the test phone it had 33 to choose from. `claw a-work` (named `humanizer` before) hands a larger goal to several agents and keeps going until you turn it off.
 - The new AI (claw) page in `xset` sets what claw may do: open web pages, manage files and run commands, reach the local network, use skills. Files and commands start switched off.
 - `xset` menus come in Indonesian, English, Chinese, Vietnamese, Russian and Hindi. The default is Indonesian; pick English on the Language page if you read the menus in English before.
 - `sudo nmap` scans, `sudo` stops warning about the host name, packages that ship a service install without errors, and `date` follows the phone's clock.
@@ -57,13 +68,13 @@ The x86_64 build is useful on Android emulators, Waydroid, and ChromeOS. 32-bit 
 Download the APK and its `.sha256` file from the [latest GitHub release](https://github.com/ExsoKamabay/dxterm/releases/latest), then verify it:
 
 ```bash
-sha256sum -c dracxterm-1.1.0-vc7-release.apk.sha256
+sha256sum -c dracxterm-1.1.2-vc8-release.apk.sha256
 ```
 
 Install or upgrade with ADB:
 
 ```bash
-adb install -r dracxterm-1.1.0-vc7-release.apk
+adb install -r dracxterm-1.1.2-vc8-release.apk
 ```
 
 You can also copy the APK to the device and open it with a file manager. Android will ask you to allow installation from that source.

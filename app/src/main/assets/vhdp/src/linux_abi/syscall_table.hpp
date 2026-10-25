@@ -82,6 +82,7 @@ enum class Handler : std::uint16_t {
     sendmmsg,
     // process / signals
     clone,
+    clone3,
     kill,
     tkill,
     tgkill,

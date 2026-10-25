@@ -1,0 +1,13 @@
+Screenshot dracxterm 1.1.2 (perangkat Infinix, arm64, Android)
+Dipakai untuk halaman toko dan materi promosi. Satu baris per gambar, dari sisi pengguna.
+
+01-prompt-brand       Terminal Linux penuh di Android, dengan prompt yang menyapa pakai nama perangkatmu.
+02-sistem-info        Debian 13 berjalan di mesin VHDP tanpa root dan tanpa VM berat.
+03-palet-warna        Warna 256 dan truecolor 24-bit, jadi output tool dan editor tampil seperti di desktop.
+04-multi-workspace    Beberapa sesi terminal sekaligus, pindah tab dengan satu ketukan.
+05-claw-chat-ai       Asisten claw di dalam terminal: tanya pakai bahasa biasa, tanpa akun.
+06-claw-awork-graph   Mode a-work, tim agen mengerjakan tujuanmu dan progresnya terlihat langsung di graf.
+07-claw-skills        Puluhan skill siap pakai, dari riset web sampai uji keamanan white-hat.
+08-xset-tema          Ganti tema, font, kursor, dan warna langsung dari dalam terminal.
+09-xset-pembaruan     Cek versi terbaru dan baca catatan rilis tanpa keluar aplikasi.
+10-xset-diagnostik    Lihat kondisi mesin VHDP: rootless engine, kebijakan, dan uji mandiri.

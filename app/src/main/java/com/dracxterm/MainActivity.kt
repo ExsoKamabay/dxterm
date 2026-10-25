@@ -30,7 +30,11 @@ import com.dracxterm.xset.XsetBootstrap
 import com.dracxterm.xset.XsetContext
 import com.dracxterm.xset.XsetController
 import com.dracxterm.xset.XsetDefaults
+import com.dracxterm.xset.XsetI18n
 import com.dracxterm.xset.XsetStore
+import com.dracxterm.xset.UpdateSnapshot
+import com.dracxterm.xset.UpdateState
+import com.dracxterm.update.UpdateChecker
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
@@ -91,6 +95,8 @@ class MainActivity : AppCompatActivity() {
         XsetBootstrap.install()
         xset = XsetController(makeXsetContext())
         binding.terminal.dashboard = xset
+        // Check the project's GitHub releases in the background (throttled, opt-out in Settings ▸ Update).
+        maybeAutoCheckUpdate()
 
         first = TerminalSession(this)
         binding.terminal.attach(first)
@@ -108,8 +114,13 @@ class MainActivity : AppCompatActivity() {
                     workspaces.markActiveStarted()
                     applyXsetOnStart()
                     // Seed the claw policy once the guest tree (incl. /opt/claw) has been prepared by
-                    // the spawn. Best-effort and idempotent; a change from the xset module rewrites it.
-                    binding.terminal.postDelayed({ runCatching { writeClawPolicy() } }, 2000)
+                    // the spawn, dan pastikan humanizer tetap MENYALA (siap dipakai). Tab monitor graf
+                    // TIDAK dibuka di sini: ia hanya muncul setelah pengguna menjalankan `claw humanizer`
+                    // dan mengonfirmasi prompt tujuannya (claw mengirim OSC monitor saat itu). Best-effort.
+                    binding.terminal.postDelayed({
+                        runCatching { xsetStore.set("claw.humanizer", "on") }
+                        runCatching { writeClawPolicy() }
+                    }, 2000)
                 } else {
                     Toast.makeText(this, getString(R.string.app_name) + ": start failed",
                         Toast.LENGTH_LONG).show()
@@ -339,31 +350,34 @@ class MainActivity : AppCompatActivity() {
     private var lastClawHumanizer: Boolean? = null
 
     /**
-     * Humanizer just changed. ON → open the live-activity monitor tab (if a rootfs is present).
-     * OFF → close that tab, and save the live activity to home/activity(<time>).log then clear the
-     * live feed, so the record is kept and the monitor closes cleanly. Best-effort; never throws.
+     * Humanizer (a-work) just turned OFF: save the guest's live feed to home/activity(<time>).log,
+     * clear it, and prune old archives. The live graph is now drawn in-process in the a-work tab's
+     * alternate screen (no separate monitor tab), so turning ON needs nothing here. Never throws.
      */
     private fun onHumanizerChanged(humanizer: Boolean) {
         val prev = lastClawHumanizer
         lastClawHumanizer = humanizer
         if (prev == null || prev == humanizer) return   // baseline / no change: do nothing
-        if (humanizer) {
-            if (File(File(filesDir, "rootfs"), "opt/claw/bin/claw").exists())
-                runCatching { workspaces.addWatcherTab("claw watch\n") }
-        } else {
-            // Save the guest's live feed (~/.claw/live.log lives in the guest HOME bind = guest-home).
-            runCatching {
-                val gh = File(filesDir, "guest-home")
-                val live = File(gh, ".claw/live.log")
-                if (live.isFile && live.length() > 0) {
-                    val ts = java.text.SimpleDateFormat("yyyy-MM-dd HH-mm-ss", java.util.Locale.US)
-                        .format(java.util.Date())
-                    live.copyTo(File(gh, "activity($ts).log"), overwrite = true)
-                    live.writeText("")   // clear the feed so a later session starts fresh
-                }
+        if (humanizer) return                            // graph is in-process in the a-work tab
+        // OFF: save the guest's live feed (~/.claw/live.log in the guest HOME bind = guest-home).
+        runCatching {
+            val gh = File(filesDir, "guest-home")
+            val live = File(gh, ".claw/live.log")
+            if (live.isFile && live.length() > 0) {
+                val ts = java.text.SimpleDateFormat("yyyy-MM-dd HH-mm-ss", java.util.Locale.US)
+                    .format(java.util.Date())
+                live.copyTo(File(gh, "activity($ts).log"), overwrite = true)
+                live.writeText("")   // clear the feed so a later session starts fresh
+                // Keep only the newest archives so guest-home never fills with old logs.
+                // The timestamped names sort chronologically, so dropping all but the last
+                // few leaves the most recent ones.
+                gh.listFiles { f -> f.name.startsWith("activity(") && f.name.endsWith(").log") }
+                    ?.sortedBy { it.name }
+                    ?.dropLast(10)
+                    ?.forEach { old -> runCatching { old.delete() } }
             }
-            runCatching { workspaces.closeWatcherTab() }
         }
+        runCatching { workspaces.closeWatcherTab() }
     }
 
     private fun makeXsetContext(): XsetContext = object : XsetContext {
@@ -446,6 +460,13 @@ class MainActivity : AppCompatActivity() {
                 "No email app. Address copied: $DEVELOPER_EMAIL"
             }
         }
+        override fun appVersion(): String = currentVersionName()
+        override fun appVersionCode(): Int = currentVersionCode()
+        override fun updateRepo(): String = UpdateChecker.REPO
+        override fun updateSnapshot(): UpdateSnapshot = updateSnap
+        override fun checkForUpdate(): String = startUpdateCheck(announce = false)
+        override fun showReleaseNotes(): String = showReleaseNotesDialog()
+        override fun openReleasePage(): String = openReleasePageExternal()
         override fun status(msg: String) { /* dashboard shows its own status line; no toast spam */ }
         override fun reapplyAll() { applyXsetOnStart(); binding.terminal.setFontSizeDp(xsetStore.getInt("font.size", binding.terminal.currentFontDp())) }
         override fun exportConfig(): String? = runCatching {
@@ -457,6 +478,133 @@ class MainActivity : AppCompatActivity() {
             if (!f.exists()) false else xsetStore.fromJson(f.readText())
         }.getOrDefault(false)
         override fun requestClose() { binding.terminal.closeDashboard() }
+    }
+
+    // ---- app self-update (Settings ▸ Update); host-owned state read by the Update module ----
+    private var updateSnap = UpdateSnapshot()
+    private var lastRelease: UpdateChecker.Result? = null
+    @Volatile private var updateChecking = false
+
+    private fun currentVersionName(): String =
+        runCatching { packageManager.getPackageInfo(packageName, 0).versionName ?: "?" }.getOrDefault("?")
+
+    private fun currentVersionCode(): Int = runCatching {
+        val pi = packageManager.getPackageInfo(packageName, 0)
+        if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode.toInt() else @Suppress("DEPRECATION") pi.versionCode
+    }.getOrDefault(-1)
+
+    /** Fetch the latest release off the UI thread, then refresh the dashboard from the result.
+     *  [announce] shows a one-time notice when a background check finds a newer build; a manual
+     *  check stays silent and only updates the rows. Never blocks the UI or the terminal. */
+    private fun startUpdateCheck(announce: Boolean): String {
+        if (updateChecking) return XsetI18n.t("val.checking")
+        updateChecking = true
+        // Keep the latest tag and whether notes exist across the CHECKING state, so re-checking does
+        // not momentarily drop the "view release notes" row that a previous result already earned.
+        updateSnap = UpdateSnapshot(
+            state = UpdateState.CHECKING,
+            latest = updateSnap.latest,
+            hasNotes = lastRelease?.notes?.isNotBlank() == true,
+        )
+        xsetStore.set("update.last_check_ms", System.currentTimeMillis().toString())
+        Thread {
+            val res = UpdateChecker.fetchLatest()
+            runOnUiThread {
+                updateChecking = false
+                applyUpdateResult(res, announce)
+                if (binding.terminal.dashboardActive()) binding.terminal.invalidate()
+            }
+        }.start()
+        return XsetI18n.t("val.checking")
+    }
+
+    private fun applyUpdateResult(res: UpdateChecker.Result, announce: Boolean) {
+        if (!res.ok) {
+            updateSnap = UpdateSnapshot(state = UpdateState.ERROR, detail = res.error ?: "")
+            xset.setStatus("${XsetI18n.t("val.check_error")}: ${res.error ?: ""}")
+            return
+        }
+        lastRelease = res
+        val newer = isNewer(res)
+        updateSnap = UpdateSnapshot(
+            state = if (newer) UpdateState.AVAILABLE else UpdateState.CURRENT,
+            latest = res.tag, hasNotes = res.notes.isNotBlank(),
+        )
+        xset.setStatus(
+            if (newer) "${XsetI18n.t("val.update_available")}: ${res.tag}"
+            else "${XsetI18n.t("val.up_to_date")} (${currentVersionName()})"
+        )
+        if (announce && newer) announceUpdate(res)
+    }
+
+    /** A versionCode from the APK asset is exact; the dotted tag is the fallback when none exists. */
+    private fun isNewer(res: UpdateChecker.Result): Boolean {
+        val cur = currentVersionCode()
+        return if (res.versionCode >= 0 && cur >= 0) res.versionCode > cur
+        else UpdateChecker.compareVersionNames(res.tag, currentVersionName()) > 0
+    }
+
+    private fun announceUpdate(res: UpdateChecker.Result) {
+        if (xsetStore.get("update.notified_tag") == res.tag) return  // this version was announced already
+        xsetStore.set("update.notified_tag", res.tag)
+        runCatching {
+            Toast.makeText(
+                this,
+                "${getString(R.string.app_name)}: ${XsetI18n.t("val.update_available")} ${res.tag}",
+                Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
+
+    /** Show the latest release notes in a scrollable dialog, with a one-tap route to the download
+     *  when the shown release is newer than the installed build. */
+    private fun showReleaseNotesDialog(): String {
+        val r = lastRelease ?: return XsetI18n.t("val.not_checked")
+        if (r.notes.isBlank()) return XsetI18n.t("val.no_notes")
+        runOnUiThread {
+            val pad = (16 * resources.displayMetrics.density).toInt()
+            val tv = TextView(this).apply {
+                text = r.notes
+                setTextIsSelectable(true)
+                setPadding(pad + pad, pad, pad + pad, pad)
+            }
+            val scroll = android.widget.ScrollView(this).apply { addView(tv) }
+            val b = androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(r.name.ifBlank { r.tag })
+                .setView(scroll)
+                .setPositiveButton(android.R.string.ok, null)
+            if (isNewer(r)) {
+                b.setNeutralButton(XsetI18n.t("act.open_release")) { _, _ -> openUrl(r.apkUrl.ifBlank { r.pageUrl }) }
+            }
+            runCatching { b.show() }
+        }
+        return r.tag
+    }
+
+    private fun openReleasePageExternal(): String {
+        val url = lastRelease?.pageUrl?.takeIf { it.isNotBlank() }
+            ?: "https://github.com/${UpdateChecker.REPO}/releases/latest"
+        openUrl(url)
+        return url
+    }
+
+    private fun openUrl(url: String) {
+        runCatching {
+            startActivity(
+                Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
+
+    /** On launch, when auto-check is on and the throttle window has passed, check in the background
+     *  and show a one-time notice if a newer build exists. The network runs off the UI thread. */
+    private fun maybeAutoCheckUpdate() {
+        if (!xsetStore.getBool("update.auto_check")) return
+        val now = System.currentTimeMillis()
+        val last = xsetStore.get("update.last_check_ms").toLongOrNull() ?: 0L
+        if (now - last < 6 * 60 * 60 * 1000L) return  // at most once every 6 hours
+        startUpdateCheck(announce = true)
     }
 
     /** Read-only, device-derived system information for the About screen. Every value comes from a

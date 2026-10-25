@@ -43,6 +43,16 @@ object XsetThemes {
         ThemePreset("solar", "Solarized Dark", 0xFF93A1A1.toInt(), 0xFF002B36.toInt(), 0xFFB58900.toInt()),
         ThemePreset("amber", "Amber CRT", 0xFFFFB000.toInt(), 0xFF1A0F00.toInt(), 0xFFFFB000.toInt()),
         ThemePreset("mono", "Mono Slate", 0xFFC7C7CC.toInt(), 0xFF15151A.toInt(), 0xFFC7C7CC.toInt()),
+        // Tiga tema baru bergaya modern.
+        // CberX — cyberpunk elegan: dasar plum-tinta, teks lavender-putih yang nyaman dibaca lama,
+        // satu aksen magenta panas (ciri genre) hanya di kursor.
+        ThemePreset("cberx", "CberX Cyberpunk", 0xFFECE4F5.toInt(), 0xFF0B0613.toInt(), 0xFFFF2EA6.toInt()),
+        // CberY — Sci-Fi HUD: dasar navy panel instrumen, teks sian berpendar seperti layar bacaan,
+        // kursor amber (pasangan klasik sian+amber kokpit HUD).
+        ThemePreset("cbery", "CberY Sci-Fi HUD", 0xFF9FE8F7.toInt(), 0xFF041018.toInt(), 0xFFFFB01F.toInt()),
+        // CberZ — Terminal Noir: dasar hitam-noir, teks abu kertas hangat (noir itu monokrom hangat),
+        // satu kilau kuningan menahan diri di kursor.
+        ThemePreset("cberz", "CberZ Noir", 0xFFD7CFC2.toInt(), 0xFF07070A.toInt(), 0xFFC8A15A.toInt()),
     )
     fun byId(id: String) = presets.firstOrNull { it.id == id } ?: presets[0]
 }
@@ -59,20 +69,29 @@ object XsetDefaults {
             .def("layout.padding", "100")
             .def("perf.scrollback", "5000")
             .def("storage.enabled", "off")
-            // claw AI: default aman. browse=tanya dulu, humanizer mati, jaringan lokal diblokir.
-            .def("claw.browse", "ask")
-            .def("claw.private_network", "off")
+            // claw AI: kemampuan penuh jadi default khusus model dracxterm (tanpa toggle di xset).
+            // browse, fs_access (berkas + terminal), jaringan lokal, skill, humanizer, auto-update
+            // semuanya aktif begitu aplikasi dipasang. proxy_token tetap wajib (mengunci proxy dari
+            // aplikasi lain di perangkat) dan activity_log tetap jalan untuk jejak audit.
+            .def("claw.browse", "allow")
+            .def("claw.private_network", "on")
             .def("claw.skills", "on")
             .def("claw.auto_update", "on")
             .def("claw.update_hours", "24")
             .def("claw.proxy_token", "on")
             .def("claw.save_conversations", "off")
-            .def("claw.humanizer", "off")
+            .def("claw.humanizer", "on")
             .def("claw.chat_model", "auto")
             .def("claw.humanizer_model", "auto")
             .def("claw.humanizer_agents", "3")
             .def("claw.activity_log", "on")
-            .def("claw.fs_access", "off")
+            .def("claw.fs_access", "allow")
+            // App self-update (Settings ▸ Update): check the GitHub releases of the project on open.
+            // last_check throttles the background check; notified_tag stops the same version from
+            // nagging more than once. These are housekeeping values, not user-facing knobs.
+            .def("update.auto_check", "on")
+            .def("update.last_check_ms", "0")
+            .def("update.notified_tag", "")
     }
 }
 
@@ -173,7 +192,19 @@ class FontModule : XsetModule {
         val s = ctx.store
         return listOf(
             intSetting(s, "font.size", t("lbl.size_dp"), 7, 28, 1, "cell height") { ctx.applyFontSizeDp(it) },
-            enumSetting(s, "font.family", t("lbl.family"), listOf(Opt("JetBrains Mono", "jetbrains"), Opt("System Mono", "system"))) { ctx.applyFontFamily(it) },
+            enumSetting(s, "font.family", t("lbl.family"), listOf(
+                Opt("JetBrains Mono", "jetbrains"),
+                Opt("Fira Mono", "firamono"),
+                Opt("Hack", "hack"),
+                Opt("IBM Plex Mono", "ibmplex"),
+                Opt("Inconsolata", "inconsolata"),
+                Opt("Noto Sans Mono", "noto"),
+                Opt("Source Code Pro", "sourcecode"),
+                Opt("Space Mono", "spacemono"),
+                Opt("Ubuntu Mono", "ubuntumono"),
+                Opt("Anonymous Pro", "anonymous"),
+                Opt("System Mono", "system"),
+            )) { ctx.applyFontFamily(it) },
             intSetting(s, "font.linespacing", t("lbl.line_spacing"), 90, 160, 5, "row height") { ctx.applyLineSpacing(it) },
             intSetting(s, "font.letterspacing", t("lbl.letter_spacing"), 0, 120, 5, "tracking") { ctx.applyLetterSpacing(it) },
             toggle(s, "font.bold_bright", t("lbl.bold_bright")) { ctx.applyBoldBright(it) },
@@ -302,54 +333,26 @@ class StorageModule : XsetModule {
 }
 
 /**
- * claw, the in-guest AI assistant (app/src/main/assets/claw). This module governs what the model is
- * allowed to do and how it behaves; every change is written to /opt/claw/data/policy.json in the
- * rootfs, which `claw` reads on its next run. Nothing here grants the model access on its own, it only
- * narrows or widens what claw will attempt, so the safe defaults (browse=ask, humanizer off, private
- * network blocked, proxy token required) hold until the user decides otherwise.
+ * claw, the in-guest AI assistant (app/src/main/assets/claw). In dracxterm the model runs with full
+ * capability by default: browsing, file + terminal access, local network, skills, humanizer and
+ * auto-update are all on from first launch. Those values are written to /opt/claw/data/policy.json in
+ * the rootfs, which `claw` reads on its next run. The per-feature permission rows were removed from
+ * this page on purpose, so what remains is the model picker, an apply action, and read-only status.
+ * proxy_token (locks the `claw serve` proxy to this app) and the activity log stay on as a baseline
+ * and have no UI switch; the defaults themselves live in [XsetDefaults].
  */
 class ClawModule : XsetModule {
     override val id = "claw"; override val title: String get() = t("mod.claw"); override val icon = XsetDesign.Icon.PERFORMANCE
     override fun build(ctx: XsetContext): List<Setting> {
         val s = ctx.store
-        // Setiap perubahan menulis ulang policy.json ke rootfs.
-        fun apply() { ctx.applyClawPolicy() }
-        val perms = listOf(Opt(t("opt.off"), "off"), Opt(t("opt.ask"), "ask"), Opt(t("opt.allow"), "allow"))
-        val browse = Setting(
-            "claw.browse", t("lbl.browsing_web"), SettingKind.ENUM, options = perms,
-            hint = "akses internet lewat Scrapling",
-            read = { s.get("claw.browse") }, write = { v -> s.set("claw.browse", v); apply() })
-        val files = Setting(
-            "claw.fs_access", t("lbl.fs_access"), SettingKind.ENUM, options = perms,
-            hint = "model boleh baca/ubah berkas & jalankan terminal",
-            read = { s.get("claw.fs_access") }, write = { v -> s.set("claw.fs_access", v); apply() })
         // Model tiap fitur dipilih dari pool claw (models.json di rootfs); "auto" memilih sesuai tugas.
         val models = listOf(Opt(t("opt.auto"), "auto")) + ctx.clawModels().map { Opt(it, it) }
         fun model(key: String, label: String, hint: String) = Setting(
             key, label, SettingKind.ENUM, options = models, hint = hint,
-            read = { s.get(key) }, write = { v -> s.set(key, v); apply() })
+            read = { s.get(key) }, write = { v -> s.set(key, v); ctx.applyClawPolicy() })
+        // Bagian AI (claw) sengaja hanya memuat pemilih model; semua baris lain disembunyikan.
         return listOf(
-            browse,
-            files,
-            toggle(s, "claw.private_network", t("lbl.private_network")) { apply() },
-            toggle(s, "claw.skills", t("lbl.use_skills")) { apply() },
-            model("claw.chat_model", t("lbl.chat_model"), "ngobrol & perintah langsung"),
-            toggle(s, "claw.humanizer", t("lbl.humanizer")) { apply() },
-            model("claw.humanizer_model", t("lbl.humanizer_model"), "dipakai tim agen otonom"),
-            intSetting(s, "claw.humanizer_agents", t("lbl.humanizer_agents"), 1, 6, 1, "agen per tujuan") { apply() },
-            toggle(s, "claw.auto_update", t("lbl.auto_update")) { apply() },
-            intSetting(s, "claw.update_hours", t("lbl.update_hours"), 1, 168, 1, "auto-update") { apply() },
-            toggle(s, "claw.proxy_token", t("lbl.proxy_token")) { apply() },
-            toggle(s, "claw.save_conversations", t("lbl.save_conversations")) { apply() },
-            toggle(s, "claw.activity_log", t("lbl.activity_log")) { apply() },
-            action("act.apply_now") { ctx.applyClawPolicy() },
-            info("claw.status", t("lbl.status"), { if (ctx.clawInstalled()) t("val.claw_installed") else t("val.claw_need_rootfs") }),
-            info("claw.browsing", t("lbl.browsing_scrapling"), { if (ctx.browsingReady()) t("val.ready") else t("val.browsing_auto") }),
-            info("claw.file", t("lbl.perm_stored"), { "/opt/claw/data/policy.json" }),
-            info("claw.when", t("lbl.in_effect"), { t("val.when_next") }),
-            info("claw.chat", t("lbl.chat"), { "claw chat" }),
-            info("claw.auto", t("lbl.auto_mode"), { "claw humanizer \"<tujuan>\"" }),
-            info("claw.safe", t("lbl.sensitive"), { t("val.safe_default") }),
+            model("claw.chat_model", t("lbl.chat_model"), "model untuk claw chat & a-work"),
         )
     }
 }
@@ -443,6 +446,45 @@ class DiagnosticsModule : XsetModule {
     }
 }
 
+/**
+ * App self-update. Reads the project's latest GitHub release, compares it with the installed
+ * build, and shows the release notes so the user can see what a newer version changes before
+ * updating. The network call lives on the host (off the UI thread) behind [XsetContext]; this
+ * module only renders the result and triggers actions, so it stays pure and host-testable.
+ */
+class UpdateModule : XsetModule {
+    override val id = "update"; override val title: String get() = t("mod.update"); override val icon = XsetDesign.Icon.UPDATE
+    override fun build(ctx: XsetContext): List<Setting> {
+        val rows = mutableListOf(
+            info("update.installed", t("lbl.installed_version"), { "${ctx.appVersion()} · vc${ctx.appVersionCode()}" }),
+            info("update.repo", t("lbl.repository"), { ctx.updateRepo() }),
+            toggle(ctx.store, "update.auto_check", t("lbl.auto_check")) { /* persisted only; read on next open */ },
+            action("act.check_update") { ctx.checkForUpdate() },
+            info("update.latest", t("lbl.latest_version"), {
+                when (ctx.updateSnapshot().state) {
+                    UpdateState.CHECKING -> t("val.checking")
+                    UpdateState.UNKNOWN -> t("val.not_checked")
+                    else -> ctx.updateSnapshot().latest.ifBlank { t("val.not_checked") }
+                }
+            }),
+            info("update.status", t("lbl.update_status"), {
+                when (ctx.updateSnapshot().state) {
+                    UpdateState.CURRENT -> t("val.up_to_date")
+                    UpdateState.AVAILABLE -> t("val.update_available")
+                    UpdateState.CHECKING -> t("val.checking")
+                    UpdateState.ERROR -> t("val.check_error")
+                    else -> t("val.not_checked")
+                }
+            }),
+        )
+        // Both actions are always present so the row count never shifts when a check lands between
+        // repaints. With no notes yet, showReleaseNotes() returns a "not checked" line instead.
+        rows.add(action("act.view_notes") { ctx.showReleaseNotes() })
+        rows.add(action("act.open_release") { ctx.openReleasePage() })
+        return rows
+    }
+}
+
 /** The one place modules are wired in. Adding a menu = add one register() line here. */
 object XsetBootstrap {
     /** Register one module, isolating construction failures so a single bad module can't block the rest. */
@@ -464,6 +506,7 @@ object XsetBootstrap {
         safeReg { ClawModule() }          // in-guest AI (assets/claw): permissions + behaviour policy
         safeReg { DiagnosticsModule() }   // real consumer of the embedded libvhdp (com.dracxterm.vhdp.Vhdp)
         safeReg { BackupModule() }
+        safeReg { UpdateModule() }        // app self-update: checks the project's GitHub releases
         safeReg { AboutModule() }
     }
 }

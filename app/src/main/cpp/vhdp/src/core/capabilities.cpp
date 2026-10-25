@@ -359,7 +359,7 @@ const std::vector<FeatureEntry>& capability_features() {
          {"T-CLI-TIMEOUT"},
          ""},
         {"proc.multiprocess",
-         "fork/vfork/clone/threads followed; CLONE_UNTRACED stripped; clone3 -> ENOSYS",
+         "fork/vfork/clone/clone3/threads followed; CLONE_UNTRACED stripped",
          kSup,
          kUnt,
          kSup,

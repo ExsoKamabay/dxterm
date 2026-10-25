@@ -80,7 +80,7 @@ VHDP_SYSCALL(clock_settime, pass_through, none)
 VHDP_SYSCALL(clone, translated, clone)
 #endif
 #ifdef __NR_clone3
-VHDP_SYSCALL(clone3, denied, deny_enosys)
+VHDP_SYSCALL(clone3, translated, clone3)
 #endif
 #ifdef __NR_close
 VHDP_SYSCALL(close, pass_through, none)

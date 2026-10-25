@@ -119,6 +119,7 @@ object XsetDesign {
         const val BACKUP      = "↧"
         const val ABOUT       = "ⓘ"
         const val LANGUAGE    = "ℒ"   // settings-language module (letterlike, single-width BMP)
+        const val UPDATE      = "⟳"   // app-update module (single-width BMP refresh glyph)
         // affordance / status glyphs
         const val OK     = "✓"
         const val WARN   = "⚠"

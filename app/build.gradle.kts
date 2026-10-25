@@ -170,8 +170,8 @@ android {
         applicationId = "com.dracxterm"
         minSdk = 24            // forkpty/openpty + WindowInsets IME animation path supported; runtime-guarded below
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.1.0"
+        versionCode = 8
+        versionName = "1.1.2"
 
         // The shipped prebuilts (proot, busybox, talloc, shmem, loader) and the VHDP libraries
         // are provided for BOTH arm64-v8a and x86_64 (see src/main/jniLibs/<abi> and the CMake

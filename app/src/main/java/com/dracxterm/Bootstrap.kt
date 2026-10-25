@@ -123,12 +123,26 @@ object Bootstrap {
         // wall-clock time. Set both in the exec env AND in /etc/profile.d (writeGuestTz) so a login
         // shell picks it up whichever path wins.
         val tz = posixTz()
+        // Device brand shown in the themed prompt: ~/.bashrc renders $DRAC_DEVICE in dark cyan after
+        // the DRAC-XTERM wordmark. Prefer Build.BRAND, fall back to the manufacturer, then a plain
+        // name. Keep it to printable word characters and a sane length so an unusual model string
+        // can never reshape the prompt or leak control bytes into it.
+        val deviceBrand = run {
+            val raw = Build.BRAND.ifBlank { Build.MANUFACTURER }.ifBlank { "dracxterm" }
+            val cleaned = raw.trim()
+                .replace(Regex("[^A-Za-z0-9 _-]"), "")
+                .replace(Regex("\\s+"), " ")
+                .take(24).trim()
+            if (cleaned.isEmpty()) "dracxterm"
+            else cleaned.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        }
         val guestEnv = arrayOf(
             "HOME=/home/dracos",
             "PWD=/home/dracos",
             "USER=dracos",
             "LOGNAME=dracos",
             "DRAC_HOME=/home/dracos",
+            "DRAC_DEVICE=$deviceBrand",
             "SHELL=$guestShell",
             "TMPDIR=/tmp",
             "TERM=xterm-256color",

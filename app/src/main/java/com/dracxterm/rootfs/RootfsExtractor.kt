@@ -91,12 +91,23 @@ class RootfsExtractor(private val ctx: Context) {
                             outFile.parentFile?.mkdirs()
                             outFile.outputStream().use { os ->
                                 var n = tar.read(buf)
-                                while (n > 0) { os.write(buf, 0, n); total += n; n = tar.read(buf) }
+                                while (n > 0) {
+                                    os.write(buf, 0, n); total += n
+                                    // Plafon total byte: tolak arsip korup/berbahaya (decompression bomb)
+                                    // sebelum memenuhi penyimpanan. 16 GB jauh di atas rootfs wajar (<1 GB).
+                                    if (total > 17_179_869_184L)
+                                        throw IllegalStateException("arsip melebihi batas 16 GB")
+                                    n = tar.read(buf)
+                                }
                             }
                         }
                     }
-                    if (!entry.isSymbolicLink) runCatching { Os.chmod(outFile.absolutePath, entry.mode and 0xFFF) }
+                    // Mask ke 0o777: jangan bawa bit setuid/setgid/sticky dari arsip (inert di storage
+                    // app non-root, dan menyalinnya tidak diperlukan).
+                    if (!entry.isSymbolicLink) runCatching { Os.chmod(outFile.absolutePath, entry.mode and 0x1FF) }
                     count++
+                    // Plafon jumlah entri (pelengkap plafon byte di atas).
+                    if (count > 4_000_000L) throw IllegalStateException("arsip punya terlalu banyak entri")
                     if (count % 250L == 0L) progress?.onProgress(count, total, entry.name)
                     e = tar.nextEntry
                 }

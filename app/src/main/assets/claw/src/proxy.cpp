@@ -129,7 +129,15 @@ void ProxyServer::setup_routes() {
   auto authorized = [this](const httplib::Request& req, httplib::Response& res) {
     if (token_.empty()) return true;
     std::string h = req.get_header_value("Authorization");
-    if (h == "Bearer " + token_) return true;
+    std::string expected = "Bearer " + token_;
+    // Perbandingan waktu-konstan: tidak keluar lebih awal pada byte pertama yang beda, agar
+    // waktu respons tidak membocorkan berapa banyak prefix token yang benar (timing attack).
+    bool same_len = h.size() == expected.size();
+    unsigned char diff = 0;
+    for (size_t i = 0; i < h.size(); ++i)
+      diff |= static_cast<unsigned char>(h[i]) ^
+              static_cast<unsigned char>(i < expected.size() ? expected[i] : 0);
+    if (same_len && diff == 0) return true;
     res.status = 401;
     res.set_content(error_body("invalid proxy token", "authentication_error").dump(),
                     "application/json");

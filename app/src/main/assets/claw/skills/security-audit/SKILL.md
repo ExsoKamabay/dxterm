@@ -77,3 +77,5 @@ pastikan temuan hilang → jalankan regression test → buat security regression
 SECURITY STATUS · CONFIRMED · FIXED · UNRESOLVED · FALSE POSITIVES · TESTS · TOOLS · FILES MODIFIED ·
 RETEST RESULT · LIMITATIONS. Jangan menyatakan sistem "100% aman" — tidak ada audit yang membuktikan
 keamanan absolut. Untuk debug program pakai `audit-debug`; untuk baca CVE/advisory pakai `web-research`.
+Untuk menguji sistem/jaringan/web yang berjalan (recon, enumerasi, PoC aman di target berizin) pakai
+`penetration-testing`.

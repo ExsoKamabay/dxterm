@@ -26,4 +26,9 @@ int score_model(const std::string& model_name, TaskKind kind);
 // pool, dipakai sebagai pemecah seri.
 std::string pick_model(const std::vector<std::string>& usable, TaskKind kind);
 
+// Pilih model-lead (manajer a-work): reasoning paling kuat yang siap. Utamakan model reasoning
+// khusus; bila tak ada, pakai model TERBESAR (parameter terbanyak). "" bila ukuran tak diketahui
+// sama sekali (pemanggil lalu memakai "auto").
+std::string pick_lead(const std::vector<std::string>& usable);
+
 }  // namespace claw

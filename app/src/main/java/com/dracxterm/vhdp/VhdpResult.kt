@@ -17,13 +17,14 @@ class VhdpResult(
     val json: String = payloadUtf8.toString(Charsets.UTF_8)
 
     val ok: Boolean get() = status == Vhdp.OK
-    val phase: Int get() = exit[0]
-    val state: Int get() = exit[1]
-    val reason: Int get() = exit[2]
-    val exitCode: Int get() = exit[3]
-    val termSignal: Int get() = exit[4]
-    val shellStatus: Int get() = exit[5]
-    val exitStatus: Int get() = exit[6]
+    // Akses aman: getter tidak melempar meski kontrak JNI (I[B[B[I)V mengirim IntArray lebih pendek.
+    val phase: Int get() = exit.getOrElse(0) { 0 }
+    val state: Int get() = exit.getOrElse(1) { 0 }
+    val reason: Int get() = exit.getOrElse(2) { 0 }
+    val exitCode: Int get() = exit.getOrElse(3) { 0 }
+    val termSignal: Int get() = exit.getOrElse(4) { 0 }
+    val shellStatus: Int get() = exit.getOrElse(5) { 0 }
+    val exitStatus: Int get() = exit.getOrElse(6) { 0 }
 
     override fun toString(): String =
         "VhdpResult(status=${Vhdp.statusName(status)}, phase=$phase, state=$state, reason=$reason, " +

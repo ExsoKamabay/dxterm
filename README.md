@@ -17,16 +17,35 @@ internet, dan Anda yang menentukan apa saja yang boleh ia sentuh.
 
 | | |
 |---|---|
-| ![Pemilihan distro](Screenshot/01-pilih-distro-dracxterm.jpg) | ![Pemasangan distro](Screenshot/02-pasang-distro-dracxterm.jpg) |
-| 1. Layar pertama. Aplikasi membaca ABI perangkat dan hanya menampilkan image yang cocok, dengan ukuran unduhan dan ruang yang dibutuhkan. | 2. Pemasangan berjalan. Arsipnya sudah lolos pemeriksaan SHA-256 dan sedang diekstrak, dengan pratinjau berkas yang sedang ditulis. |
-| ![Debian berjalan](Screenshot/03-terminal-debian-dracxterm.jpg) | ![Warna dan UTF-8](Screenshot/04-warna-utf8-dracxterm.jpg) |
-| 3. Debian 13 berjalan lewat VHDP, tanpa root: `fastfetch`, `sudo apt-get install`, sesi root, git, Python, dan curl. | 4. 16 warna ANSI, palet 256 warna, truecolor 24-bit, atribut teks, dan UTF-8 penuh termasuk CJK, emoji, dan combining mark. |
-| ![Superuser dan paket .deb](Screenshot/05-superuser-deb-dracxterm.jpg) | ![htop di workspace kedua](Screenshot/06-htop-multi-workspace-dracxterm.jpg) |
-| 5. `sudo -i` menjadi root, lalu paket `.deb` diunduh, dipasang dengan `dpkg -i`, dijalankan, dan dihapus. `exit` kembali ke user biasa. | 6. `htop` layar penuh di workspace kedua. Tiap workspace punya shell dan PTY sendiri. |
-| ![xset Appearance](Screenshot/07-xset-appearance-dracxterm.jpg) | ![xset Diagnostics](Screenshot/08-xset-diagnostics-vhdp-dracxterm.jpg) |
-| 7. `xset`, pengaturan yang digambar di dalam terminal. Halaman Appearance merangkum tema, font, kursor, dan padding. | 8. Halaman Diagnostics: mesin yang sedang menjalankan sesi Linux, dan tombol untuk menjalankan pemeriksaan. |
-| ![claw chat](Screenshot/09-claw-chat-dracxterm.jpg) | ![xset claw](Screenshot/10-xset-claw-dracxterm.jpg) |
-| 9. `claw chat` di 1.1.0: pertanyaan biasa, jawaban di terminal yang sama. Saat diuji ada 33 model gratis yang bisa dipakai. | 10. Halaman AI (claw) di `xset`, menu berbahasa Indonesia. Tiap baris menentukan apa yang boleh dilakukan claw. |
+| ![Prompt dan identitas](Screenshot/01-prompt-brand-dracxterm.jpg) | ![Info sistem](Screenshot/02-sistem-info-dracxterm.jpg) |
+| 1. Begitu dibuka, promptnya menyapa dengan nama perangkat Anda. Terminal Linux penuh, langsung bisa diketik. | 2. Debian 13 berjalan lewat VHDP, tanpa root dan tanpa VM berat, dengan warna truecolor. |
+| ![Palet warna](Screenshot/03-palet-warna-dracxterm.jpg) | ![Beberapa workspace](Screenshot/04-multi-workspace-dracxterm.jpg) |
+| 3. 256 warna dan truecolor 24-bit penuh, jadi output tool dan editor tampil seperti di desktop. | 4. Beberapa sesi terminal sekaligus. Tiap workspace punya shell sendiri, pindah tab dengan satu ketukan. |
+| ![claw chat](Screenshot/05-claw-chat-ai-dracxterm.jpg) | ![Graf a-work](Screenshot/06-claw-awork-graph-dracxterm.jpg) |
+| 5. `claw chat`: tanya pakai kalimat biasa, jawabannya muncul di terminal yang sama. Tanpa akun. | 6. `claw a-work`: satu tim agen mengerjakan tujuan Anda, dan kemajuannya terlihat langsung di graf. |
+| ![Skill claw](Screenshot/07-claw-skills-dracxterm.jpg) | ![xset Tema](Screenshot/08-xset-tema-dracxterm.jpg) |
+| 7. Puluhan skill siap pakai, dari riset web sampai uji keamanan white-hat. | 8. `xset`, pengaturan di dalam terminal. Tema, font, kursor, dan warna diatur dari sini. |
+| ![xset Pembaruan](Screenshot/09-xset-pembaruan-dracxterm.jpg) | ![xset Diagnostik](Screenshot/10-xset-diagnostik-vhdp-dracxterm.jpg) |
+| 9. Halaman Pembaruan memeriksa rilis terbaru dan menampilkan catatan rilisnya tanpa keluar aplikasi. | 10. Halaman Diagnostik: kondisi mesin VHDP yang menjalankan sesi Linux, dengan tombol uji mandiri. |
+
+## Yang baru di 1.1.2
+
+Mode otonom claw berganti nama jadi `a-work`. Tulis tujuan project Anda, dan satu
+tim agen mengerjakannya terus sampai Anda berhenti. Grafnya terbuka di tab yang
+sama begitu tujuan dikonfirmasi, lengkap dengan persen kemajuan, dan keluar dari
+graf mengembalikan terminal Anda seperti semula.
+
+`xset` dapat halaman Pembaruan: cek rilis terbaru dan baca catatan rilisnya tanpa
+keluar aplikasi. Ada juga sepuluh font pilihan dan tiga tema yang digambar ulang.
+
+Lebih banyak program Linux jalan di dalam distro, termasuk alat Go, Rust, dan
+musl yang dulu berhenti begitu dibuka. Claw juga punya skill pentest white-hat
+untuk menguji sistem milik sendiri atau yang sudah berizin.
+
+Satu perbaikan yang mungkin pernah Anda alami: waktu unduhan distro gagal, tombol
+Coba lagi sekarang benar-benar mengulang unduhannya dan menyebutkan masalahnya,
+bukan lompat kembali ke tampilan awal. Catatan lengkap tiap rilis ada di
+[`CHANGELOG.md`](CHANGELOG.md).
 
 ## Yang baru di 1.1.0
 
@@ -38,9 +57,9 @@ claw memakai layanan model gratis yang bisa dipakai tanpa daftar, dan pindah ke
 model lain sendiri kalau satu model sedang penuh. Penjelasan lengkapnya ada di
 [Asisten claw](#asisten-claw).
 
-`claw humanizer "tujuan"` menjalankan beberapa agen untuk satu tujuan besar dan
-terus bekerja sampai Anda mematikannya. Aktivitasnya bisa diikuti langsung di
-tab yang dibuka aplikasi untuk Anda.
+`claw a-work` (dulu bernama `humanizer`) menjalankan beberapa agen untuk satu
+tujuan besar dan terus bekerja sampai Anda mematikannya. Aktivitasnya bisa
+diikuti langsung di tab yang dibuka aplikasi untuk Anda.
 
 Pengaturan `xset` mendapat dua halaman baru. AI (claw) mengatur apa yang boleh
 dilakukan claw, dengan bawaan yang hati-hati: akses berkas dan perintah mati,
@@ -342,7 +361,7 @@ ada empat pustaka yang dibangun dari sumber di repo ini saat build: `libxterm.so
 
 ## Versi dan paket
 
-Rilis saat ini 1.1.0, `versionCode` 7, dengan `applicationId` `com.dracxterm`.
+Rilis saat ini 1.1.2, `versionCode` 8, dengan `applicationId` `com.dracxterm`.
 Nomor 1.0.4 dilewati. APK-nya ditandatangani dengan kunci yang sama seperti
 rilis-rilis sebelumnya, jadi bisa dipasang di atas pemasangan lama sebagai
 pembaruan, tanpa menghapus rootfs dan isi home.
@@ -356,13 +375,13 @@ Tiap berkas punya berkas `.sha256` di sebelahnya. Cocokkan dulu sebelum
 memasang, supaya Anda tahu berkasnya utuh:
 
 ```bash
-sha256sum -c dracxterm-1.1.0-vc7-release.apk.sha256
+sha256sum -c dracxterm-1.1.2-vc8-release.apk.sha256
 ```
 
 Lalu pasang lewat `adb`:
 
 ```bash
-adb install -r dracxterm-1.1.0-vc7-release.apk
+adb install -r dracxterm-1.1.2-vc8-release.apk
 ```
 
 Atau salin APK ke ponsel dan buka lewat pengelola berkas. Android akan meminta
@@ -545,8 +564,8 @@ Untuk rilis baru, ubah dua angka di
 [`app/build.gradle.kts`](app/build.gradle.kts):
 
 ```kotlin
-versionCode = 7
-versionName = "1.1.0"
+versionCode = 8
+versionName = "1.1.2"
 ```
 
 Itu nilai yang ada di berkas sekarang; naikkan keduanya untuk rilis berikutnya.
@@ -584,16 +603,16 @@ BT="$ANDROID_HOME/build-tools/35.0.0"
 ```
 
 `apksigner` harus melaporkan skema v2 dan v3 sebagai `true`, dan `zipalign`
-harus keluar tanpa pesan. `aapt2` harus menunjukkan `versionCode='7'`,
-`versionName='1.1.0'`, dan `native-code: 'arm64-v8a' 'x86_64'`.
+harus keluar tanpa pesan. `aapt2` harus menunjukkan `versionCode='8'`,
+`versionName='1.1.2'`, dan `native-code: 'arm64-v8a' 'x86_64'`.
 
 Untuk dilampirkan ke GitHub Release, beri nama berversi dan buat berkas
 checksum-nya:
 
 ```bash
 mkdir -p apps
-cp "$APK" apps/dracxterm-1.1.0-vc7-release.apk
-(cd apps && sha256sum dracxterm-1.1.0-vc7-release.apk > dracxterm-1.1.0-vc7-release.apk.sha256)
+cp "$APK" apps/dracxterm-1.1.2-vc8-release.apk
+(cd apps && sha256sum dracxterm-1.1.2-vc8-release.apk > dracxterm-1.1.2-vc8-release.apk.sha256)
 ```
 
 `apps/` ada di `.gitignore` dan tidak pernah ikut ter-commit.
